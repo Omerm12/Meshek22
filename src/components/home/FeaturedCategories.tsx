@@ -1,0 +1,55 @@
+import { ArrowLeft } from "lucide-react";
+import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
+import { CategoryCard } from "@/components/shop/CategoryCard";
+import { MOCK_CATEGORIES } from "@/lib/data/mock";
+
+export function FeaturedCategories() {
+  return (
+    <section
+      className="py-14 lg:py-20"
+      style={{ backgroundColor: "var(--color-surface)" }}
+      aria-labelledby="categories-title"
+    >
+      <Container>
+        <div className="flex items-end justify-between mb-8 gap-4">
+          <Reveal>
+            <div>
+              <p className="text-xs font-semibold text-brand-600 uppercase tracking-widest mb-2">
+                קנו לפי קטגוריה
+              </p>
+              <h2 id="categories-title" className="text-3xl font-bold text-gray-900 sm:text-4xl">
+                מה תרצו היום?
+              </h2>
+            </div>
+          </Reveal>
+          <a
+            href="/shop"
+            className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
+          >
+            לכל הקטגוריות
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </div>
+
+        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+          {MOCK_CATEGORIES.map((cat, i) => (
+            <Reveal key={cat.id} delay={i * 50}>
+              <CategoryCard category={cat} />
+            </Reveal>
+          ))}
+        </div>
+
+        <div className="mt-5 sm:hidden text-center">
+          <a
+            href="/shop"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700"
+          >
+            לכל הקטגוריות
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </div>
+      </Container>
+    </section>
+  );
+}

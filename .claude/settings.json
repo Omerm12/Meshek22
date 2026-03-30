@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "Bash(find c:UsersomermOneDriveמסמכיםMeshek22/src/components -name *checkout* -o -name *Checkout*)",
+      "Bash(find \"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22/src/app/\\(shop\\)\" -type f)",
+      "Read(//c/Users/omerm/OneDrive/מסמכים/Meshek22/{gsub\\(/[^/]+/**)",
+      "Bash(cmd.exe /c \"rmdir /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\"\")",
+      "Bash(cmd.exe /c \"rd /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\"\")",
+      "Bash(cmd.exe /c \"del /s /f /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\\\\*.*\"\" >nul 2>&1 && rd /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\" >nul 2>&1 && echo cleaned\")"
+    ]
+  }
+}
