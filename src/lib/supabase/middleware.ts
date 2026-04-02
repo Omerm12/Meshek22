@@ -55,21 +55,15 @@ export async function updateSession(request: NextRequest) {
   // Protect admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
     if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", request.nextUrl.pathname);
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL("/", request.url));
     }
-    // Admin role check happens in layout
+    // Admin role check happens in requireAdmin() inside the layout
   }
 
   // Protect account routes
   if (request.nextUrl.pathname.startsWith("/account")) {
     if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", request.nextUrl.pathname);
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 

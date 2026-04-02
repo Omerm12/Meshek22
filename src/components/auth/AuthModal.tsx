@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Leaf } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuthModal } from "@/store/auth-modal";
+import { createClient } from "@/lib/supabase/client";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
 
@@ -39,13 +40,58 @@ export function AuthModal() {
     };
   }, [isOpen]);
 
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
     closeModal();
-    // Always refresh so server components on the current page (e.g. CheckoutPage)
-    // re-run with the now-authenticated session. Client components (Header) update
-    // automatically via onAuthStateChange in UserProvider without needing this.
+
+    const supabase = createClient();
+
+    // Step 1: getUser() forces the client to load + validate the session from
+    // cookies before we attempt any table query. Skipping this caused the
+    // previous implementation to query with an uninitialised session → RLS
+    // filtered out all rows → profile was null → admin redirect never fired.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[AuthModal] handleSuccess — user:", user?.id ?? "(none)");
+    }
+
+    if (!user) {
+      router.refresh();
+      onSuccess?.();
+      return;
+    }
+
+    // Step 2: Fetch profile with an explicit .eq filter — never rely solely on
+    // RLS implicit filtering inside modal handlers where session timing is tight.
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "[AuthModal] handleSuccess — role:",
+        profile?.role ?? "(none)",
+        profileError ? `error: ${profileError.message}` : ""
+      );
+    }
+
+    // Step 3: Branch on role
+    if (profile?.role === "admin") {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[AuthModal] handleSuccess — admin → /admin");
+      }
+      router.push("/admin");
+      return;
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[AuthModal] handleSuccess — non-admin, refreshing");
+    }
     router.refresh();
-    // Run any caller-specific callback after the refresh is queued.
     onSuccess?.();
   };
 
