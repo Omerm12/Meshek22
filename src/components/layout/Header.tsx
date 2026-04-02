@@ -2,23 +2,27 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ShoppingCart, Menu, X, Leaf, Phone, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ShoppingCart, Menu, X, Leaf, Phone, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
 import { useUser } from "@/store/user";
+import { useAuthModal } from "@/store/auth-modal";
 import { Button } from "@/components/ui/Button";
 
 const NAV_LINKS = [
   { label: "ירקות ופירות", href: "/category/yerakot" },
   { label: "מבצעים", href: "/promotions" },
-  { label: "אזורי משלוח", href: "#delivery-areas" },
-  { label: "אודות", href: "#about" },
+  { label: "אזורי משלוח", href: "/#delivery-areas" },
+  { label: "אודות", href: "/about" },
 ];
 
 export function Header() {
   const { totalItems, subtotalAgorot, openCart } = useCart();
-  const { user, isLoading: authLoading } = useUser();
+  const { user, isLoading: authLoading, signOut } = useUser();
+  const { openModal } = useAuthModal();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -50,6 +54,11 @@ export function Header() {
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.refresh();
+  };
+
   return (
     <>
       <header
@@ -64,7 +73,7 @@ export function Header() {
           <div className="flex items-center justify-between h-16">
 
             {/* Logo */}
-            <a
+            <Link
               href="/"
               className="flex items-center gap-2 text-brand-700 hover:text-brand-800 transition-colors"
               aria-label="דף הבית"
@@ -75,18 +84,18 @@ export function Header() {
               <span className="font-bold text-xl tracking-tight">
                 משק 22
               </span>
-            </a>
+            </Link>
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-1" aria-label="ניווט ראשי">
               {NAV_LINKS.map((link) => (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
                   className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50 transition-all duration-150"
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </nav>
 
@@ -101,26 +110,38 @@ export function Header() {
                 <span>*3722</span>
               </a>
 
-              {/* Auth link (desktop) */}
-              {!authLoading && (
-                user ? (
-                  <Link
-                    href="/account"
-                    className="hidden md:flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50 transition-colors"
-                    aria-label="החשבון שלי"
-                  >
-                    <User className="h-4 w-4" aria-hidden="true" />
-                    <span className="hidden lg:inline">החשבון שלי</span>
-                  </Link>
+              {/* Auth area (desktop) */}
+              <div className="hidden md:flex items-center gap-1">
+                {authLoading ? (
+                  <div className="h-9 w-20 rounded-full bg-stone-100 animate-pulse" aria-hidden="true" />
+                ) : user ? (
+                  <>
+                    <Link
+                      href="/account"
+                      className="flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50 transition-colors"
+                      aria-label="החשבון שלי"
+                    >
+                      <User className="h-4 w-4" aria-hidden="true" />
+                      <span className="hidden lg:inline">החשבון שלי</span>
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      aria-label="התנתקות"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      <span className="hidden lg:inline">התנתק</span>
+                    </button>
+                  </>
                 ) : (
-                  <Link
-                    href="/login"
-                    className="hidden md:flex items-center h-9 px-4 rounded-full text-sm font-semibold border border-stone-200 text-stone-700 hover:border-brand-400 hover:text-brand-700 transition-colors"
+                  <button
+                    onClick={() => openModal()}
+                    className="flex items-center h-9 px-4 rounded-full text-sm font-semibold border border-stone-200 text-stone-700 hover:border-brand-400 hover:text-brand-700 transition-colors cursor-pointer"
                   >
                     כניסה
-                  </Link>
-                )
-              )}
+                  </button>
+                )}
+              </div>
 
               {/* Cart */}
               <button
@@ -184,14 +205,14 @@ export function Header() {
       >
         <nav className="px-4 py-4 flex flex-col gap-1">
           {NAV_LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
               className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-stone-700 hover:bg-brand-50 hover:text-brand-700 transition-colors"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -210,25 +231,35 @@ export function Header() {
               </span>
             )}
           </Button>
-          {!authLoading && (
-            user ? (
+
+          {authLoading ? (
+            <div className="h-11 rounded-xl bg-stone-100 animate-pulse" aria-hidden="true" />
+          ) : user ? (
+            <div className="flex gap-2">
               <Link
                 href="/account"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center gap-2 h-11 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:border-brand-400 hover:text-brand-700 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:border-brand-400 hover:text-brand-700 transition-colors"
               >
                 <User className="h-4 w-4" aria-hidden="true" />
                 החשבון שלי
               </Link>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center h-11 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:border-brand-400 hover:text-brand-700 transition-colors"
+              <button
+                onClick={() => { setMobileOpen(false); handleSignOut(); }}
+                className="flex items-center justify-center gap-1.5 h-11 px-4 rounded-xl border border-stone-200 text-sm font-semibold text-stone-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                aria-label="התנתקות"
               >
-                כניסה / הרשמה
-              </Link>
-            )
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                התנתק
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setMobileOpen(false); openModal(); }}
+              className="flex items-center justify-center h-11 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:border-brand-400 hover:text-brand-700 transition-colors w-full cursor-pointer"
+            >
+              כניסה / הרשמה
+            </button>
           )}
         </div>
 

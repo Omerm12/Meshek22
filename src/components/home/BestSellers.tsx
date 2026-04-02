@@ -1,12 +1,14 @@
-"use client";
-
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ProductCard } from "@/components/shop/ProductCard";
-import { FEATURED_PRODUCTS } from "@/lib/data/mock";
+import { fetchFeaturedProducts } from "@/lib/data/storefront";
 
-export function BestSellers() {
+export async function BestSellers() {
+  const products = await fetchFeaturedProducts(8);
+
+  if (products.length === 0) return null;
+
   return (
     <section
       id="best-sellers"
@@ -22,7 +24,7 @@ export function BestSellers() {
             subtitle="המוצרים שכולם אוהבים, טריים כל יום"
           />
           <a
-            href="/shop"
+            href="/category/yerakot"
             className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0"
           >
             כל המוצרים
@@ -31,14 +33,14 @@ export function BestSellers() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {FEATURED_PRODUCTS.map((product) => (
+          {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
 
         <div className="mt-8 sm:hidden text-center">
           <a
-            href="/shop"
+            href="/category/yerakot"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700"
           >
             לכל המוצרים

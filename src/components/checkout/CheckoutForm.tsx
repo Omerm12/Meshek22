@@ -12,6 +12,8 @@ import {
   AlertCircle,
   ShieldCheck,
   Loader2,
+  CreditCard,
+  ArrowRight,
 } from "lucide-react";
 import { useCart } from "@/store/cart";
 import { formatPrice } from "@/lib/utils/money";
@@ -34,11 +36,13 @@ function InputField({
   label,
   id,
   required,
+  error,
   children,
 }: {
   label: string;
   id: string;
   required?: boolean;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -48,6 +52,7 @@ function InputField({
         {required && <span className="text-red-500 ms-0.5">*</span>}
       </label>
       {children}
+      {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
     </div>
   );
 }
@@ -55,9 +60,42 @@ function InputField({
 const inputClass =
   "w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-gray-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow";
 
+const inputErrorClass =
+  "w-full h-11 px-3.5 rounded-xl border border-red-400 bg-white text-gray-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition-shadow";
+
+// ── Payment validation helpers ────────────────────────────────────────────────
+
+function luhn(digits: string): boolean {
+  const arr = digits.split("").reverse().map(Number);
+  const sum = arr.reduce((acc, d, i) => {
+    if (i % 2 === 1) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    return acc + d;
+  }, 0);
+  return sum % 10 === 0;
+}
+
+function formatCardNumber(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 16);
+  return digits.replace(/(.{4})(?=.)/g, "$1 ");
+}
+
+function formatExpiry(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProps) {
   const router = useRouter();
-  const { items, subtotalAgorot, clearCart } = useCart();
+  const { items, subtotalAgorot, clearCart, isHydrated } = useCart();
+
+  // ── Step state ─────────────────────────────────────────────────────────────
+  const [step, setStep] = useState<"details" | "payment">("details");
 
   // ── Address state ──────────────────────────────────────────────────────────
   const defaultAddress = addresses.find((a) => a.is_default) ?? addresses[0] ?? null;
@@ -66,13 +104,11 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
   );
   const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
 
-  // Manual address fields
   const [manualCity, setManualCity] = useState("");
   const [manualStreet, setManualStreet] = useState("");
   const [manualHouseNumber, setManualHouseNumber] = useState("");
   const [manualApartment, setManualApartment] = useState("");
 
-  // Settlement combobox
   const [settlementResults, setSettlementResults] = useState<Settlement[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const comboboxRef = useRef<HTMLDivElement>(null);
@@ -84,56 +120,53 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
     return null;
   });
 
-  // Customer details
+  // ── Customer details ───────────────────────────────────────────────────────
   const [name, setName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [email, setEmail] = useState(userEmail ?? "");
   const [notes, setNotes] = useState("");
 
-  // Submission
+  // ── Payment fields ─────────────────────────────────────────────────────────
+  const [cardHolder, setCardHolder] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [installments, setInstallments] = useState("1");
+  const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
+
+  // ── Submission ─────────────────────────────────────────────────────────────
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
-  // ── Redirect if cart empty ─────────────────────────────────────────────────
+  // ── Redirect if cart empty (only after localStorage has been read) ─────────
   useEffect(() => {
-    if (items.length === 0) {
+    if (isHydrated && items.length === 0) {
       router.replace("/cart");
     }
-  }, [items.length, router]);
+  }, [isHydrated, items.length, router]);
 
   // ── Update zone when selected address changes ──────────────────────────────
   useEffect(() => {
     if (useNewAddress) return;
-    if (!selectedAddressId) {
-      setDeliveryZoneSlug(null);
-      return;
-    }
+    if (!selectedAddressId) { setDeliveryZoneSlug(null); return; }
     const addr = addresses.find((a) => a.id === selectedAddressId);
     if (!addr) return;
-    if (addr.delivery_zone_id) {
-      setDeliveryZoneSlug(addr.delivery_zone_id);
-    } else {
-      setDeliveryZoneSlug(findZoneByCity(addr.city)?.slug ?? null);
-    }
+    setDeliveryZoneSlug(
+      addr.delivery_zone_id ?? findZoneByCity(addr.city)?.slug ?? null
+    );
   }, [selectedAddressId, useNewAddress, addresses]);
 
   // ── Update zone when manual city changes ──────────────────────────────────
   useEffect(() => {
     if (!useNewAddress) return;
-    const zone = findZoneByCity(manualCity);
-    setDeliveryZoneSlug(zone?.slug ?? null);
+    setDeliveryZoneSlug(findZoneByCity(manualCity)?.slug ?? null);
   }, [manualCity, useNewAddress]);
 
   // ── Settlement search ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (manualCity.length >= 2) {
-      setSettlementResults(searchSettlements(manualCity));
-    } else {
-      setSettlementResults([]);
-    }
+    setSettlementResults(manualCity.length >= 2 ? searchSettlements(manualCity) : []);
   }, [manualCity]);
 
-  // Close combobox on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (comboboxRef.current && !comboboxRef.current.contains(e.target as Node)) {
@@ -152,7 +185,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
 
   const totalAgorot = subtotalAgorot + (quote?.feeAgorot ?? 0);
 
-  // ── Get address to use in submission ──────────────────────────────────────
+  // ── Address helper ─────────────────────────────────────────────────────────
   const getAddressFields = () => {
     if (!useNewAddress && selectedAddressId) {
       const addr = addresses.find((a) => a.id === selectedAddressId)!;
@@ -171,20 +204,95 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
     };
   };
 
+  // ── Delivery details validation ────────────────────────────────────────────
+  const validateDeliveryDetails = (): string | null => {
+    if (!deliveryZoneSlug)
+      return "לא ניתן לזהות את אזור המשלוח. נא לבחור עיר מהרשימה.";
+    if (quote && !quote.meetsMinimum)
+      return `ההזמנה המינימלית לאזור ${quote.zone.name} לא הושגה.`;
+
+    if (useNewAddress || addresses.length === 0) {
+      if (!manualCity.trim()) return "נא להזין עיר / יישוב";
+      if (!manualStreet.trim()) return "נא להזין שם רחוב";
+      if (!manualHouseNumber.trim()) return "נא להזין מספר בית";
+    }
+
+    if (name.trim().length < 2) return "נא להזין שם מלא";
+    if (!/^0\d{8,9}$/.test(phone.replace(/[-\s]/g, "")))
+      return "מספר טלפון לא תקין (לדוגמה: 0501234567)";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      return "כתובת אימייל לא תקינה";
+
+    return null;
+  };
+
+  // ── Payment validation ─────────────────────────────────────────────────────
+  const validatePayment = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+
+    if (cardHolder.trim().length < 2) {
+      errors.cardHolder = "נא להזין שם בעל הכרטיס";
+    }
+
+    const cleanCard = cardNumber.replace(/\s/g, "");
+    if (!/^\d{13,19}$/.test(cleanCard)) {
+      errors.cardNumber = "מספר כרטיס לא תקין";
+    } else if (!luhn(cleanCard)) {
+      errors.cardNumber = "מספר הכרטיס אינו תקין — בדקו שוב";
+    }
+
+    const m = expiry.match(/^(\d{2})\/(\d{2})$/);
+    if (!m) {
+      errors.expiry = "תוקף לא תקין — הזינו MM/YY";
+    } else {
+      const mon = parseInt(m[1], 10);
+      const yr = parseInt(m[2], 10) + 2000;
+      if (mon < 1 || mon > 12) {
+        errors.expiry = "חודש לא תקין";
+      } else {
+        const now = new Date();
+        const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
+        const expiryYM = yr * 100 + mon;
+        if (expiryYM < currentYM) {
+          errors.expiry = "הכרטיס פג תוקפו";
+        }
+      }
+    }
+
+    if (!/^\d{3,4}$/.test(cvv)) {
+      errors.cvv = "CVV לא תקין (3–4 ספרות)";
+    }
+
+    return errors;
+  };
+
   // ── Form submission ────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!deliveryZoneSlug) {
-      setError("לא ניתן לזהות את אזור המשלוח. נא לבחור עיר מהרשימה.");
+    // ── Step 1: validate delivery details and advance ──────────────────────
+    if (step === "details") {
+      const validationError = validateDeliveryDetails();
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+      setStep("payment");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    if (!quote?.meetsMinimum) {
-      setError(
-        `ההזמנה המינימלית לאזור ${quote?.zone.name ?? ""} לא הושגה.`
-      );
+    // ── Step 2: validate payment and create order ──────────────────────────
+    const payErrs = validatePayment();
+    if (Object.keys(payErrs).length > 0) {
+      setPaymentErrors(payErrs);
+      return;
+    }
+    setPaymentErrors({});
+
+    if (!deliveryZoneSlug) {
+      setError("לא ניתן לזהות את אזור המשלוח. חזרו לשלב הקודם.");
       return;
     }
 
@@ -192,7 +300,6 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
 
     const addrFields = getAddressFields();
     const fd = new FormData();
-
     fd.set(
       "cart_items",
       JSON.stringify(
@@ -229,7 +336,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
     }
   };
 
-  if (items.length === 0) return null;
+  if (!isHydrated || items.length === 0) return null;
 
   const selectedAddress =
     !useNewAddress && selectedAddressId
@@ -240,290 +347,447 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
     <form onSubmit={handleSubmit} noValidate>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
 
-        {/* ── Left column: Address + Details + Notes ── */}
+        {/* ── Left column ── */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* ── Section: Delivery Address ── */}
-          <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
-                <MapPin className="h-4 w-4 text-brand-600" />
-              </div>
-              <h2 className="font-bold text-gray-900">כתובת למשלוח</h2>
-            </div>
+          {/* ══ STEP 1: Delivery + Customer + Notes ══ */}
+          {step === "details" && (
+            <>
+              {/* Delivery Address */}
+              <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
+                    <MapPin className="h-4 w-4 text-brand-600" />
+                  </div>
+                  <h2 className="font-bold text-gray-900">כתובת למשלוח</h2>
+                </div>
 
-            {/* Saved addresses picker */}
-            {addresses.length > 0 && (
-              <div className="mb-4">
-                <div className="space-y-2 mb-3">
-                  {addresses.map((addr) => (
-                    <label
-                      key={addr.id}
-                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        !useNewAddress && selectedAddressId === addr.id
-                          ? "border-brand-400 bg-brand-50"
-                          : "border-stone-200 hover:border-brand-300"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="address_choice"
-                        value={addr.id}
-                        checked={!useNewAddress && selectedAddressId === addr.id}
-                        onChange={() => {
-                          setSelectedAddressId(addr.id);
-                          setUseNewAddress(false);
-                        }}
-                        className="mt-0.5 accent-brand-600"
-                      />
-                      <div className="min-w-0">
-                        {addr.label && (
-                          <p className="text-xs font-semibold text-brand-700 mb-0.5">
-                            {addr.label}
-                          </p>
-                        )}
-                        <p className="text-sm text-gray-900">
-                          {addr.street} {addr.house_number}
-                          {addr.apartment ? `, ${addr.apartment}` : ""}
-                        </p>
-                        <p className="text-xs text-stone-500">{addr.city}</p>
+                {/* Saved addresses picker */}
+                {addresses.length > 0 && (
+                  <div className="mb-4">
+                    <div className="space-y-2 mb-3">
+                      {addresses.map((addr) => (
+                        <label
+                          key={addr.id}
+                          className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                            !useNewAddress && selectedAddressId === addr.id
+                              ? "border-brand-400 bg-brand-50"
+                              : "border-stone-200 hover:border-brand-300"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="address_choice"
+                            value={addr.id}
+                            checked={!useNewAddress && selectedAddressId === addr.id}
+                            onChange={() => {
+                              setSelectedAddressId(addr.id);
+                              setUseNewAddress(false);
+                            }}
+                            className="mt-0.5 accent-brand-600"
+                          />
+                          <div className="min-w-0">
+                            {addr.label && (
+                              <p className="text-xs font-semibold text-brand-700 mb-0.5">
+                                {addr.label}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-900">
+                              {addr.street} {addr.house_number}
+                              {addr.apartment ? `, ${addr.apartment}` : ""}
+                            </p>
+                            <p className="text-xs text-stone-500">{addr.city}</p>
+                          </div>
+                          {addr.is_default && (
+                            <span className="shrink-0 text-xs font-semibold text-brand-600 bg-brand-50 border border-brand-200 rounded-full px-2 py-0.5">
+                              ברירת מחדל
+                            </span>
+                          )}
+                        </label>
+                      ))}
+
+                      <label
+                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          useNewAddress
+                            ? "border-brand-400 bg-brand-50"
+                            : "border-stone-200 hover:border-brand-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="address_choice"
+                          value="new"
+                          checked={useNewAddress}
+                          onChange={() => {
+                            setUseNewAddress(true);
+                            setSelectedAddressId(null);
+                          }}
+                          className="accent-brand-600"
+                        />
+                        <span className="text-sm font-medium text-gray-900">כתובת חדשה</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual address form */}
+                {(useNewAddress || addresses.length === 0) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2" ref={comboboxRef}>
+                      <InputField label="עיר / יישוב" id="manual_city" required>
+                        <div className="relative">
+                          <input
+                            id="manual_city"
+                            type="text"
+                            value={manualCity}
+                            onChange={(e) => {
+                              setManualCity(e.target.value);
+                              setShowSuggestions(true);
+                            }}
+                            onFocus={() => setShowSuggestions(true)}
+                            placeholder="הקלידו שם עיר..."
+                            className={inputClass}
+                            autoComplete="off"
+                            required
+                          />
+                          {showSuggestions && settlementResults.length > 0 && (
+                            <ul className="absolute top-full start-0 end-0 z-20 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                              {settlementResults.map((s) => (
+                                <li key={s.name}>
+                                  <button
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setManualCity(s.name);
+                                      setShowSuggestions(false);
+                                    }}
+                                    className="w-full text-start px-4 py-2.5 text-sm text-gray-900 hover:bg-brand-50 transition-colors"
+                                  >
+                                    {s.name}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </InputField>
+                    </div>
+
+                    <div className="sm:col-span-2 grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <InputField label="רחוב" id="manual_street" required>
+                          <input
+                            id="manual_street"
+                            type="text"
+                            value={manualStreet}
+                            onChange={(e) => setManualStreet(e.target.value)}
+                            placeholder="שם הרחוב"
+                            className={inputClass}
+                            required
+                          />
+                        </InputField>
                       </div>
-                      {addr.is_default && (
-                        <span className="shrink-0 text-xs font-semibold text-brand-600 bg-brand-50 border border-brand-200 rounded-full px-2 py-0.5">
-                          ברירת מחדל
+                      <div>
+                        <InputField label="מס׳ בית" id="manual_house" required>
+                          <input
+                            id="manual_house"
+                            type="text"
+                            value={manualHouseNumber}
+                            onChange={(e) => setManualHouseNumber(e.target.value)}
+                            placeholder="1"
+                            className={inputClass}
+                            required
+                          />
+                        </InputField>
+                      </div>
+                    </div>
+
+                    <InputField label="דירה / קומה" id="manual_apartment">
+                      <input
+                        id="manual_apartment"
+                        type="text"
+                        value={manualApartment}
+                        onChange={(e) => setManualApartment(e.target.value)}
+                        placeholder="דירה 3, קומה 2"
+                        className={inputClass}
+                      />
+                    </InputField>
+                  </div>
+                )}
+
+                {/* Delivery zone info */}
+                {quote ? (
+                  <div className="mt-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 flex items-center gap-3">
+                    <Truck className="h-4 w-4 text-brand-600 shrink-0" />
+                    <div className="text-sm">
+                      <span className="font-semibold text-brand-800">{quote.zone.name}</span>
+                      <span className="text-brand-600">
+                        {" · "}
+                        {quote.isFree ? (
+                          <span className="font-semibold text-emerald-600">משלוח חינם 🎉</span>
+                        ) : (
+                          <>דמי משלוח {formatPrice(quote.feeAgorot)}</>
+                        )}
+                        {" · "}
+                        {quote.zone.estimatedDays}
+                      </span>
+                      {!quote.isFree && quote.remainingForFree > 0 && (
+                        <span className="block text-xs text-brand-500 mt-0.5">
+                          עוד {formatPrice(quote.remainingForFree)} למשלוח חינם
                         </span>
                       )}
-                    </label>
-                  ))}
-
-                  {/* New address option */}
-                  <label
-                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                      useNewAddress
-                        ? "border-brand-400 bg-brand-50"
-                        : "border-stone-200 hover:border-brand-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="address_choice"
-                      value="new"
-                      checked={useNewAddress}
-                      onChange={() => {
-                        setUseNewAddress(true);
-                        setSelectedAddressId(null);
-                      }}
-                      className="accent-brand-600"
-                    />
-                    <span className="text-sm font-medium text-gray-900">
-                      כתובת חדשה
-                    </span>
-                  </label>
-                </div>
+                    </div>
+                  </div>
+                ) : (
+                  useNewAddress && manualCity.length > 0 && !deliveryZoneSlug && (
+                    <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3 text-sm text-amber-800">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      העיר שהזנתם אינה ברשימת היישובים שמשלוח מגיע אליהם. בחרו עיר מהרשימה.
+                    </div>
+                  )
+                )}
               </div>
-            )}
 
-            {/* Manual address form */}
-            {(useNewAddress || addresses.length === 0) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* City with settlement search */}
-                <div className="sm:col-span-2" ref={comboboxRef}>
-                  <InputField label="עיר / יישוב" id="manual_city" required>
+              {/* Customer Details */}
+              <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
+                    <User className="h-4 w-4 text-brand-600" />
+                  </div>
+                  <h2 className="font-bold text-gray-900">פרטי הלקוח</h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <InputField label="שם מלא" id="customer_name" required>
+                      <div className="relative">
+                        <User className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                        <input
+                          id="customer_name"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="ישראל ישראלי"
+                          className={`${inputClass} ps-10`}
+                          required
+                        />
+                      </div>
+                    </InputField>
+                  </div>
+
+                  <InputField label="טלפון" id="customer_phone" required>
                     <div className="relative">
+                      <Phone className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        id="manual_city"
-                        type="text"
-                        value={manualCity}
-                        onChange={(e) => {
-                          setManualCity(e.target.value);
-                          setShowSuggestions(true);
-                        }}
-                        onFocus={() => setShowSuggestions(true)}
-                        placeholder="הקלידו שם עיר..."
-                        className={inputClass}
-                        autoComplete="off"
+                        id="customer_phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="0501234567"
+                        dir="ltr"
+                        className={`${inputClass} ps-10`}
                         required
                       />
-                      {showSuggestions && settlementResults.length > 0 && (
-                        <ul className="absolute top-full start-0 end-0 z-20 mt-1 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
-                          {settlementResults.map((s) => (
-                            <li key={s.name}>
-                              <button
-                                type="button"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setManualCity(s.name);
-                                  setShowSuggestions(false);
-                                }}
-                                className="w-full text-start px-4 py-2.5 text-sm text-gray-900 hover:bg-brand-50 transition-colors"
-                              >
-                                {s.name}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                    </div>
+                  </InputField>
+
+                  <InputField label="אימייל" id="customer_email" required>
+                    <div className="relative">
+                      <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                      <input
+                        id="customer_email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        dir="ltr"
+                        className={`${inputClass} ps-10`}
+                        required
+                      />
                     </div>
                   </InputField>
                 </div>
-
-                <div className="sm:col-span-2 grid grid-cols-3 gap-3">
-                  <div className="col-span-2">
-                    <InputField label="רחוב" id="manual_street" required>
-                      <input
-                        id="manual_street"
-                        type="text"
-                        value={manualStreet}
-                        onChange={(e) => setManualStreet(e.target.value)}
-                        placeholder="שם הרחוב"
-                        className={inputClass}
-                        required
-                      />
-                    </InputField>
-                  </div>
-                  <div>
-                    <InputField label='מס׳ בית' id="manual_house" required>
-                      <input
-                        id="manual_house"
-                        type="text"
-                        value={manualHouseNumber}
-                        onChange={(e) => setManualHouseNumber(e.target.value)}
-                        placeholder="1"
-                        className={inputClass}
-                        required
-                      />
-                    </InputField>
-                  </div>
-                </div>
-
-                <InputField label="דירה / קומה" id="manual_apartment">
-                  <input
-                    id="manual_apartment"
-                    type="text"
-                    value={manualApartment}
-                    onChange={(e) => setManualApartment(e.target.value)}
-                    placeholder="דירה 3, קומה 2"
-                    className={inputClass}
-                  />
-                </InputField>
               </div>
-            )}
 
-            {/* Delivery zone info */}
-            {quote ? (
-              <div className="mt-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 flex items-center gap-3">
-                <Truck className="h-4 w-4 text-brand-600 shrink-0" />
-                <div className="text-sm">
-                  <span className="font-semibold text-brand-800">{quote.zone.name}</span>
-                  <span className="text-brand-600">
-                    {" · "}
+              {/* Notes */}
+              <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
+                    <MessageSquare className="h-4 w-4 text-brand-600" />
+                  </div>
+                  <h2 className="font-bold text-gray-900">הערות למשלוח</h2>
+                  <span className="text-xs text-stone-400">(אופציונלי)</span>
+                </div>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="לדוגמה: צלצלו בדלת 2, השאירו ליד הכניסה, שעות עדיפות..."
+                  maxLength={300}
+                  rows={3}
+                  className="w-full px-3.5 py-3 rounded-xl border border-stone-200 bg-white text-gray-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow resize-none"
+                />
+                <p className="text-xs text-stone-400 mt-1 text-end">{notes.length}/300</p>
+              </div>
+            </>
+          )}
+
+          {/* ══ STEP 2: Payment form ══ */}
+          {step === "payment" && (
+            <>
+              {/* Back to details */}
+              <button
+                type="button"
+                onClick={() => { setStep("details"); setError(null); setPaymentErrors({}); }}
+                className="flex items-center gap-1.5 text-sm text-brand-700 hover:text-brand-800 font-medium transition-colors"
+              >
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                חזרה לפרטי משלוח
+              </button>
+
+              {/* Delivery summary (read-only) */}
+              <div className="bg-stone-50 rounded-2xl border border-stone-100 p-4 text-sm text-stone-600 space-y-1">
+                <p className="font-semibold text-gray-900 text-xs uppercase tracking-wide mb-2">
+                  פרטי המשלוח שנבחרו
+                </p>
+                {selectedAddress ? (
+                  <p>{selectedAddress.street} {selectedAddress.house_number}, {selectedAddress.city}</p>
+                ) : (
+                  <p>{manualStreet} {manualHouseNumber}, {manualCity}</p>
+                )}
+                <p>{name} · {phone}</p>
+                {quote && (
+                  <p>
+                    {quote.zone.name} ·{" "}
                     {quote.isFree ? (
-                      <span className="font-semibold text-emerald-600">משלוח חינם 🎉</span>
+                      <span className="text-emerald-600 font-semibold">משלוח חינם</span>
                     ) : (
-                      <>דמי משלוח {formatPrice(quote.feeAgorot)}</>
+                      formatPrice(quote.feeAgorot)
                     )}
-                    {" · "}
-                    {quote.zone.estimatedDays}
-                  </span>
-                  {!quote.isFree && quote.remainingForFree > 0 && (
-                    <span className="block text-xs text-brand-500 mt-0.5">
-                      עוד {formatPrice(quote.remainingForFree)} למשלוח חינם
-                    </span>
-                  )}
-                </div>
+                  </p>
+                )}
               </div>
-            ) : (
-              useNewAddress && manualCity.length > 0 && !deliveryZoneSlug && (
-                <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3 text-sm text-amber-800">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  העיר שהזנתם אינה ברשימת היישובים שמשלוח מגיע אליהם. בחרו עיר מהרשימה.
-                </div>
-              )
-            )}
-          </div>
 
-          {/* ── Section: Customer Details ── */}
-          <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
-                <User className="h-4 w-4 text-brand-600" />
-              </div>
-              <h2 className="font-bold text-gray-900">פרטי הלקוח</h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <InputField label="שם מלא" id="customer_name" required>
-                  <div className="relative">
-                    <User className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-                    <input
-                      id="customer_name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="ישראל ישראלי"
-                      className={`${inputClass} ps-10`}
-                      required
-                    />
+              {/* Payment card */}
+              <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
+                    <CreditCard className="h-4 w-4 text-brand-600" />
                   </div>
-                </InputField>
-              </div>
-
-              <InputField label="טלפון" id="customer_phone" required>
-                <div className="relative">
-                  <Phone className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-                  <input
-                    id="customer_phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0501234567"
-                    dir="ltr"
-                    className={`${inputClass} ps-10`}
-                    required
-                  />
+                  <h2 className="font-bold text-gray-900">פרטי תשלום</h2>
                 </div>
-              </InputField>
 
-              <InputField label="אימייל" id="customer_email" required>
-                <div className="relative">
-                  <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-                  <input
-                    id="customer_email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    dir="ltr"
-                    className={`${inputClass} ps-10`}
+                <div className="space-y-4">
+                  {/* Cardholder name */}
+                  <InputField
+                    label="שם בעל הכרטיס"
+                    id="card_holder"
                     required
-                  />
-                </div>
-              </InputField>
-            </div>
-          </div>
+                    error={paymentErrors.cardHolder}
+                  >
+                    <input
+                      id="card_holder"
+                      type="text"
+                      autoComplete="cc-name"
+                      placeholder="ישראל ישראלי"
+                      value={cardHolder}
+                      onChange={(e) => setCardHolder(e.target.value)}
+                      className={paymentErrors.cardHolder ? inputErrorClass : inputClass}
+                    />
+                  </InputField>
 
-          {/* ── Section: Notes ── */}
-          <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-4 w-4 text-brand-600" />
+                  {/* Card number */}
+                  <InputField
+                    label="מספר כרטיס"
+                    id="card_number"
+                    required
+                    error={paymentErrors.cardNumber}
+                  >
+                    <input
+                      id="card_number"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                      placeholder="0000 0000 0000 0000"
+                      dir="ltr"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                      maxLength={19}
+                      className={paymentErrors.cardNumber ? inputErrorClass : inputClass}
+                    />
+                  </InputField>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Expiry */}
+                    <div className="col-span-2">
+                      <InputField
+                        label="תוקף (MM/YY)"
+                        id="expiry"
+                        required
+                        error={paymentErrors.expiry}
+                      >
+                        <input
+                          id="expiry"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                          placeholder="MM/YY"
+                          dir="ltr"
+                          value={expiry}
+                          onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                          maxLength={5}
+                          className={paymentErrors.expiry ? inputErrorClass : inputClass}
+                        />
+                      </InputField>
+                    </div>
+
+                    {/* CVV */}
+                    <InputField
+                      label="CVV"
+                      id="cvv"
+                      required
+                      error={paymentErrors.cvv}
+                    >
+                      <input
+                        id="cvv"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-csc"
+                        placeholder="123"
+                        dir="ltr"
+                        value={cvv}
+                        onChange={(e) =>
+                          setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))
+                        }
+                        maxLength={4}
+                        className={paymentErrors.cvv ? inputErrorClass : inputClass}
+                      />
+                    </InputField>
+                  </div>
+
+                  {/* Installments */}
+                  <InputField label="מספר תשלומים" id="installments">
+                    <select
+                      id="installments"
+                      value={installments}
+                      onChange={(e) => setInstallments(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="1">תשלום אחד</option>
+                      <option value="2">2 תשלומים</option>
+                      <option value="3">3 תשלומים</option>
+                      <option value="6">6 תשלומים</option>
+                      <option value="12">12 תשלומים</option>
+                    </select>
+                  </InputField>
+                </div>
+
+                <div className="mt-5 flex items-center gap-2 text-xs text-stone-400 border-t border-stone-100 pt-4">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <span>פרטי הכרטיס מאומתים בלבד — אין חיוב אמיתי בשלב זה</span>
+                </div>
               </div>
-              <h2 className="font-bold text-gray-900">הערות למשלוח</h2>
-              <span className="text-xs text-stone-400">(אופציונלי)</span>
-            </div>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="לדוגמה: צלצלו בדלת 2, השאירו ליד הכניסה, שעות עדיפות..."
-              maxLength={300}
-              rows={3}
-              className="w-full px-3.5 py-3 rounded-xl border border-stone-200 bg-white text-gray-900 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow resize-none"
-            />
-            <p className="text-xs text-stone-400 mt-1 text-end">
-              {notes.length}/300
-            </p>
-          </div>
+            </>
+          )}
         </div>
 
         {/* ── Right column: Order Summary ── */}
@@ -531,7 +795,6 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
           <div className="bg-white rounded-2xl border border-stone-100 p-5 lg:sticky lg:top-24">
             <h2 className="font-bold text-gray-900 text-lg mb-4">סיכום הזמנה</h2>
 
-            {/* Cart items */}
             <ul className="space-y-3 mb-4">
               {items.map((item) => (
                 <li key={item.variantId} className="flex items-center gap-2.5">
@@ -589,8 +852,8 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
               )}
             </div>
 
-            {/* Minimum order warning */}
-            {quote && !quote.meetsMinimum && (
+            {/* Minimum order warning (step 1 only) */}
+            {step === "details" && quote && !quote.meetsMinimum && (
               <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
                 <span className="font-semibold">הזמנה מינימלית לא הושגה.</span>
                 {" "}חסרים עוד {formatPrice(quote.shortfallAgorot)} להגיע למינימום של{" "}
@@ -606,11 +869,14 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
               </div>
             )}
 
-            {/* Submit */}
+            {/* Submit button */}
             <button
               type="submit"
-              disabled={isPending || (!!quote && !quote.meetsMinimum)}
-              className="w-full h-13 rounded-full bg-brand-600 text-white font-bold text-base hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-brand-600/20 flex items-center justify-center gap-2"
+              disabled={
+                isPending ||
+                (step === "details" && !!quote && !quote.meetsMinimum)
+              }
+              className="w-full rounded-full bg-brand-600 text-white font-bold text-base hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-brand-600/20 flex items-center justify-center gap-2"
               style={{ height: "52px" }}
             >
               {isPending ? (
@@ -618,8 +884,13 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                   <Loader2 className="h-4 w-4 animate-spin" />
                   מעבד...
                 </>
-              ) : (
+              ) : step === "details" ? (
                 "המשך לתשלום"
+              ) : (
+                <>
+                  <ShieldCheck className="h-4 w-4" />
+                  בצעו הזמנה
+                </>
               )}
             </button>
 

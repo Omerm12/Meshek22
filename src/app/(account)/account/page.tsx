@@ -14,13 +14,40 @@ export default async function AccountPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  if (!profile) redirect("/login");
+  // Profile missing — this shouldn't happen when the DB trigger is in place,
+  // but handle it defensively to avoid a /login redirect loop.
+  if (!profile) {
+    const { data: created } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        email: user.email ?? "",
+        full_name: (user.user_metadata?.full_name as string) ?? null,
+        phone: (user.user_metadata?.phone as string) ?? null,
+      })
+      .select()
+      .single();
+
+    if (created) {
+      // Re-render with the freshly created row
+      profile = created;
+    } else {
+      // Insert failed (RLS or constraint). Show a recoverable error instead of looping.
+      return (
+        <div className="bg-white rounded-2xl border border-stone-100 p-6 max-w-md">
+          <p className="text-sm text-stone-500">
+            לא ניתן היה לטעון את הפרופיל. נסו לרענן את הדף.
+          </p>
+        </div>
+      );
+    }
+  }
 
   return (
     <div>

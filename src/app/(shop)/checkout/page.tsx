@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { CheckoutLoginGate } from "@/components/checkout/CheckoutLoginGate";
 import { Container } from "@/components/ui/Container";
 import type { Database } from "@/types/database";
 
@@ -19,23 +20,25 @@ export default async function CheckoutPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let addresses: AddressRow[] = [];
-  let profile: ProfileRow | null = null;
-
-  if (user) {
-    const [addrRes, profileRes] = await Promise.all([
-      supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("is_default", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
-    ]);
-
-    addresses = (addrRes.data ?? []) as AddressRow[];
-    profile = (profileRes.data as ProfileRow | null) ?? null;
+  // Not authenticated — show a friendly gate with a modal trigger instead
+  // of a hard redirect. After login the client calls router.refresh() which
+  // re-runs this server component with the active session.
+  if (!user) {
+    return <CheckoutLoginGate />;
   }
+
+  const [addrRes, profileRes] = await Promise.all([
+    supabase
+      .from("addresses")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
+  ]);
+
+  const addresses = (addrRes.data ?? []) as AddressRow[];
+  const profile = (profileRes.data as ProfileRow | null) ?? null;
 
   return (
     <main className="flex-1 py-8 lg:py-12" style={{ backgroundColor: "var(--color-surface)" }}>
@@ -55,7 +58,7 @@ export default async function CheckoutPage() {
         <CheckoutForm
           addresses={addresses}
           profile={profile}
-          userEmail={user?.email ?? null}
+          userEmail={user.email ?? null}
         />
       </Container>
     </main>

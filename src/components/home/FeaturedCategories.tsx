@@ -2,9 +2,13 @@ import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { CategoryCard } from "@/components/shop/CategoryCard";
-import { MOCK_CATEGORIES } from "@/lib/data/mock";
+import { fetchCategories } from "@/lib/data/storefront";
 
-export function FeaturedCategories() {
+export async function FeaturedCategories() {
+  const categories = await fetchCategories();
+
+  if (categories.length === 0) return null;
+
   return (
     <section
       className="py-14 lg:py-20"
@@ -24,7 +28,7 @@ export function FeaturedCategories() {
             </div>
           </Reveal>
           <a
-            href="/shop"
+            href="/category/yerakot"
             className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
           >
             לכל הקטגוריות
@@ -33,7 +37,7 @@ export function FeaturedCategories() {
         </div>
 
         <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-          {MOCK_CATEGORIES.map((cat, i) => (
+          {categories.map((cat, i) => (
             <Reveal key={cat.id} delay={i * 50}>
               <CategoryCard category={cat} />
             </Reveal>
@@ -42,7 +46,7 @@ export function FeaturedCategories() {
 
         <div className="mt-5 sm:hidden text-center">
           <a
-            href="/shop"
+            href="/category/yerakot"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700"
           >
             לכל הקטגוריות

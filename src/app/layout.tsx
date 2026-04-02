@@ -4,6 +4,8 @@ import "./globals.css";
 import { CartProvider } from "@/store/cart";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { UserProvider } from "@/store/user";
+import { AuthModalProvider } from "@/store/auth-modal";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const rubik = Rubik({
   subsets: ["hebrew", "latin"],
@@ -54,10 +56,13 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--color-surface)] text-gray-900 antialiased">
         <UserProvider>
-          <CartProvider>
-            {children}
-            <CartDrawer />
-          </CartProvider>
+          <AuthModalProvider>
+            <CartProvider>
+              {children}
+              <CartDrawer />
+              <AuthModal />
+            </CartProvider>
+          </AuthModalProvider>
         </UserProvider>
       </body>
     </html>

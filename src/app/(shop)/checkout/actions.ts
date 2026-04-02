@@ -29,6 +29,11 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Checkout requires authentication
+  if (!user) {
+    return { error: "יש להתחבר לחשבון לפני ביצוע הזמנה" };
+  }
+
   // ── Parse cart items ───────────────────────────────────────────────────────
   const cartItemsRaw = formData.get("cart_items") as string | null;
   if (!cartItemsRaw) return { error: "הסל ריק" };
@@ -186,7 +191,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
   };
 
   const orderInsert: OrderInsert = {
-    user_id: user?.id ?? null,
+    user_id: user.id,
     delivery_zone_id: zoneRow.id,
     delivery_address_snapshot: deliveryAddressSnapshot,
     customer_snapshot: customerSnapshot,
@@ -231,67 +236,30 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     return { error: "שגיאה בשמירת פריטי ההזמנה. נא לנסות שוב." };
   }
 
-  // ── Initiate payment ───────────────────────────────────────────────────────
+  // ── Mock payment (card validation happened client-side; no external provider) ─
+  // TODO: Replace this block with PayPlus integration when credentials are ready.
+  // Keep createPaymentPage import — it will be used when PAYPLUS_API_KEY is set.
+  //
+  // Future integration point:
+  //   const paymentResult = await createPaymentPage({ orderId, orderNumber, ... });
+  //   await supabase.from("orders").update({ payment_reference: paymentResult.paypageUid }).eq("id", order.id);
+  //   return { paymentUrl: paymentResult.paymentPageLink, orderNumber: order.order_number };
+
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-  // Development / missing credentials: simulate payment directly
-  if (!process.env.PAYPLUS_API_KEY) {
-    await supabase
-      .from("orders")
-      .update({
-        payment_status: "paid",
-        order_status: "paid",
-        payment_method: "dev_bypass",
-        payment_reference: `DEV-${Date.now()}`,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", order.id);
+  await supabase
+    .from("orders")
+    .update({
+      payment_status: "paid",
+      order_status: "paid",
+      payment_method: "card_mock",
+      payment_reference: `MOCK-${Date.now()}`,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", order.id);
 
-    return {
-      paymentUrl: `${origin}/checkout/success?order=${order.order_number}`,
-      orderNumber: order.order_number,
-    };
-  }
-
-  // Production: create PayPlus payment page
-  try {
-    const paymentResult = await createPaymentPage({
-      orderId: order.id,
-      orderNumber: order.order_number,
-      amountNIS: totalAgorot / 100,
-      customerEmail,
-      customerName,
-      customerPhone,
-      items: orderItemsData.map((item) => ({
-        name: `${item.productName} – ${item.variantLabel}`,
-        quantity: item.quantity,
-        price: item.unitPriceAgorot / 100,
-      })),
-      successUrl: `${origin}/checkout/success?order=${order.order_number}`,
-      failureUrl: `${origin}/checkout/failure?order=${order.order_number}`,
-      cancelUrl: `${origin}/checkout?canceled=1`,
-      webhookUrl: `${origin}/api/payment/webhook`,
-    });
-
-    // Persist payment page reference
-    await supabase
-      .from("orders")
-      .update({
-        payment_reference: paymentResult.paypageUid,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", order.id);
-
-    return {
-      paymentUrl: paymentResult.paymentPageLink,
-      orderNumber: order.order_number,
-    };
-  } catch (e) {
-    console.error("PayPlus createPaymentPage error:", e);
-    // Order is created but payment initiation failed.
-    // The order stays as pending_payment — customer can retry.
-    return {
-      error: "שגיאה ביצירת דף התשלום. ההזמנה נשמרה במערכת. נא לפנות לתמיכה בטלפון *3722.",
-    };
-  }
+  return {
+    paymentUrl: `${origin}/checkout/success?order=${order.order_number}`,
+    orderNumber: order.order_number,
+  };
 }

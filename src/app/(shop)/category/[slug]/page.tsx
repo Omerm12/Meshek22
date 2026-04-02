@@ -1,12 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { MOCK_CATEGORIES, MOCK_PRODUCTS } from "@/lib/data/mock";
+import { fetchCategories, fetchProductsByCategory } from "@/lib/data/storefront";
 import { CategoryShell } from "@/components/shop/CategoryShell";
 
-// Pre-generate all known category slugs at build time
-export function generateStaticParams() {
-  return MOCK_CATEGORIES.map((c) => ({ slug: c.slug }));
-}
+export const revalidate = 60;
 
 export async function generateMetadata({
   params,
@@ -14,11 +11,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const category = MOCK_CATEGORIES.find((c) => c.slug === slug);
+  const allCategories = await fetchCategories();
+  const category = allCategories.find((c) => c.slug === slug);
   return {
-    title: category
-      ? `${category.name} – ירקות ופירות טריים`
-      : "קטגוריה",
+    title: category ? `${category.name} – ירקות ופירות טריים` : "קטגוריה",
     description: category?.description,
   };
 }
@@ -30,16 +26,19 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
 
-  const category = MOCK_CATEGORIES.find((c) => c.slug === slug);
-  if (!category) notFound();
+  const [allCategories, products] = await Promise.all([
+    fetchCategories(),
+    fetchProductsByCategory(slug),
+  ]);
 
-  const products = MOCK_PRODUCTS.filter((p) => p.categorySlug === slug);
+  const category = allCategories.find((c) => c.slug === slug);
+  if (!category) notFound();
 
   return (
     <CategoryShell
       category={category}
       products={products}
-      allCategories={MOCK_CATEGORIES}
+      allCategories={allCategories}
       currentSlug={slug}
     />
   );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MapPin, Truck, Clock, CheckCircle2, Info } from "lucide-react";
+import { MapPin, Truck, Clock, CheckCircle2, Info, CalendarDays, PackageCheck, RefreshCw, MessageCircle } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { DELIVERY_ZONES } from "@/lib/delivery";
 import { SETTLEMENTS } from "@/lib/data/settlements";
@@ -240,6 +240,90 @@ export default function DeliveryAreasPage() {
           </div>
         </Container>
       </div>
+
+      {/* Delivery policy section */}
+      <div className="py-12 lg:py-16 bg-white border-t border-stone-100">
+        <Container>
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">מדיניות ולוח זמנים</h2>
+            <p className="text-stone-500 mb-8">כל מה שצריך לדעת לפני שמזמינים.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              {[
+                {
+                  icon: CalendarDays,
+                  title: "ימי משלוח",
+                  body: "משלוחים מתבצעים ימים א׳ עד ה׳. אין משלוחים בשישי, שבת ובחגים.",
+                  bg: "#f0fdf4",
+                  iconClass: "text-brand-600",
+                },
+                {
+                  icon: Clock,
+                  title: "שעת הגשת הזמנה",
+                  body: "הזמינו עד 22:00 ותקבלו את המשלוח ביום העסקים הבא. הזמנות שהוגשו לאחר 22:00 יצאו יום לאחר מכן.",
+                  bg: "#e0f2fe",
+                  iconClass: "text-sky-600",
+                },
+                {
+                  icon: PackageCheck,
+                  title: "קבלת המשלוח",
+                  body: "תקבלו SMS בבוקר יום המשלוח עם חלון זמנים משוער. לא הייתם בבית? ניצור איתכם קשר לתיאום מחדש ללא תוספת עלות.",
+                  bg: "#d1fae5",
+                  iconClass: "text-emerald-600",
+                },
+                {
+                  icon: RefreshCw,
+                  title: "מוצר פגום? מחליפים",
+                  body: "מוצר שהגיע פגום, נובל מוקדם מהרגיל, או שאינו לשביעות רצונכם — החלפה מיידית ללא שאלות ב-24 השעות הבאות.",
+                  bg: "#fef3c7",
+                  iconClass: "text-amber-600",
+                },
+              ].map(({ icon: Icon, title, body, bg, iconClass }) => (
+                <div
+                  key={title}
+                  className="bg-stone-50 rounded-2xl border border-stone-100 p-5"
+                >
+                  <div
+                    className="h-9 w-9 rounded-xl flex items-center justify-center mb-3"
+                    style={{ backgroundColor: bg }}
+                  >
+                    <Icon className={`h-5 w-5 ${iconClass}`} aria-hidden="true" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-1 text-sm">{title}</h3>
+                  <p className="text-sm text-stone-500 leading-relaxed">{body}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* FAQ-style notes */}
+            <div className="bg-brand-50 border border-brand-100 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <MessageCircle className="h-4 w-4 text-brand-600 shrink-0" />
+                <h3 className="font-semibold text-brand-800 text-sm">שאלות נפוצות</h3>
+              </div>
+              <ul className="space-y-3 text-sm text-brand-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-brand-500 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span><strong>האם אפשר לבטל הזמנה?</strong> ניתן לבטל עד 6 שעות לפני יציאת המשלוח. צרו קשר בטלפון *3722 או בדוא"ל.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-brand-500 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span><strong>האם ניתן לשנות כתובת?</strong> כן, עד יום לפני המשלוח — בתנאי שהכתובת באותו אזור משלוח.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-brand-500 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span><strong>מה קורה בחגים?</strong> לפני חגים גדולים נשלחת הודעה מוקדמת עם עדכון לוח הזמנים.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-brand-500 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span><strong>מגיעים גם לישובים קטנים?</strong> ברוב המקרים כן. אם לא מצאתם את הישוב שלכם ברשימה, <a href="tel:*3722" className="underline">התקשרו אלינו</a>.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </Container>
+      </div>
+
     </main>
   );
 }

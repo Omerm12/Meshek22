@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
 } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -18,8 +19,8 @@ export interface CartLineItem {
   variantLabel: string;
   priceAgorot: number;
   quantity: number;
-  imageColor?: string;  // css color for placeholder
-  productIcon?: string; // emoji for display
+  imageColor?: string;
+  productIcon?: string;
 }
 
 interface CartState {
@@ -45,6 +46,8 @@ interface CartContextValue extends CartState {
   closeCart: () => void;
   totalItems: number;
   subtotalAgorot: number;
+  /** True once localStorage has been read. Use this to guard redirect-on-empty logic. */
+  isHydrated: boolean;
 }
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
@@ -126,6 +129,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     items: [],
     isOpen: false,
   });
+  // Separate flag — becomes true after the localStorage read completes.
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -137,17 +142,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       // ignore
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
-  // Persist to localStorage on every change
+  // Persist to localStorage on every change (skip before hydration to avoid
+  // overwriting stored cart with the empty initial state)
   useEffect(() => {
+    if (!isHydrated) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
     } catch {
       // ignore
     }
-  }, [state.items]);
+  }, [state.items, isHydrated]);
 
   const addItem = useCallback(
     (item: Omit<CartLineItem, "quantity"> & { quantity?: number }) => {
@@ -190,6 +199,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         closeCart,
         totalItems,
         subtotalAgorot,
+        isHydrated,
       }}
     >
       {children}

@@ -7,7 +7,8 @@
       "Read(//c/Users/omerm/OneDrive/מסמכים/Meshek22/{gsub\\(/[^/]+/**)",
       "Bash(cmd.exe /c \"rmdir /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\"\")",
       "Bash(cmd.exe /c \"rd /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\"\")",
-      "Bash(cmd.exe /c \"del /s /f /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\\\\*.*\"\" >nul 2>&1 && rd /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\" >nul 2>&1 && echo cleaned\")"
+      "Bash(cmd.exe /c \"del /s /f /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\\\\*.*\"\" >nul 2>&1 && rd /s /q \"\"c:\\\\Users\\\\omerm\\\\OneDrive\\\\מסמכים\\\\Meshek22\\\\.next\"\" >nul 2>&1 && echo cleaned\")",
+      "Read(//c/Users/omerm/.claude/projects/c--Projects-Meshek22/**)"
     ]
   }
 }

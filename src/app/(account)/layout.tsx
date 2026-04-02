@@ -16,7 +16,7 @@ export default async function AccountLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirect=/account");
+    redirect("/login?next=/account");
   }
 
   return (
