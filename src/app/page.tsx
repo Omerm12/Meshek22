@@ -1,4 +1,10 @@
 import { Suspense } from "react";
+
+// ISR: rebuild the homepage at most once per 60 seconds.
+// FeaturedCategories and BestSellers now use createPublicClient() (no cookies()),
+// so Next.js can actually apply this cache — previously the cookies() call was
+// forcing the page into dynamic rendering on every request.
+export const revalidate = 60;
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/home/HeroSection";

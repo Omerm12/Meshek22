@@ -5,7 +5,7 @@ import { CartProvider } from "@/store/cart";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { UserProvider } from "@/store/user";
 import { AuthModalProvider } from "@/store/auth-modal";
-import { AuthModal } from "@/components/auth/AuthModal";
+import { AuthModalLoader } from "@/components/auth/AuthModalLoader";
 
 const rubik = Rubik({
   subsets: ["hebrew", "latin"],
@@ -60,7 +60,7 @@ export default function RootLayout({
             <CartProvider>
               {children}
               <CartDrawer />
-              <AuthModal />
+              <AuthModalLoader />
             </CartProvider>
           </AuthModalProvider>
         </UserProvider>
