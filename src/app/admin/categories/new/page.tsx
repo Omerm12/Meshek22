@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/auth";
+import { createAdminClient } from "@/lib/supabase/server";
 import { CategoryForm } from "@/components/admin/categories/CategoryForm";
 import { createCategory } from "@/app/admin/categories/actions";
 
@@ -9,6 +10,15 @@ export const metadata: Metadata = { title: "קטגוריה חדשה" };
 
 export default async function NewCategoryPage() {
   await requireAdmin();
+
+  const supabase = await createAdminClient();
+  // Only top-level categories can be parents
+  const { data: topLevelCategories } = await supabase
+    .from("categories")
+    .select("id, name")
+    .is("parent_id", null)
+    .order("sort_order", { ascending: true })
+    .order("name",       { ascending: true });
 
   return (
     <div>
@@ -27,7 +37,11 @@ export default async function NewCategoryPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 max-w-xl">
-        <CategoryForm action={createCategory} submitLabel="צרו קטגוריה" />
+        <CategoryForm
+          action={createCategory}
+          submitLabel="צרו קטגוריה"
+          parentCategories={topLevelCategories ?? []}
+        />
       </div>
     </div>
   );

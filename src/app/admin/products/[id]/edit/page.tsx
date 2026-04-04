@@ -8,6 +8,7 @@ import { ProductForm } from "@/components/admin/products/ProductForm";
 import { updateProduct } from "@/app/admin/products/actions";
 import type { ProductFormData, VariantFormData } from "@/lib/validations/admin-product";
 import { VARIANT_UNITS } from "@/lib/validations/admin-product";
+import type { CategoryOption } from "@/components/admin/products/ProductForm";
 
 export const metadata: Metadata = { title: "עריכת מוצר" };
 
@@ -38,7 +39,7 @@ export default async function EditProductPage({
         .single(),
       supabase
         .from("categories")
-        .select("id, name")
+        .select("id, name, parent_id")
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .order("name",       { ascending: true }),
@@ -46,7 +47,6 @@ export default async function EditProductPage({
 
   if (productError || !product || catError) notFound();
 
-  // Convert DB → form values (agorot → shekels for price fields)
   const rawVariants = Array.isArray(product.product_variants)
     ? product.product_variants
     : [];
@@ -105,7 +105,7 @@ export default async function EditProductPage({
           defaultValues={defaultValues}
           action={actionWithId}
           submitLabel="שמרו שינויים"
-          categories={categories ?? []}
+          categories={(categories ?? []) as CategoryOption[]}
         />
       </div>
     </div>

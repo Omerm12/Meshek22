@@ -56,7 +56,6 @@ const COMMITMENTS = [
 export default function AboutPage() {
   return (
     <main className="flex-1">
-
       {/* Hero */}
       <div className="bg-gradient-to-b from-brand-700 to-brand-600 text-white py-16 lg:py-24">
         <Container>
@@ -69,9 +68,8 @@ export default function AboutPage() {
               ירקות ופירות כמו שצריך להיות
             </h1>
             <p className="text-brand-100 text-lg leading-relaxed">
-              משק 22 הוקם מתוך תסכול פשוט: למה קשה כל כך לקנות ירקות טריים
-              מבלי לנסוע לשוק, להמר על מה שיהיה בסופר, או לקבל אריזה
-              מוזנחת מהמשלוח?
+              משק 22 הוקם מתוך תסכול פשוט: למה קשה כל כך לקנות ירקות טריים מבלי
+              לנסוע לשוק, להמר על מה שיהיה בסופר, או לקבל אריזה מוזנחת מהמשלוח?
             </p>
           </div>
         </Container>
@@ -84,10 +82,12 @@ export default function AboutPage() {
             {/* Story text */}
             <div className="space-y-6 text-stone-600 leading-relaxed">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">מי אנחנו</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                  מי אנחנו
+                </h2>
                 <p>
-                  אנחנו משפחת לוי מגדרה. גדלנו על חקלאות, ידענו תמיד מה זה
-                  ירק טרי אמיתי. לפני כמה שנים החלטנו להפסיק לקנות ירקות בסופר
+                  אנחנו משפחת לוי מגדרה. גדלנו על חקלאות, ידענו תמיד מה זה ירק
+                  טרי אמיתי. לפני כמה שנים החלטנו להפסיק לקנות ירקות בסופר
                   ולחזור לבסיס – לקנות ישירות מהשדה.
                 </p>
                 <p className="mt-3">
@@ -102,13 +102,13 @@ export default function AboutPage() {
                   למה בחרנו לעשות את זה
                 </h2>
                 <p>
-                  כי האוכל שאנחנו אוכלים חשוב. כי החקלאי שמגדל את הגזר שלכם
-                  ראוי שתדעו את שמו. וכי הנסיעה לשוק לא תמיד מתאפשרת –
-                  ולמה שתצטרכו לוותר על טריות בגלל זה?
+                  כי האוכל שאנחנו אוכלים חשוב. כי החקלאי שמגדל את הגזר שלכם ראוי
+                  שתדעו את שמו. וכי הנסיעה לשוק לא תמיד מתאפשרת – ולמה שתצטרכו
+                  לוותר על טריות בגלל זה?
                 </p>
                 <p className="mt-3">
-                  המטרה שלנו פשוטה: לחבר בין האדמה לבין השולחן שלכם,
-                  בצורה ישירה, הגונה וטעימה.
+                  המטרה שלנו פשוטה: לחבר בין האדמה לבין השולחן שלכם, בצורה
+                  ישירה, הגונה וטעימה.
                 </p>
               </div>
             </div>
@@ -125,7 +125,9 @@ export default function AboutPage() {
                   key={label}
                   className="bg-brand-50 rounded-2xl border border-brand-100 p-5 text-center"
                 >
-                  <p className="text-3xl font-bold text-brand-700 mb-1">{value}</p>
+                  <p className="text-3xl font-bold text-brand-700 mb-1">
+                    {value}
+                  </p>
                   <p className="text-sm text-stone-500">{label}</p>
                 </div>
               ))}
@@ -135,10 +137,15 @@ export default function AboutPage() {
       </div>
 
       {/* Values */}
-      <div className="py-14 lg:py-20" style={{ backgroundColor: "var(--color-surface)" }}>
+      <div
+        className="py-14 lg:py-20"
+        style={{ backgroundColor: "var(--color-surface)" }}
+      >
         <Container>
           <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">מה מייחד את משק 22</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              מה מייחד את משק 22
+            </h2>
             <p className="text-stone-500 max-w-xl mx-auto">
               לא הכל שווה. זו הסיבה שבחרנו לבנות עסק אחרת.
             </p>
@@ -149,9 +156,22 @@ export default function AboutPage() {
                 key={title}
                 className="bg-white rounded-2xl border border-stone-100 p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
               >
-                <div className={`h-10 w-10 rounded-xl ${color} bg-opacity-20 flex items-center justify-center mb-4`}
-                     style={{ backgroundColor: color.includes("emerald") ? "#d1fae5" : color.includes("sky") ? "#e0f2fe" : color.includes("rose") ? "#ffe4e6" : "#fef3c7" }}>
-                  <Icon className={`h-5 w-5 ${color.split(" ")[1]}`} aria-hidden="true" />
+                <div
+                  className={`h-10 w-10 rounded-xl ${color} bg-opacity-20 flex items-center justify-center mb-4`}
+                  style={{
+                    backgroundColor: color.includes("emerald")
+                      ? "#d1fae5"
+                      : color.includes("sky")
+                        ? "#e0f2fe"
+                        : color.includes("rose")
+                          ? "#ffe4e6"
+                          : "#fef3c7",
+                  }}
+                >
+                  <Icon
+                    className={`h-5 w-5 ${color.split(" ")[1]}`}
+                    aria-hidden="true"
+                  />
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
                 <p className="text-sm text-stone-500 leading-relaxed">{desc}</p>
@@ -175,7 +195,10 @@ export default function AboutPage() {
               </p>
               <ul className="space-y-3">
                 {COMMITMENTS.map((c) => (
-                  <li key={c} className="flex items-start gap-3 text-sm text-stone-700">
+                  <li
+                    key={c}
+                    className="flex items-start gap-3 text-sm text-stone-700"
+                  >
                     <CheckCircle2
                       className="h-5 w-5 text-brand-500 shrink-0 mt-0.5"
                       aria-hidden="true"
@@ -188,11 +211,14 @@ export default function AboutPage() {
 
             {/* CTA card */}
             <div className="bg-brand-600 rounded-2xl p-8 text-white">
-              <Leaf className="h-10 w-10 text-brand-200 mb-5" aria-hidden="true" />
+              <Leaf
+                className="h-10 w-10 text-brand-200 mb-5"
+                aria-hidden="true"
+              />
               <h3 className="text-2xl font-bold mb-3">מוכנים לנסות?</h3>
               <p className="text-brand-100 mb-6 leading-relaxed">
-                הצטרפו לאלפי לקוחות שכבר גילו שירקות טריים יכולים להגיע
-                לביתם – בלי סופר, בלי תורים, בלי ויתורים.
+                הצטרפו לאלפי לקוחות שכבר גילו שירקות טריים יכולים להגיע לביתם –
+                בלי סופר, בלי תורים, בלי ויתורים.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
@@ -216,7 +242,10 @@ export default function AboutPage() {
       </div>
 
       {/* Contact strip */}
-      <div className="py-10 border-t border-stone-100" style={{ backgroundColor: "var(--color-surface)" }}>
+      <div
+        className="py-10 border-t border-stone-100"
+        style={{ backgroundColor: "var(--color-surface)" }}
+      >
         <Container>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-stone-500">
             <span className="font-medium text-gray-900">יש לכם שאלה?</span>

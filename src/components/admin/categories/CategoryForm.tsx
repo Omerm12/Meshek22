@@ -8,12 +8,19 @@ import { categorySchema, type CategoryFormData } from "@/lib/validations/admin-c
 import { slugify } from "@/lib/utils/slugify";
 import type { ActionResult } from "@/app/admin/categories/actions";
 
+interface ParentOption {
+  id:   string;
+  name: string;
+}
+
 interface CategoryFormProps {
   /** Pre-filled values for edit mode. Omit for create mode. */
   defaultValues?: Partial<CategoryFormData>;
   /** The server action to call on submit. */
   action: (formData: FormData) => Promise<ActionResult>;
   submitLabel: string;
+  /** Top-level categories available as parent options. */
+  parentCategories: ParentOption[];
 }
 
 function Field({
@@ -50,11 +57,15 @@ const inputClass =
 const errorInputClass =
   "w-full h-10 bg-white border border-red-400 rounded-xl px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition-shadow";
 
-export function CategoryForm({ defaultValues, action, submitLabel }: CategoryFormProps) {
+export function CategoryForm({
+  defaultValues,
+  action,
+  submitLabel,
+  parentCategories,
+}: CategoryFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(
-    // In edit mode the slug is pre-set; treat it as manually set so auto-gen doesn't overwrite
     !!defaultValues?.slug
   );
 
@@ -73,6 +84,7 @@ export function CategoryForm({ defaultValues, action, submitLabel }: CategoryFor
       image_url:   defaultValues?.image_url   ?? "",
       sort_order:  defaultValues?.sort_order  ?? 0,
       is_active:   defaultValues?.is_active   ?? true,
+      parent_id:   defaultValues?.parent_id   ?? "",
     },
   });
 
@@ -93,25 +105,45 @@ export function CategoryForm({ defaultValues, action, submitLabel }: CategoryFor
     fd.set("image_url",   data.image_url ?? "");
     fd.set("sort_order",  String(data.sort_order));
     fd.set("is_active",   String(data.is_active));
+    fd.set("parent_id",   data.parent_id ?? "");
 
     startTransition(async () => {
       const result = await action(fd);
-      // If result returns (i.e., no redirect), it means an error occurred.
       if (result && !result.success) {
         setServerError(result.error);
       }
-      // On success, the server action calls redirect() — no need to handle here.
     });
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+      {/* Parent category */}
+      <Field
+        label="קטגוריה ראשית (אב)"
+        id="parent_id"
+        hint="השאירו ריק כדי ליצור קטגוריה ראשית. בחרו קטגוריה אב כדי ליצור תת-קטגוריה."
+        error={errors.parent_id?.message}
+      >
+        <select
+          id="parent_id"
+          {...register("parent_id")}
+          className={errors.parent_id ? errorInputClass : inputClass}
+        >
+          <option value="">— קטגוריה ראשית (ללא אב) —</option>
+          {parentCategories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
       {/* Name */}
       <Field label="שם הקטגוריה" id="name" required error={errors.name?.message}>
         <input
           id="name"
           type="text"
-          placeholder="ירקות טריים"
+          placeholder="ירקות שורש"
           {...register("name")}
           className={errors.name ? errorInputClass : inputClass}
         />
@@ -122,14 +154,14 @@ export function CategoryForm({ defaultValues, action, submitLabel }: CategoryFor
         label="Slug (מזהה ב-URL)"
         id="slug"
         required
-        hint="מוצג ב-URL: /category/slug — ניתן לשנות, אותיות לועזיות, ספרות ומקפים בלבד"
+        hint="מוצג ב-URL — ניתן לשנות, אותיות לועזיות, ספרות ומקפים בלבד"
         error={errors.slug?.message}
       >
         <input
           id="slug"
           type="text"
           dir="ltr"
-          placeholder="yerakot"
+          placeholder="root-vegetables"
           {...register("slug", {
             onChange: () => setSlugManuallyEdited(true),
           })}
@@ -169,7 +201,7 @@ export function CategoryForm({ defaultValues, action, submitLabel }: CategoryFor
         />
       </Field>
 
-      {/* Sort order + Is active — side by side */}
+      {/* Sort order + Is active */}
       <div className="grid grid-cols-2 gap-4">
         <Field label="סדר מיון" id="sort_order" required error={errors.sort_order?.message}>
           <input

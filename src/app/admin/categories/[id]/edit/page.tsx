@@ -19,15 +19,27 @@ export default async function EditCategoryPage({
   const { id } = await params;
 
   const supabase = await createAdminClient();
-  const { data: category, error } = await supabase
-    .from("categories")
-    .select("id, name, slug, description, image_url, sort_order, is_active")
-    .eq("id", id)
-    .single();
+
+  const [{ data: category, error }, { data: allTopLevel }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, slug, description, image_url, sort_order, is_active, parent_id")
+      .eq("id", id)
+      .single(),
+    // Only top-level categories can be parents; exclude self
+    supabase
+      .from("categories")
+      .select("id, name")
+      .is("parent_id", null)
+      .order("sort_order", { ascending: true })
+      .order("name",       { ascending: true }),
+  ]);
 
   if (error || !category) notFound();
 
-  // Bind the id into the action so the form only needs to call action(fd)
+  // Exclude self from parent options (prevent self-parenting)
+  const parentCategories = (allTopLevel ?? []).filter((c) => c.id !== id);
+
   const actionWithId = updateCategory.bind(null, category.id);
 
   return (
@@ -58,9 +70,11 @@ export default async function EditCategoryPage({
             image_url:   category.image_url ?? "",
             sort_order:  category.sort_order,
             is_active:   category.is_active,
+            parent_id:   category.parent_id ?? "",
           }}
           action={actionWithId}
           submitLabel="שמרו שינויים"
+          parentCategories={parentCategories}
         />
       </div>
     </div>

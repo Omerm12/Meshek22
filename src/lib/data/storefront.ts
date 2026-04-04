@@ -5,41 +5,27 @@
  * so that Next.js can ISR-cache routes that call them. The SSR (cookie-aware)
  * client is intentionally NOT used here because catalog data is fully public
  * and does not change per user.
+ *
+ * Hierarchical category helpers:
+ *   fetchTopLevelCategories()             – categories with no parent
+ *   fetchChildCategoriesByParentSlug()    – direct children of a parent
+ *   fetchCategoryTree()                   – full parent→children tree
+ *   fetchProductsByParentCategorySlug()   – products across all child categories
  */
 
 import { createPublicClient } from "@/lib/supabase/public";
 import { getCategoryDisplay, getProductDisplay } from "@/lib/product-display";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
 
-// ─── Categories ───────────────────────────────────────────────────────────────
+// ─── Internal row types ────────────────────────────────────────────────────────
 
-export async function fetchCategories(): Promise<MockCategory[]> {
-  const supabase = createPublicClient();
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, slug, description")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-
-  if (error || !data) return [];
-
-  return data.map((cat) => {
-    const display = getCategoryDisplay(cat.slug);
-    return {
-      id: cat.id,
-      name: cat.name,
-      slug: cat.slug,
-      description: cat.description ?? "",
-      icon: display.icon,
-      color: display.color,
-      textColor: display.textColor,
-      count: 0,
-    };
-  });
-}
-
-// ─── Products ─────────────────────────────────────────────────────────────────
+type CategoryRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  parent_id: string | null;
+};
 
 type VariantRow = {
   id: string;
@@ -63,8 +49,25 @@ type ProductRow = {
   product_variants: VariantRow[];
 };
 
+// ─── Shared helpers ────────────────────────────────────────────────────────────
+
+function toMockCategory(row: CategoryRow): MockCategory {
+  const display = getCategoryDisplay(row.slug);
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description ?? "",
+    icon: display.icon,
+    color: display.color,
+    textColor: display.textColor,
+    count: 0,
+    parentId: row.parent_id,
+  };
+}
+
 function toMockProduct(row: ProductRow): MockProduct {
-  const catSlug = row.categories?.slug ?? "yerakot";
+  const catSlug = row.categories?.slug ?? "vegetables";
   const display = getProductDisplay(row.slug);
 
   const variants: MockVariant[] = row.product_variants
@@ -103,15 +106,127 @@ const PRODUCT_SELECT = `
   product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order )
 `;
 
+// ─── Category queries ──────────────────────────────────────────────────────────
+
 /**
- * Fetch all active products for a given category slug.
- *
- * Previously made two sequential Supabase round-trips:
- *   1. resolve slug → category id
- *   2. fetch products by category id
- *
- * Now uses a single query with !inner join + embedded filter, saving ~300-500ms
- * per request (one fewer network round-trip to Supabase).
+ * All active categories (flat list, includes parent_id).
+ * Used for backward-compat storefront category tabs.
+ */
+export async function fetchCategories(): Promise<MockCategory[]> {
+  const supabase = createPublicClient();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, slug, description, parent_id")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+
+  return (data as CategoryRow[]).map(toMockCategory);
+}
+
+/**
+ * Only top-level categories (parent_id IS NULL).
+ */
+export async function fetchTopLevelCategories(): Promise<MockCategory[]> {
+  const supabase = createPublicClient();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, slug, description, parent_id")
+    .eq("is_active", true)
+    .is("parent_id", null)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+
+  return (data as CategoryRow[]).map(toMockCategory);
+}
+
+/**
+ * Direct child categories of a parent identified by slug.
+ */
+export async function fetchChildCategoriesByParentSlug(
+  parentSlug: string
+): Promise<MockCategory[]> {
+  const supabase = createPublicClient();
+
+  // 1. Resolve parent slug → id
+  const { data: parent, error: parentErr } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", parentSlug)
+    .eq("is_active", true)
+    .single();
+
+  if (parentErr || !parent) return [];
+
+  // 2. Fetch children
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, slug, description, parent_id")
+    .eq("parent_id", parent.id)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+
+  return (data as CategoryRow[]).map(toMockCategory);
+}
+
+/**
+ * Full category tree: each top-level category contains a `children` array.
+ */
+export async function fetchCategoryTree(): Promise<MockCategory[]> {
+  const supabase = createPublicClient();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, slug, description, parent_id")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+
+  const all = (data as CategoryRow[]).map(toMockCategory);
+  const byId = new Map(all.map((c) => [c.id, c]));
+
+  const roots: MockCategory[] = [];
+
+  for (const cat of all) {
+    if (!cat.parentId) {
+      cat.children = [];
+      roots.push(cat);
+    } else {
+      const parent = byId.get(cat.parentId);
+      if (parent) {
+        parent.children = parent.children ?? [];
+        parent.children.push(cat);
+      }
+    }
+  }
+
+  return roots;
+}
+
+/**
+ * All active category slugs — used for generateStaticParams.
+ */
+export async function fetchAllCategorySlugs(): Promise<string[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("categories")
+    .select("slug")
+    .eq("is_active", true);
+  return (data ?? []).map((r) => r.slug);
+}
+
+// ─── Product queries ───────────────────────────────────────────────────────────
+
+/**
+ * All active products for a given leaf category slug.
+ * Uses !inner join so unmatched category rows are excluded.
  */
 export async function fetchProductsByCategory(
   categorySlug: string
@@ -126,6 +241,49 @@ export async function fetchProductsByCategory(
       product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order )
     `)
     .eq("categories.slug", categorySlug)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data) return [];
+
+  return (data as unknown as ProductRow[]).map(toMockProduct);
+}
+
+/**
+ * All active products across every child category of a parent.
+ * Two round-trips: resolve children IDs, then fetch products.
+ */
+export async function fetchProductsByParentCategorySlug(
+  parentSlug: string
+): Promise<MockProduct[]> {
+  const supabase = createPublicClient();
+
+  // 1. Resolve parent slug → id
+  const { data: parent, error: parentErr } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", parentSlug)
+    .eq("is_active", true)
+    .single();
+
+  if (parentErr || !parent) return [];
+
+  // 2. Fetch child category IDs
+  const { data: children, error: childErr } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("parent_id", parent.id)
+    .eq("is_active", true);
+
+  if (childErr || !children || children.length === 0) return [];
+
+  const childIds = children.map((c) => c.id);
+
+  // 3. Fetch products in those child categories
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .in("category_id", childIds)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
@@ -155,7 +313,7 @@ export async function fetchProductBySlug(
 }
 
 /**
- * Fetch featured products (for homepage BestSellers).
+ * Featured products for homepage BestSellers section.
  */
 export async function fetchFeaturedProducts(
   limit = 8
@@ -176,24 +334,12 @@ export async function fetchFeaturedProducts(
 }
 
 /**
- * Fetch all active product slugs (for generateStaticParams).
+ * All active product slugs — for generateStaticParams.
  */
 export async function fetchAllProductSlugs(): Promise<string[]> {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from("products")
-    .select("slug")
-    .eq("is_active", true);
-  return (data ?? []).map((r) => r.slug);
-}
-
-/**
- * Fetch all active category slugs (for generateStaticParams).
- */
-export async function fetchAllCategorySlugs(): Promise<string[]> {
-  const supabase = createPublicClient();
-  const { data } = await supabase
-    .from("categories")
     .select("slug")
     .eq("is_active", true);
   return (data ?? []).map((r) => r.slug);

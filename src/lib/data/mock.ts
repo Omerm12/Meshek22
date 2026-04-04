@@ -15,6 +15,8 @@ export interface MockCategory {
   color: string;      // Tailwind bg class
   textColor: string;
   count: number;
+  parentId: string | null;
+  children?: MockCategory[];
 }
 
 export interface MockVariant {

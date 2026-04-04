@@ -2,10 +2,12 @@ import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { CategoryCard } from "@/components/shop/CategoryCard";
-import { fetchCategories } from "@/lib/data/storefront";
+import { fetchTopLevelCategories } from "@/lib/data/storefront";
 
 export async function FeaturedCategories() {
-  const categories = await fetchCategories();
+  // Only show top-level parent categories (vegetables, fruits) on the homepage.
+  // Child sub-categories are browsed from within their parent page.
+  const categories = await fetchTopLevelCategories();
 
   if (categories.length === 0) return null;
 
@@ -28,7 +30,7 @@ export async function FeaturedCategories() {
             </div>
           </Reveal>
           <a
-            href="/category/yerakot"
+            href="/vegetables"
             className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
           >
             לכל הקטגוריות
@@ -36,9 +38,9 @@ export async function FeaturedCategories() {
           </a>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
           {categories.map((cat, i) => (
-            <Reveal key={cat.id} delay={i * 50}>
+            <Reveal key={cat.id} delay={i * 60}>
               <CategoryCard category={cat} />
             </Reveal>
           ))}
@@ -46,7 +48,7 @@ export async function FeaturedCategories() {
 
         <div className="mt-5 sm:hidden text-center">
           <a
-            href="/category/yerakot"
+            href="/vegetables"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700"
           >
             לכל הקטגוריות

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { MapPin, Truck, Clock, CheckCircle2, Info, CalendarDays, PackageCheck, RefreshCw, MessageCircle } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { DELIVERY_ZONES } from "@/lib/delivery";
-import { SETTLEMENTS } from "@/lib/data/settlements";
+import { createAdminClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/utils/money";
+import type { DeliveryZone } from "@/lib/delivery";
 
 export const metadata: Metadata = {
   title: "אזורי משלוח | משק 22",
@@ -11,24 +11,40 @@ export const metadata: Metadata = {
     "אנחנו מגיעים לעשרות יישובים ברחבי ישראל. בדקו האם אנחנו מגיעים לאזור שלכם, מה דמי המשלוח ומהי ההזמנה המינימלית.",
 };
 
-// Group settlements by zone slug
-const SETTLEMENTS_BY_ZONE: Record<string, string[]> = {};
-for (const s of SETTLEMENTS) {
-  if (!SETTLEMENTS_BY_ZONE[s.zone]) SETTLEMENTS_BY_ZONE[s.zone] = [];
-  SETTLEMENTS_BY_ZONE[s.zone].push(s.name);
-}
-
 const ZONE_ICONS: Record<string, string> = {
-  "zone-center":    "🏙️",
-  "zone-gush-dan":  "🌆",
-  "zone-central":   "🌄",
-  "zone-jerusalem": "🕌",
-  "zone-north":     "⛰️",
-  "zone-south":     "🌵",
+  "גוש דן מרכזי":     "🌆",
+  "גוש דן רחב":       "🏙️",
+  "מרכז הארץ":        "🌄",
+  "ירושלים והסביבה":  "🕌",
+  "צפון":             "⛰️",
+  "דרום":             "🌵",
 };
 
-export default function DeliveryAreasPage() {
-  const zones = Object.values(DELIVERY_ZONES);
+export default async function DeliveryAreasPage() {
+  const adminClient = await createAdminClient();
+  const [zonesRes, settlementsRes] = await Promise.all([
+    adminClient
+      .from("delivery_zones")
+      .select("id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot, estimated_delivery_hours")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    adminClient
+      .from("settlements")
+      .select("name, delivery_zone_id")
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+  ]);
+
+  const zones = (zonesRes.data ?? []) as DeliveryZone[];
+  const allSettlements = (settlementsRes.data ?? []) as { name: string; delivery_zone_id: string | null }[];
+
+  // Group settlement names by zone ID
+  const settlementsByZone: Record<string, string[]> = {};
+  for (const s of allSettlements) {
+    if (!s.delivery_zone_id) continue;
+    if (!settlementsByZone[s.delivery_zone_id]) settlementsByZone[s.delivery_zone_id] = [];
+    settlementsByZone[s.delivery_zone_id].push(s.name);
+  }
 
   return (
     <main className="flex-1">
@@ -82,18 +98,21 @@ export default function DeliveryAreasPage() {
 
           <div className="space-y-4">
             {zones.map((zone) => {
-              const settlements = SETTLEMENTS_BY_ZONE[zone.slug] ?? [];
-              const isFree = zone.baseFeeAgorot === 0;
+              const settlements = settlementsByZone[zone.id] ?? [];
+              const isFree = zone.delivery_fee_agorot === 0;
+              const estimatedLabel = zone.estimated_delivery_hours
+                ? `עד ${zone.estimated_delivery_hours} שעות`
+                : "בתיאום";
 
               return (
                 <details
-                  key={zone.slug}
+                  key={zone.id}
                   className="group bg-white rounded-2xl border border-stone-100 overflow-hidden hover:border-brand-200 transition-colors"
                 >
                   <summary className="flex items-center gap-4 p-5 cursor-pointer list-none select-none">
                     {/* Zone icon */}
                     <div className="h-11 w-11 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-xl shrink-0">
-                      {ZONE_ICONS[zone.slug] ?? "📍"}
+                      {ZONE_ICONS[zone.name] ?? "📍"}
                     </div>
 
                     {/* Name + fee */}
@@ -107,7 +126,7 @@ export default function DeliveryAreasPage() {
                         )}
                       </div>
                       <p className="text-xs text-stone-400 mt-0.5">
-                        {settlements.length} יישובים · {zone.estimatedDays}
+                        {settlements.length} יישובים · {estimatedLabel}
                       </p>
                     </div>
 
@@ -115,20 +134,20 @@ export default function DeliveryAreasPage() {
                     <div className="hidden sm:flex items-center gap-6 shrink-0 text-sm">
                       <div className="text-end">
                         <p className="font-bold text-gray-900">
-                          {isFree ? "חינם" : formatPrice(zone.baseFeeAgorot)}
+                          {isFree ? "חינם" : formatPrice(zone.delivery_fee_agorot)}
                         </p>
                         <p className="text-xs text-stone-400">דמי משלוח</p>
                       </div>
                       <div className="text-end">
                         <p className="font-bold text-gray-900">
-                          {formatPrice(zone.minOrderAgorot)}
+                          {formatPrice(zone.min_order_agorot)}
                         </p>
                         <p className="text-xs text-stone-400">מינימום</p>
                       </div>
-                      {zone.freeThrsholdAgorot && (
+                      {zone.free_delivery_threshold_agorot && (
                         <div className="text-end">
                           <p className="font-bold text-emerald-600">
-                            {formatPrice(zone.freeThrsholdAgorot)}
+                            {formatPrice(zone.free_delivery_threshold_agorot)}
                           </p>
                           <p className="text-xs text-stone-400">לחינם</p>
                         </div>
@@ -154,20 +173,20 @@ export default function DeliveryAreasPage() {
                     <div className="sm:hidden grid grid-cols-3 gap-3 mb-4">
                       <div className="bg-stone-50 rounded-xl p-3 text-center">
                         <p className="font-bold text-gray-900 text-sm">
-                          {isFree ? "חינם" : formatPrice(zone.baseFeeAgorot)}
+                          {isFree ? "חינם" : formatPrice(zone.delivery_fee_agorot)}
                         </p>
                         <p className="text-xs text-stone-400">משלוח</p>
                       </div>
                       <div className="bg-stone-50 rounded-xl p-3 text-center">
                         <p className="font-bold text-gray-900 text-sm">
-                          {formatPrice(zone.minOrderAgorot)}
+                          {formatPrice(zone.min_order_agorot)}
                         </p>
                         <p className="text-xs text-stone-400">מינימום</p>
                       </div>
-                      {zone.freeThrsholdAgorot ? (
+                      {zone.free_delivery_threshold_agorot ? (
                         <div className="bg-emerald-50 rounded-xl p-3 text-center">
                           <p className="font-bold text-emerald-600 text-sm">
-                            {formatPrice(zone.freeThrsholdAgorot)}
+                            {formatPrice(zone.free_delivery_threshold_agorot)}
                           </p>
                           <p className="text-xs text-stone-400">לחינם</p>
                         </div>
@@ -183,15 +202,15 @@ export default function DeliveryAreasPage() {
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="inline-flex items-center gap-1.5 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded-full px-3 py-1">
                         <Clock className="h-3 w-3 text-brand-500" />
-                        {zone.estimatedDays}
+                        {estimatedLabel}
                       </span>
-                      {!isFree && zone.freeThrsholdAgorot && (
+                      {!isFree && zone.free_delivery_threshold_agorot && (
                         <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
                           <Truck className="h-3 w-3" />
-                          משלוח חינם מ-{formatPrice(zone.freeThrsholdAgorot)}
+                          משלוח חינם מ-{formatPrice(zone.free_delivery_threshold_agorot)}
                         </span>
                       )}
-                      {!zone.freeThrsholdAgorot && (
+                      {!zone.free_delivery_threshold_agorot && (
                         <span className="inline-flex items-center gap-1.5 text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-full px-3 py-1">
                           <Info className="h-3 w-3" />
                           אין אפשרות למשלוח חינם באזור זה

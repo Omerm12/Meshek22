@@ -29,6 +29,8 @@ export const categorySchema = z.object({
     .min(0, "סדר המיון חייב להיות 0 או יותר")
     .max(9999),
   is_active: z.boolean(),
+  /** UUID of the parent category. Empty string treated as null (no parent). */
+  parent_id: z.string().uuid("מזהה קטגוריית אב אינו תקין").optional().or(z.literal("")),
 });
 
 export type CategoryFormData = z.infer<typeof categorySchema>;

@@ -108,7 +108,6 @@ export type ActionResult = { success: true } | { success: false; error: string }
 
 const VALID_ORDER_STATUSES = [
   "pending_payment",
-  "paid",
   "confirmed",
   "preparing",
   "out_for_delivery",
@@ -140,6 +139,11 @@ export async function updateOrderStatuses(
   }
   if (!paymentStatus || !VALID_PAYMENT_STATUSES.includes(paymentStatus as ValidPaymentStatus)) {
     return { success: false, error: "סטטוס תשלום לא תקין" };
+  }
+
+  // Business rule: cannot confirm an order unless payment is marked as paid.
+  if (orderStatus === "confirmed" && paymentStatus !== "paid") {
+    return { success: false, error: "לא ניתן לאשר הזמנה ללא אישור תשלום" };
   }
 
   const supabase = await createAdminClient();

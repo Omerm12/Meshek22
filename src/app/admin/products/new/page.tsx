@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 import { createProduct } from "@/app/admin/products/actions";
+import type { CategoryOption } from "@/components/admin/products/ProductForm";
 
 export const metadata: Metadata = { title: "מוצר חדש" };
 
@@ -15,7 +16,7 @@ export default async function NewProductPage() {
   const supabase = await createAdminClient();
   const { data: categories, error } = await supabase
     .from("categories")
-    .select("id, name")
+    .select("id, name, parent_id")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("name",       { ascending: true });
@@ -42,7 +43,7 @@ export default async function NewProductPage() {
         <ProductForm
           action={createProduct}
           submitLabel="צרו מוצר"
-          categories={categories ?? []}
+          categories={(categories ?? []) as CategoryOption[]}
         />
       </div>
     </div>

@@ -15,13 +15,15 @@ export type ActionResult =
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function parseForm(formData: FormData) {
+  const rawParentId = (formData.get("parent_id") as string | null) ?? "";
   return categorySchema.safeParse({
     name:        formData.get("name"),
     slug:        formData.get("slug"),
     description: formData.get("description") ?? "",
     image_url:   formData.get("image_url") ?? "",
-    sort_order:  formData.get("sort_order"),
+    sort_order:  Number(formData.get("sort_order")),
     is_active:   formData.get("is_active") === "true",
+    parent_id:   rawParentId,
   });
 }
 
@@ -30,14 +32,14 @@ function parseForm(formData: FormData) {
 export async function createCategory(
   formData: FormData
 ): Promise<ActionResult> {
-  // Every action re-verifies admin status server-side.
-  // A non-admin can never reach this code path, even by crafting a direct POST.
   await requireAdmin();
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
+
+  const parentId = parsed.data.parent_id || null;
 
   const supabase = await createAdminClient();
   const { error } = await supabase.from("categories").insert({
@@ -47,6 +49,7 @@ export async function createCategory(
     image_url:   parsed.data.image_url || null,
     sort_order:  parsed.data.sort_order,
     is_active:   parsed.data.is_active,
+    parent_id:   parentId,
   });
 
   if (error) {
@@ -57,8 +60,10 @@ export async function createCategory(
   }
 
   revalidatePath("/admin/categories");
-  revalidatePath("/");              // storefront homepage (ISR)
-  revalidatePath("/category/[slug]", "layout"); // storefront category pages
+  revalidatePath("/");
+  revalidatePath("/category/[slug]", "layout");
+  revalidatePath("/vegetables");
+  revalidatePath("/fruits");
 
   redirect("/admin/categories");
 }
@@ -76,6 +81,12 @@ export async function updateCategory(
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
+  // Prevent self-parenting
+  const parentId = parsed.data.parent_id || null;
+  if (parentId === id) {
+    return { success: false, error: "קטגוריה לא יכולה להיות קטגוריית האב של עצמה." };
+  }
+
   const supabase = await createAdminClient();
   const { error } = await supabase
     .from("categories")
@@ -86,6 +97,7 @@ export async function updateCategory(
       image_url:   parsed.data.image_url || null,
       sort_order:  parsed.data.sort_order,
       is_active:   parsed.data.is_active,
+      parent_id:   parentId,
     })
     .eq("id", id);
 
@@ -99,6 +111,8 @@ export async function updateCategory(
   revalidatePath("/admin/categories");
   revalidatePath("/");
   revalidatePath("/category/[slug]", "layout");
+  revalidatePath("/vegetables");
+  revalidatePath("/fruits");
 
   redirect("/admin/categories");
 }
@@ -109,10 +123,24 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   await requireAdmin();
 
   const supabase = await createAdminClient();
+
+  // Prevent deleting a parent that still has children
+  const { count: childCount } = await supabase
+    .from("categories")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_id", id);
+
+  if (childCount && childCount > 0) {
+    return {
+      success: false,
+      error:
+        "לא ניתן למחוק קטגוריה זו כי יש תתי-קטגוריות המשויכות אליה. מחקו אותן תחילה.",
+    };
+  }
+
   const { error } = await supabase.from("categories").delete().eq("id", id);
 
   if (error) {
-    // PostgreSQL FK violation — products reference this category
     if (error.code === "23503") {
       return {
         success: false,
@@ -126,6 +154,8 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   revalidatePath("/admin/categories");
   revalidatePath("/");
   revalidatePath("/category/[slug]", "layout");
+  revalidatePath("/vegetables");
+  revalidatePath("/fruits");
 
   return { success: true };
 }

@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Info, Loader2 } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { saveAddress } from "@/app/(account)/actions";
-import { searchSettlements } from "@/lib/data/settlements";
-import { DELIVERY_ZONES, findZoneByCity } from "@/lib/delivery";
-import { formatPrice } from "@/lib/utils/money";
+import { SETTLEMENTS } from "@/lib/data/settlements";
 import type { Database } from "@/types/database";
 
 type AddressRow = Database["public"]["Tables"]["addresses"]["Row"];
@@ -18,9 +16,6 @@ export function AddressForm({ address }: AddressFormProps) {
   const [city, setCity] = useState(address?.city ?? "");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [zoneInfo, setZoneInfo] = useState(() =>
-    address?.city ? findZoneByCity(address.city) : undefined
-  );
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,36 +28,33 @@ export function AddressForm({ address }: AddressFormProps) {
   const defaultFloor = floorMatch?.[1] ?? "";
 
   useEffect(() => {
-    if (city.trim().length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const results = searchSettlements(city);
-    setSuggestions(results.map((s) => s.name));
+    if (city.trim().length < 2) { setSuggestions([]); return; }
+    const q = city.trim().toLowerCase();
+    setSuggestions(
+      SETTLEMENTS.filter((s) => s.name.toLowerCase().includes(q))
+        .slice(0, 8)
+        .map((s) => s.name)
+    );
   }, [city]);
 
   const selectCity = useCallback((name: string) => {
     setCity(name);
     setShowSuggestions(false);
-    setZoneInfo(findZoneByCity(name));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPending(true);
     setError("");
-
-    const formData = new FormData(e.currentTarget);
-
     try {
-      const result = await saveAddress(formData);
+      const result = await saveAddress(new FormData(e.currentTarget));
       if (result?.error) {
         setError(result.error);
         setPending(false);
       }
       // On success, saveAddress redirects — no further action needed
     } catch {
-      // redirect() throws internally; this is expected on success
+      // redirect() throws internally; expected on success
     }
   };
 
@@ -104,11 +96,7 @@ export function AddressForm({ address }: AddressFormProps) {
             required
             autoComplete="off"
             value={city}
-            onChange={(e) => {
-              setCity(e.target.value);
-              setShowSuggestions(true);
-              if (!e.target.value) setZoneInfo(undefined);
-            }}
+            onChange={(e) => { setCity(e.target.value); setShowSuggestions(true); }}
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             placeholder="הקלידו שם עיר..."
@@ -116,7 +104,6 @@ export function AddressForm({ address }: AddressFormProps) {
           />
         </div>
 
-        {/* Suggestions dropdown */}
         {showSuggestions && suggestions.length > 0 && (
           <ul
             className="absolute z-20 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden"
@@ -127,10 +114,7 @@ export function AddressForm({ address }: AddressFormProps) {
                 key={name}
                 role="option"
                 aria-selected={city === name}
-                onMouseDown={(e) => {
-                  e.preventDefault(); // prevent blur before click
-                  selectCity(name);
-                }}
+                onMouseDown={(e) => { e.preventDefault(); selectCity(name); }}
                 className="px-4 py-2.5 text-sm text-gray-800 hover:bg-brand-50 hover:text-brand-700 cursor-pointer transition-colors"
               >
                 {name}
@@ -139,34 +123,6 @@ export function AddressForm({ address }: AddressFormProps) {
           </ul>
         )}
       </div>
-
-      {/* Delivery zone info */}
-      {zoneInfo && (
-        <div className="flex items-start gap-2.5 bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
-          <Info className="h-4 w-4 text-brand-600 shrink-0 mt-0.5" aria-hidden="true" />
-          <div className="text-xs text-brand-800 leading-relaxed">
-            <strong className="font-semibold">{zoneInfo.name}</strong> ·{" "}
-            {zoneInfo.baseFeeAgorot === 0
-              ? "משלוח חינם!"
-              : `דמי משלוח ${formatPrice(zoneInfo.baseFeeAgorot)}`}
-            {zoneInfo.freeThrsholdAgorot && (
-              <> · חינם מ-{formatPrice(zoneInfo.freeThrsholdAgorot)}</>
-            )}
-            {" "}· הגעה: {zoneInfo.estimatedDays}
-            <br />
-            <span className="text-brand-700">
-              הזמנה מינימלית {formatPrice(zoneInfo.minOrderAgorot)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden zone slug field */}
-      <input
-        type="hidden"
-        name="delivery_zone_id"
-        value={zoneInfo?.slug ?? ""}
-      />
 
       {/* Street + House number */}
       <div className="grid grid-cols-3 gap-3">
@@ -203,9 +159,7 @@ export function AddressForm({ address }: AddressFormProps) {
       {/* Floor + Apartment */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="floor" className="block text-sm font-medium text-gray-700 mb-1.5">
-            קומה
-          </label>
+          <label htmlFor="floor" className="block text-sm font-medium text-gray-700 mb-1.5">קומה</label>
           <input
             id="floor"
             name="floor"
@@ -216,9 +170,7 @@ export function AddressForm({ address }: AddressFormProps) {
           />
         </div>
         <div>
-          <label htmlFor="apartment" className="block text-sm font-medium text-gray-700 mb-1.5">
-            דירה
-          </label>
+          <label htmlFor="apartment" className="block text-sm font-medium text-gray-700 mb-1.5">דירה</label>
           <input
             id="apartment"
             name="apartment"
@@ -233,8 +185,7 @@ export function AddressForm({ address }: AddressFormProps) {
       {/* ZIP code */}
       <div>
         <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1.5">
-          מיקוד{" "}
-          <span className="text-stone-400 font-normal">(לא חובה)</span>
+          מיקוד <span className="text-stone-400 font-normal">(לא חובה)</span>
         </label>
         <input
           id="zip_code"
@@ -251,8 +202,7 @@ export function AddressForm({ address }: AddressFormProps) {
       {/* Notes */}
       <div>
         <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1.5">
-          הוראות לשליח{" "}
-          <span className="text-stone-400 font-normal">(לא חובה)</span>
+          הוראות לשליח <span className="text-stone-400 font-normal">(לא חובה)</span>
         </label>
         <textarea
           id="notes"

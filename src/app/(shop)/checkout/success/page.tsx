@@ -13,13 +13,12 @@ export const metadata: Metadata = {
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending_payment: "ממתין לתשלום",
-  paid: "שולם",
-  confirmed: "אושר",
-  preparing: "בהכנה",
+  pending_payment:  "ממתין לתשלום",
+  confirmed:        "אושר",
+  preparing:        "בהכנה",
   out_for_delivery: "בדרך אליכם",
-  delivered: "נמסר",
-  cancelled: "בוטל",
+  delivered:        "נמסר",
+  cancelled:        "בוטל",
 };
 
 export default async function CheckoutSuccessPage({
@@ -50,8 +49,7 @@ export default async function CheckoutSuccessPage({
     | { street?: string; house_number?: string; city?: string; zone_name?: string }
     | null;
 
-  const isPaid =
-    order?.payment_status === "paid" || order?.order_status !== "pending_payment";
+  const isPaid = order?.payment_status === "paid";
 
   return (
     <main

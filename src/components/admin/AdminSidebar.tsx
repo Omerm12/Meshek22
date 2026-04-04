@@ -10,15 +10,19 @@ import {
   LogOut,
   Leaf,
   ExternalLink,
+  Truck,
+  MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useUser } from "@/store/user";
 
 const NAV_ITEMS = [
-  { href: "/admin",            label: "לוח בקרה",  icon: LayoutDashboard, exact: true },
-  { href: "/admin/orders",     label: "הזמנות",    icon: ClipboardList,   exact: false },
-  { href: "/admin/products",   label: "מוצרים",    icon: ShoppingBag,     exact: false },
-  { href: "/admin/categories", label: "קטגוריות",  icon: Tag,             exact: false },
+  { href: "/admin",                  label: "לוח בקרה",    icon: LayoutDashboard, exact: true },
+  { href: "/admin/orders",           label: "הזמנות",      icon: ClipboardList,   exact: false },
+  { href: "/admin/products",         label: "מוצרים",      icon: ShoppingBag,     exact: false },
+  { href: "/admin/categories",       label: "קטגוריות",    icon: Tag,             exact: false },
+  { href: "/admin/delivery-zones",   label: "אזורי משלוח", icon: Truck,           exact: false },
+  { href: "/admin/settlements",      label: "יישובים",     icon: MapPin,          exact: false },
 ];
 
 interface AdminSidebarProps {

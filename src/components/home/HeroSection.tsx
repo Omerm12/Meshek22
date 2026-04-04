@@ -6,7 +6,6 @@ import { Container } from "@/components/ui/Container";
 function HeroVisual() {
   return (
     <div className="relative w-full max-w-[340px] mx-auto" aria-hidden="true">
-
       {/* Outer soft halo — adds depth behind the circle */}
       <div
         className="absolute inset-[-14px] rounded-full pointer-events-none"
@@ -46,29 +45,33 @@ function HeroVisual() {
       </div>
 
       {/* Floating card 1 — freshness (top-end) */}
-      <div
-        className="absolute top-5 -end-6 flex items-center gap-2.5 bg-white/96 backdrop-blur-sm rounded-2xl border border-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] px-3.5 py-3 animate-fade-up animate-delay-300"
-      >
+      <div className="absolute top-5 -end-6 flex items-center gap-2.5 bg-white/96 backdrop-blur-sm rounded-2xl border border-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] px-3.5 py-3 animate-fade-up animate-delay-300">
         <div className="relative h-8 w-8 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
           <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-brand-400 opacity-50" />
           <span className="relative h-2.5 w-2.5 rounded-full bg-brand-500" />
         </div>
         <div>
-          <p className="text-[10px] text-stone-400 leading-none mb-0.5">קטיף יומי</p>
-          <p className="text-[13px] font-bold text-gray-900 leading-none">טרי מהשדה</p>
+          <p className="text-[10px] text-stone-400 leading-none mb-0.5">
+            קטיף יומי
+          </p>
+          <p className="text-[13px] font-bold text-gray-900 leading-none">
+            טרי מהשדה
+          </p>
         </div>
       </div>
 
       {/* Floating card 2 — delivery (start side) */}
-      <div
-        className="absolute bottom-24 -start-8 flex items-center gap-2.5 bg-white/96 backdrop-blur-sm rounded-2xl border border-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] px-3.5 py-3 animate-fade-up animate-delay-500"
-      >
+      <div className="absolute bottom-24 -start-8 flex items-center gap-2.5 bg-white/96 backdrop-blur-sm rounded-2xl border border-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.12)] px-3.5 py-3 animate-fade-up animate-delay-500">
         <div className="h-8 w-8 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
           <Truck className="h-4 w-4 text-sky-500" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-[10px] text-stone-400 leading-none mb-0.5">משלוח מהיר</p>
-          <p className="text-[13px] font-bold text-gray-900 leading-none">עד 24 שעות</p>
+          <p className="text-[10px] text-stone-400 leading-none mb-0.5">
+            משלוח מהיר
+          </p>
+          <p className="text-[13px] font-bold text-gray-900 leading-none">
+            עד 24 שעות
+          </p>
         </div>
       </div>
 
@@ -78,8 +81,12 @@ function HeroVisual() {
           <Star className="h-[18px] w-[18px] text-amber-400 fill-amber-400" />
         </div>
         <div>
-          <p className="text-[10px] text-stone-400 leading-none mb-0.5">דירוג לקוחות</p>
-          <p className="font-bold text-gray-900 text-[13px] leading-none">4.9 ★ מ-1,200 ביקורות</p>
+          <p className="text-[10px] text-stone-400 leading-none mb-0.5">
+            דירוג לקוחות
+          </p>
+          <p className="font-bold text-gray-900 text-[13px] leading-none">
+            4.9 ★ מ-1,200 ביקורות
+          </p>
         </div>
       </div>
 
@@ -104,79 +111,81 @@ export function HeroSection() {
       <div
         className="pointer-events-none absolute -top-28 -end-28 h-[520px] w-[520px] rounded-full opacity-[0.20]"
         style={{
-          background: "radial-gradient(circle, var(--color-brand-200), transparent 65%)",
+          background:
+            "radial-gradient(circle, var(--color-brand-200), transparent 65%)",
         }}
         aria-hidden="true"
       />
       {/* Bottom-start warm glow */}
       <div
         className="pointer-events-none absolute -bottom-20 -start-20 h-[440px] w-[440px] rounded-full opacity-[0.28]"
-        style={{ background: "radial-gradient(circle, #fef3c7, transparent 65%)" }}
+        style={{
+          background: "radial-gradient(circle, #fef3c7, transparent 65%)",
+        }}
         aria-hidden="true"
       />
 
       <Container className="relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 py-14 lg:py-24 items-center">
-
           {/* ── Text side ── */}
-          <div className="order-2 lg:order-1 text-center lg:text-end">
-
-            {/* Eyebrow — live pulse dot */}
-            <div className="inline-flex items-center gap-2.5 bg-brand-50 border border-brand-100 rounded-full px-4 py-1.5 mb-6 animate-fade-up">
-              <span className="relative flex h-2 w-2 shrink-0">
+          <div className="order-2 lg:order-1 text-center lg:text-right">
+            {/* Eyebrow */}
+            <div className="inline-flex items-center gap-2 bg-brand-50/80 border border-brand-100 rounded-full px-4.5 py-2.5 mb-7 animate-fade-up">
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-600" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-600" />
               </span>
               <span className="text-sm font-medium text-brand-700">
-                קטיף יומי טרי – ישירות מהמשק
+                קטיף יומי · ישירות מהמשק
               </span>
             </div>
 
             {/* Headline */}
             <h1
-              className="font-bold text-gray-900 mb-5 animate-fade-up animate-delay-100"
+              className="font-bold text-gray-900 mb-7 animate-fade-up animate-delay-100"
               style={{
                 fontSize: "clamp(2.4rem, 5vw, 3.6rem)",
-                lineHeight: 1.1,
-                letterSpacing: "-0.025em",
+                lineHeight: 1.05,
+                letterSpacing: "-0.02em",
               }}
             >
-              נקטף הבוקר.{" "}
-              <span className="relative inline-block whitespace-nowrap">
-                <span className="text-brand-600">אצלכם הערב.</span>
-                <svg
-                  className="absolute -bottom-2 start-0 w-full"
-                  viewBox="0 0 260 10"
-                  fill="none"
-                  aria-hidden="true"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M2 7 Q65 2 130 6 Q195 9 258 4"
-                    stroke="var(--color-brand-200)"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
+              <span className="block w-fit mx-auto lg:ml-auto lg:mr-0">
+                נקטף הבוקר.
+              </span>
+              <span
+                className="block w-fit mx-auto lg:ml-auto lg:mr-0 text-brand-600 mt-2"
+                style={{
+                  paddingBottom: "0.26em",
+                  backgroundImage:
+                    "linear-gradient(90deg, var(--color-brand-200), var(--color-brand-300, #86efac))",
+                  backgroundSize: "100% 2px",
+                  backgroundPosition: "0 100%",
+                  backgroundRepeat: "no-repeat",
+                }}
+              >
+                אצלכם הערב.
               </span>
             </h1>
 
             {/* Subheading */}
-            <p className="text-lg text-stone-500 leading-relaxed mb-8 max-w-[420px] mx-auto lg:mr-0 lg:ml-auto animate-fade-up animate-delay-200">
-              ירקות ופירות טריים ישירות מהחקלאי לביתכם –
-              בלי מחסנים, בלי ביניים. רק טרי ואמיתי.
-            </p>
+            <div className="mb-9 animate-fade-up animate-delay-200">
+              <p className="block w-fit mx-auto lg:ml-auto lg:mr-0 text-[1.0625rem] text-stone-500 leading-relaxed">
+                מהשדה ישירות לבית שלכם — ללא מחסנים, ללא מתווכים.
+              </p>
+            </div>
 
             {/* CTAs — one dominant hero button + plain text secondary */}
             <div className="flex flex-wrap items-center gap-5 justify-center lg:justify-end mb-9 animate-fade-up animate-delay-300">
               <button
                 onClick={() =>
-                  document.getElementById("best-sellers")?.scrollIntoView({ behavior: "smooth" })
+                  document
+                    .getElementById("best-sellers")
+                    ?.scrollIntoView({ behavior: "smooth" })
                 }
                 className="inline-flex items-center justify-center gap-2.5 h-[52px] px-9 rounded-full bg-brand-600 text-white font-semibold text-base hover:bg-brand-700 active:bg-brand-800 shadow-lg shadow-brand-600/25 hover:shadow-xl hover:shadow-brand-600/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
               >
-                <ArrowLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
                 הזמינו עכשיו
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               </button>
               <a
                 href="#about"
@@ -186,51 +195,12 @@ export function HeroSection() {
                 <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
             </div>
-
-            {/* Trust row — social proof, rating, guarantee */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-center lg:justify-end animate-fade-up animate-delay-400">
-
-              {/* Avatar cluster + count */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center">
-                  {["#bbf7d0", "#bfdbfe", "#fde68a", "#f9a8d4"].map((color, i) => (
-                    <div
-                      key={i}
-                      className="h-[22px] w-[22px] rounded-full border-2 border-white"
-                      style={{
-                        backgroundColor: color,
-                        marginInlineStart: i === 0 ? 0 : "-6px",
-                      }}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-stone-500">+5,000 משפחות</span>
-              </div>
-
-              <span className="h-3.5 w-px bg-stone-200" aria-hidden="true" />
-
-              {/* Rating */}
-              <div className="flex items-center gap-1">
-                <span className="text-amber-400 text-sm leading-none">★</span>
-                <span className="text-sm font-semibold text-gray-800">4.9</span>
-                <span className="text-xs text-stone-400">(1,200 ביקורות)</span>
-              </div>
-
-              <span className="h-3.5 w-px bg-stone-200" aria-hidden="true" />
-
-              {/* Guarantee */}
-              <span className="flex items-center gap-1.5 text-sm text-stone-500">
-                <CheckCircle2 className="h-3.5 w-3.5 text-brand-500 shrink-0" aria-hidden="true" />
-                100% החזר כספי
-              </span>
-            </div>
           </div>
 
           {/* ── Visual side ── */}
           <div className="order-1 lg:order-2 flex items-center justify-center px-8 sm:px-16 lg:px-4 animate-scale-in animate-delay-200">
             <HeroVisual />
           </div>
-
         </div>
       </Container>
     </section>

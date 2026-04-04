@@ -3,10 +3,18 @@ import { MapPin, Clock, Truck, CheckCircle2 } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { formatPrice } from "@/lib/utils/money";
-import { DELIVERY_ZONES } from "@/lib/delivery";
+import { createAdminClient } from "@/lib/supabase/server";
+import type { DeliveryZone } from "@/lib/delivery";
 
-export function DeliveryAreas() {
-  const zones = Object.values(DELIVERY_ZONES);
+export async function DeliveryAreas() {
+  const adminClient = await createAdminClient();
+  const { data } = await adminClient
+    .from("delivery_zones")
+    .select("id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot, estimated_delivery_hours")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  const zones = (data ?? []) as DeliveryZone[];
 
   return (
     <section
@@ -61,7 +69,7 @@ export function DeliveryAreas() {
           {/* Zone cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {zones.map((zone, i) => (
-              <Reveal key={zone.slug} delay={i * 60}>
+              <Reveal key={zone.id} delay={i * 60}>
                 <div className="group h-full p-4 rounded-2xl bg-white border border-stone-100 hover:border-brand-200 hover:shadow-md transition-all duration-300">
                   {/* Zone name + fee */}
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -75,27 +83,29 @@ export function DeliveryAreas() {
                     </div>
                     <div className="text-end shrink-0">
                       <p className="text-sm font-bold text-brand-700 leading-tight">
-                        {zone.baseFeeAgorot === 0 ? "חינם" : formatPrice(zone.baseFeeAgorot)}
+                        {zone.delivery_fee_agorot === 0 ? "חינם" : formatPrice(zone.delivery_fee_agorot)}
                       </p>
                       <p className="text-[11px] text-stone-400">משלוח</p>
                     </div>
                   </div>
 
                   <p className="text-xs text-stone-500 mb-3 leading-relaxed pe-1">
-                    הזמנה מינימלית {formatPrice(zone.minOrderAgorot)}
-                    {zone.freeThrsholdAgorot
-                      ? `. משלוח חינם מ-${formatPrice(zone.freeThrsholdAgorot)}`
+                    הזמנה מינימלית {formatPrice(zone.min_order_agorot)}
+                    {zone.free_delivery_threshold_agorot
+                      ? `. משלוח חינם מ-${formatPrice(zone.free_delivery_threshold_agorot)}`
                       : ""}
                   </p>
 
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1 text-xs text-stone-400">
                       <Clock className="h-3 w-3" aria-hidden="true" />
-                      {zone.estimatedDays}
+                      {zone.estimated_delivery_hours
+                        ? `עד ${zone.estimated_delivery_hours} שעות`
+                        : "בתיאום"}
                     </span>
-                    {zone.freeThrsholdAgorot ? (
+                    {zone.free_delivery_threshold_agorot ? (
                       <span className="text-xs font-semibold text-brand-600 bg-brand-50 rounded-full px-2 py-0.5">
-                        חינם מ-{formatPrice(zone.freeThrsholdAgorot)}
+                        חינם מ-{formatPrice(zone.free_delivery_threshold_agorot)}
                       </span>
                     ) : (
                       <span className="text-xs text-stone-400 bg-stone-50 rounded-full px-2 py-0.5">

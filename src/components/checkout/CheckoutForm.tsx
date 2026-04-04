@@ -17,10 +17,10 @@ import {
 } from "lucide-react";
 import { useCart } from "@/store/cart";
 import { formatPrice } from "@/lib/utils/money";
-import { getDeliveryQuote, findZoneByCity } from "@/lib/delivery";
-import { searchSettlements } from "@/lib/data/settlements";
-import type { Settlement } from "@/lib/data/settlements";
+import { getDeliveryQuote } from "@/lib/delivery";
+import type { DeliveryZone } from "@/lib/delivery";
 import { createOrder } from "@/app/(shop)/checkout/actions";
+import type { CheckoutSettlement } from "@/app/(shop)/checkout/page";
 import type { Database } from "@/types/database";
 
 type AddressRow = Database["public"]["Tables"]["addresses"]["Row"];
@@ -30,6 +30,10 @@ interface CheckoutFormProps {
   addresses: AddressRow[];
   profile: ProfileRow | null;
   userEmail: string | null;
+  /** Active delivery zones fetched from DB at page-render time. */
+  deliveryZones: DeliveryZone[];
+  /** Active settlements fetched from DB — used for autocomplete and zone resolution. */
+  settlements: CheckoutSettlement[];
 }
 
 function InputField({
@@ -68,10 +72,7 @@ const inputErrorClass =
 function luhn(digits: string): boolean {
   const arr = digits.split("").reverse().map(Number);
   const sum = arr.reduce((acc, d, i) => {
-    if (i % 2 === 1) {
-      d *= 2;
-      if (d > 9) d -= 9;
-    }
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
     return acc + d;
   }, 0);
   return sum % 10 === 0;
@@ -90,7 +91,13 @@ function formatExpiry(value: string): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProps) {
+export function CheckoutForm({
+  addresses,
+  profile,
+  userEmail,
+  deliveryZones,
+  settlements,
+}: CheckoutFormProps) {
   const router = useRouter();
   const { items, subtotalAgorot, clearCart, isHydrated } = useCart();
 
@@ -109,16 +116,20 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
   const [manualHouseNumber, setManualHouseNumber] = useState("");
   const [manualApartment, setManualApartment] = useState("");
 
-  const [settlementResults, setSettlementResults] = useState<Settlement[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const comboboxRef = useRef<HTMLDivElement>(null);
 
-  // ── Delivery zone ──────────────────────────────────────────────────────────
-  const [deliveryZoneSlug, setDeliveryZoneSlug] = useState<string | null>(() => {
-    if (defaultAddress?.delivery_zone_id) return defaultAddress.delivery_zone_id;
-    if (defaultAddress?.city) return findZoneByCity(defaultAddress.city)?.slug ?? null;
-    return null;
-  });
+  // ── Delivery zone (stored as UUID) ─────────────────────────────────────────
+  // The zone is resolved exclusively from the DB settlements list passed as a prop.
+  // We store the delivery_zone_id UUID — no slug, no static dict.
+  const findZoneIdByCity = (city: string): string | null => {
+    const s = settlements.find((s) => s.name === city);
+    return s?.delivery_zone_id ?? null;
+  };
+
+  const [deliveryZoneId, setDeliveryZoneId] = useState<string | null>(() =>
+    defaultAddress?.city ? findZoneIdByCity(defaultAddress.city) : null
+  );
 
   // ── Customer details ───────────────────────────────────────────────────────
   const [name, setName] = useState(profile?.full_name ?? "");
@@ -134,39 +145,44 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
   const [installments, setInstallments] = useState("1");
   const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
 
+  // ── Idempotency key ────────────────────────────────────────────────────────
+  // Generated once per component mount (null → UUID on first render).
+  // Survives re-renders but is discarded on navigation, so each new checkout
+  // session gets a fresh key. The server rejects duplicate submissions.
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (idempotencyKeyRef.current === null) {
+    idempotencyKeyRef.current = crypto.randomUUID();
+  }
+
   // ── Submission ─────────────────────────────────────────────────────────────
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
-  // ── Redirect if cart empty (only after localStorage has been read) ─────────
+  // ── Redirect if cart empty ─────────────────────────────────────────────────
   useEffect(() => {
     if (isHydrated && items.length === 0) {
       router.replace("/cart");
     }
   }, [isHydrated, items.length, router]);
 
-  // ── Update zone when selected address changes ──────────────────────────────
+  // ── Update zone when saved address changes ─────────────────────────────────
   useEffect(() => {
     if (useNewAddress) return;
-    if (!selectedAddressId) { setDeliveryZoneSlug(null); return; }
+    if (!selectedAddressId) { setDeliveryZoneId(null); return; }
     const addr = addresses.find((a) => a.id === selectedAddressId);
     if (!addr) return;
-    setDeliveryZoneSlug(
-      addr.delivery_zone_id ?? findZoneByCity(addr.city)?.slug ?? null
-    );
+    setDeliveryZoneId(findZoneIdByCity(addr.city));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAddressId, useNewAddress, addresses]);
 
   // ── Update zone when manual city changes ──────────────────────────────────
   useEffect(() => {
     if (!useNewAddress) return;
-    setDeliveryZoneSlug(findZoneByCity(manualCity)?.slug ?? null);
+    setDeliveryZoneId(findZoneIdByCity(manualCity));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manualCity, useNewAddress]);
 
-  // ── Settlement search ──────────────────────────────────────────────────────
-  useEffect(() => {
-    setSettlementResults(manualCity.length >= 2 ? searchSettlements(manualCity) : []);
-  }, [manualCity]);
-
+  // ── Click-outside to close suggestions ────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (comboboxRef.current && !comboboxRef.current.contains(e.target as Node)) {
@@ -177,11 +193,23 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Delivery quote ─────────────────────────────────────────────────────────
-  const quote = useMemo(() => {
-    if (!deliveryZoneSlug) return null;
-    return getDeliveryQuote(deliveryZoneSlug, subtotalAgorot);
-  }, [deliveryZoneSlug, subtotalAgorot]);
+  // ── Settlement autocomplete ────────────────────────────────────────────────
+  const settlementResults = useMemo(() => {
+    const q = manualCity.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return settlements.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [manualCity, settlements]);
+
+  // ── Zone + quote ───────────────────────────────────────────────────────────
+  const selectedZone = useMemo(
+    () => (deliveryZoneId ? deliveryZones.find((z) => z.id === deliveryZoneId) ?? null : null),
+    [deliveryZoneId, deliveryZones]
+  );
+
+  const quote = useMemo(
+    () => (selectedZone ? getDeliveryQuote(selectedZone, subtotalAgorot) : null),
+    [selectedZone, subtotalAgorot]
+  );
 
   const totalAgorot = subtotalAgorot + (quote?.feeAgorot ?? 0);
 
@@ -189,80 +217,60 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
   const getAddressFields = () => {
     if (!useNewAddress && selectedAddressId) {
       const addr = addresses.find((a) => a.id === selectedAddressId)!;
-      return {
-        street: addr.street,
-        house_number: addr.house_number,
-        city: addr.city,
-        apartment: addr.apartment ?? "",
-      };
+      return { street: addr.street, house_number: addr.house_number, city: addr.city, apartment: addr.apartment ?? "" };
     }
-    return {
-      street: manualStreet,
-      house_number: manualHouseNumber,
-      city: manualCity,
-      apartment: manualApartment,
-    };
+    return { street: manualStreet, house_number: manualHouseNumber, city: manualCity, apartment: manualApartment };
   };
 
   // ── Delivery details validation ────────────────────────────────────────────
   const validateDeliveryDetails = (): string | null => {
-    if (!deliveryZoneSlug)
+    if (!deliveryZoneId)
       return "לא ניתן לזהות את אזור המשלוח. נא לבחור עיר מהרשימה.";
     if (quote && !quote.meetsMinimum)
-      return `ההזמנה המינימלית לאזור ${quote.zone.name} לא הושגה.`;
-
+      return `ההזמנה המינימלית לאזור ${selectedZone?.name} לא הושגה.`;
     if (useNewAddress || addresses.length === 0) {
       if (!manualCity.trim()) return "נא להזין עיר / יישוב";
       if (!manualStreet.trim()) return "נא להזין שם רחוב";
       if (!manualHouseNumber.trim()) return "נא להזין מספר בית";
     }
-
     if (name.trim().length < 2) return "נא להזין שם מלא";
     if (!/^0\d{8,9}$/.test(phone.replace(/[-\s]/g, "")))
       return "מספר טלפון לא תקין (לדוגמה: 0501234567)";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
       return "כתובת אימייל לא תקינה";
-
     return null;
   };
 
   // ── Payment validation ─────────────────────────────────────────────────────
   const validatePayment = (): Record<string, string> => {
     const errors: Record<string, string> = {};
-
     if (cardHolder.trim().length < 2) {
       errors.cardHolder = "נא להזין שם בעל הכרטיס";
     }
-
     const cleanCard = cardNumber.replace(/\s/g, "");
     if (!/^\d{13,19}$/.test(cleanCard)) {
       errors.cardNumber = "מספר כרטיס לא תקין";
     } else if (!luhn(cleanCard)) {
       errors.cardNumber = "מספר הכרטיס אינו תקין — בדקו שוב";
     }
-
     const m = expiry.match(/^(\d{2})\/(\d{2})$/);
     if (!m) {
       errors.expiry = "תוקף לא תקין — הזינו MM/YY";
     } else {
       const mon = parseInt(m[1], 10);
-      const yr = parseInt(m[2], 10) + 2000;
+      const yr  = parseInt(m[2], 10) + 2000;
       if (mon < 1 || mon > 12) {
         errors.expiry = "חודש לא תקין";
       } else {
         const now = new Date();
-        const currentYM = now.getFullYear() * 100 + (now.getMonth() + 1);
-        const expiryYM = yr * 100 + mon;
-        if (expiryYM < currentYM) {
+        if (yr * 100 + mon < now.getFullYear() * 100 + (now.getMonth() + 1)) {
           errors.expiry = "הכרטיס פג תוקפו";
         }
       }
     }
-
     if (!/^\d{3,4}$/.test(cvv)) {
       errors.cvv = "CVV לא תקין (3–4 ספרות)";
     }
-
     return errors;
   };
 
@@ -271,27 +279,19 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
     e.preventDefault();
     setError(null);
 
-    // ── Step 1: validate delivery details and advance ──────────────────────
     if (step === "details") {
       const validationError = validateDeliveryDetails();
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
+      if (validationError) { setError(validationError); return; }
       setStep("payment");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    // ── Step 2: validate payment and create order ──────────────────────────
     const payErrs = validatePayment();
-    if (Object.keys(payErrs).length > 0) {
-      setPaymentErrors(payErrs);
-      return;
-    }
+    if (Object.keys(payErrs).length > 0) { setPaymentErrors(payErrs); return; }
     setPaymentErrors({});
 
-    if (!deliveryZoneSlug) {
+    if (!deliveryZoneId) {
       setError("לא ניתן לזהות את אזור המשלוח. חזרו לשלב הקודם.");
       return;
     }
@@ -300,26 +300,24 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
 
     const addrFields = getAddressFields();
     const fd = new FormData();
-    fd.set(
-      "cart_items",
-      JSON.stringify(
-        items.map((i) => ({
-          variantId: i.variantId,
-          quantity: i.quantity,
-          productName: i.productName,
-          variantLabel: i.variantLabel,
-        }))
-      )
-    );
-    fd.set("delivery_zone_id", deliveryZoneSlug);
-    fd.set("customer_name", name);
-    fd.set("customer_phone", phone);
-    fd.set("customer_email", email);
-    fd.set("delivery_notes", notes);
-    fd.set("address_street", addrFields.street);
-    fd.set("address_house_number", addrFields.house_number);
-    fd.set("address_city", addrFields.city);
-    fd.set("address_apartment", addrFields.apartment);
+    fd.set("idempotency_key",  idempotencyKeyRef.current!);
+    fd.set("cart_items", JSON.stringify(
+      items.map((i) => ({
+        variantId:    i.variantId,
+        quantity:     i.quantity,
+        productName:  i.productName,
+        variantLabel: i.variantLabel,
+      }))
+    ));
+    fd.set("delivery_zone_id",       deliveryZoneId);   // UUID — no slug
+    fd.set("customer_name",          name);
+    fd.set("customer_phone",         phone);
+    fd.set("customer_email",         email);
+    fd.set("delivery_notes",         notes);
+    fd.set("address_street",         addrFields.street);
+    fd.set("address_house_number",   addrFields.house_number);
+    fd.set("address_city",           addrFields.city);
+    fd.set("address_apartment",      addrFields.apartment);
 
     try {
       const result = await createOrder(fd);
@@ -520,7 +518,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                   <div className="mt-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 flex items-center gap-3">
                     <Truck className="h-4 w-4 text-brand-600 shrink-0" />
                     <div className="text-sm">
-                      <span className="font-semibold text-brand-800">{quote.zone.name}</span>
+                      <span className="font-semibold text-brand-800">{selectedZone!.name}</span>
                       <span className="text-brand-600">
                         {" · "}
                         {quote.isFree ? (
@@ -529,7 +527,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                           <>דמי משלוח {formatPrice(quote.feeAgorot)}</>
                         )}
                         {" · "}
-                        {quote.zone.estimatedDays}
+                        {quote.estimatedLabel}
                       </span>
                       {!quote.isFree && quote.remainingForFree > 0 && (
                         <span className="block text-xs text-brand-500 mt-0.5">
@@ -539,7 +537,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                     </div>
                   </div>
                 ) : (
-                  useNewAddress && manualCity.length > 0 && !deliveryZoneSlug && (
+                  useNewAddress && manualCity.length > 0 && !deliveryZoneId && (
                     <div className="mt-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3 text-sm text-amber-800">
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       העיר שהזנתם אינה ברשימת היישובים שמשלוח מגיע אליהם. בחרו עיר מהרשימה.
@@ -655,9 +653,9 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                   <p>{manualStreet} {manualHouseNumber}, {manualCity}</p>
                 )}
                 <p>{name} · {phone}</p>
-                {quote && (
+                {quote && selectedZone && (
                   <p>
-                    {quote.zone.name} ·{" "}
+                    {selectedZone.name} ·{" "}
                     {quote.isFree ? (
                       <span className="text-emerald-600 font-semibold">משלוח חינם</span>
                     ) : (
@@ -677,13 +675,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                 </div>
 
                 <div className="space-y-4">
-                  {/* Cardholder name */}
-                  <InputField
-                    label="שם בעל הכרטיס"
-                    id="card_holder"
-                    required
-                    error={paymentErrors.cardHolder}
-                  >
+                  <InputField label="שם בעל הכרטיס" id="card_holder" required error={paymentErrors.cardHolder}>
                     <input
                       id="card_holder"
                       type="text"
@@ -695,13 +687,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                     />
                   </InputField>
 
-                  {/* Card number */}
-                  <InputField
-                    label="מספר כרטיס"
-                    id="card_number"
-                    required
-                    error={paymentErrors.cardNumber}
-                  >
+                  <InputField label="מספר כרטיס" id="card_number" required error={paymentErrors.cardNumber}>
                     <input
                       id="card_number"
                       type="text"
@@ -717,14 +703,8 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                   </InputField>
 
                   <div className="grid grid-cols-3 gap-4">
-                    {/* Expiry */}
                     <div className="col-span-2">
-                      <InputField
-                        label="תוקף (MM/YY)"
-                        id="expiry"
-                        required
-                        error={paymentErrors.expiry}
-                      >
+                      <InputField label="תוקף (MM/YY)" id="expiry" required error={paymentErrors.expiry}>
                         <input
                           id="expiry"
                           type="text"
@@ -740,13 +720,7 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                       </InputField>
                     </div>
 
-                    {/* CVV */}
-                    <InputField
-                      label="CVV"
-                      id="cvv"
-                      required
-                      error={paymentErrors.cvv}
-                    >
+                    <InputField label="CVV" id="cvv" required error={paymentErrors.cvv}>
                       <input
                         id="cvv"
                         type="text"
@@ -755,16 +729,13 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                         placeholder="123"
                         dir="ltr"
                         value={cvv}
-                        onChange={(e) =>
-                          setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))
-                        }
+                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
                         maxLength={4}
                         className={paymentErrors.cvv ? inputErrorClass : inputClass}
                       />
                     </InputField>
                   </div>
 
-                  {/* Installments */}
                   <InputField label="מספר תשלומים" id="installments">
                     <select
                       id="installments"
@@ -805,12 +776,8 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
                     {item.productIcon ?? "🛒"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {item.productName}
-                    </p>
-                    <p className="text-xs text-stone-400">
-                      {item.variantLabel} × {item.quantity}
-                    </p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>
+                    <p className="text-xs text-stone-400">{item.variantLabel} × {item.quantity}</p>
                   </div>
                   <p className="text-sm font-semibold text-gray-900 shrink-0">
                     {formatPrice(item.priceAgorot * item.quantity)}
@@ -852,12 +819,12 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
               )}
             </div>
 
-            {/* Minimum order warning (step 1 only) */}
+            {/* Minimum order warning */}
             {step === "details" && quote && !quote.meetsMinimum && (
               <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
                 <span className="font-semibold">הזמנה מינימלית לא הושגה.</span>
                 {" "}חסרים עוד {formatPrice(quote.shortfallAgorot)} להגיע למינימום של{" "}
-                {formatPrice(quote.zone.minOrderAgorot)} באזור {quote.zone.name}.
+                {formatPrice(selectedZone!.min_order_agorot)} באזור {selectedZone!.name}.
               </div>
             )}
 
@@ -869,28 +836,19 @@ export function CheckoutForm({ addresses, profile, userEmail }: CheckoutFormProp
               </div>
             )}
 
-            {/* Submit button */}
+            {/* Submit */}
             <button
               type="submit"
-              disabled={
-                isPending ||
-                (step === "details" && !!quote && !quote.meetsMinimum)
-              }
+              disabled={isPending || (step === "details" && !!quote && !quote.meetsMinimum)}
               className="w-full rounded-full bg-brand-600 text-white font-bold text-base hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-brand-600/20 flex items-center justify-center gap-2"
               style={{ height: "52px" }}
             >
               {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  מעבד...
-                </>
+                <><Loader2 className="h-4 w-4 animate-spin" />מעבד...</>
               ) : step === "details" ? (
                 "המשך לתשלום"
               ) : (
-                <>
-                  <ShieldCheck className="h-4 w-4" />
-                  בצעו הזמנה
-                </>
+                <><ShieldCheck className="h-4 w-4" />בצעו הזמנה</>
               )}
             </button>
 

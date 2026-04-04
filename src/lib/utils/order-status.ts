@@ -5,7 +5,6 @@ export interface StatusEntry {
 
 export const ORDER_STATUS_MAP: Record<string, StatusEntry> = {
   pending_payment:  { label: "ממתין לתשלום", cls: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  paid:             { label: "שולם",          cls: "bg-blue-50   text-blue-700   border-blue-200"   },
   confirmed:        { label: "אושר",          cls: "bg-indigo-50 text-indigo-700 border-indigo-200" },
   preparing:        { label: "בהכנה",         cls: "bg-purple-50 text-purple-700 border-purple-200" },
   out_for_delivery: { label: "בדרך",          cls: "bg-orange-50 text-orange-700 border-orange-200" },

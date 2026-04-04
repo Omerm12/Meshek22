@@ -8,7 +8,6 @@ export type Json =
 
 export type OrderStatus =
   | "pending_payment"
-  | "paid"
   | "confirmed"
   | "preparing"
   | "out_for_delivery"
@@ -112,6 +111,7 @@ export interface Database {
           image_url: string | null;
           sort_order: number;
           is_active: boolean;
+          parent_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -122,6 +122,7 @@ export interface Database {
           image_url?: string | null;
           sort_order?: number;
           is_active?: boolean;
+          parent_id?: string | null;
         };
         Update: {
           name?: string;
@@ -130,6 +131,7 @@ export interface Database {
           image_url?: string | null;
           sort_order?: number;
           is_active?: boolean;
+          parent_id?: string | null;
         };
         Relationships: [];
       };
@@ -325,6 +327,7 @@ export interface Database {
           id: string;
           order_number: string;
           user_id: string | null;
+          idempotency_key: string | null;
           delivery_zone_id: string;
           delivery_address_snapshot: Json;
           customer_snapshot: Json;
@@ -346,6 +349,7 @@ export interface Database {
           id?: string;
           order_number?: string;
           user_id?: string | null;
+          idempotency_key?: string | null;
           delivery_zone_id: string;
           delivery_address_snapshot: Json;
           customer_snapshot: Json;
@@ -404,6 +408,25 @@ export interface Database {
       generate_order_number: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      create_order_atomic: {
+        Args: {
+          p_idempotency_key: string;
+          p_delivery_zone_id: string;
+          p_delivery_address: Json;
+          p_customer: Json;
+          p_subtotal_agorot: number;
+          p_delivery_fee_agorot: number;
+          p_discount_agorot: number;
+          p_total_agorot: number;
+          p_delivery_notes: string | null;
+          p_items: Json;
+        };
+        Returns: {
+          out_order_id: string;
+          out_order_number: string;
+          out_is_duplicate: boolean;
+        }[];
       };
     };
     Enums: {

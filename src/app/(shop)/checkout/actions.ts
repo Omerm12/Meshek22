@@ -1,12 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { getDeliveryQuote, DELIVERY_ZONES } from "@/lib/delivery";
-import { createPaymentPage } from "@/lib/payment/payplus";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
-
-type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"];
-type OrderItemInsert = Database["public"]["Tables"]["order_items"]["Insert"];
 
 interface CartItemInput {
   variantId: string;
@@ -17,11 +12,22 @@ interface CartItemInput {
 
 type CreateOrderResult = { error: string } | { paymentUrl: string; orderNumber: string };
 
+// UUID v4 pattern — used to validate idempotency_key and delivery_zone_id
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Create an order from checkout form data.
  *
- * Security: all totals and prices are calculated server-side from the database.
- * Client-supplied prices are never trusted.
+ * Security model:
+ * - Auth is verified server-side via supabase.auth.getUser() (JWT validation).
+ * - All prices and totals are re-fetched from the DB — client values are ignored.
+ * - Delivery zone is fetched by UUID from the DB — no hardcoded slug mapping.
+ * - Minimum order is enforced server-side.
+ * - Order + items are inserted atomically via create_order_atomic() Postgres RPC.
+ * - Idempotency key (UUID generated per checkout session) prevents duplicate orders
+ *   on double-click, network retry, or page refresh during submission.
+ * - Mock payment update uses adminClient to bypass the missing orders_own_update
+ *   RLS policy (same as the zone lookup). In production this would be a webhook.
  */
 export async function createOrder(formData: FormData): Promise<CreateOrderResult> {
   const supabase = await createClient();
@@ -29,9 +35,16 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Checkout requires authentication
   if (!user) {
     return { error: "יש להתחבר לחשבון לפני ביצוע הזמנה" };
+  }
+
+  // ── Idempotency key ────────────────────────────────────────────────────────
+  // Generated once per checkout session in CheckoutForm using crypto.randomUUID().
+  // Stored in a useRef so it survives re-renders but resets on page navigation.
+  const idempotencyKey = (formData.get("idempotency_key") as string | null)?.trim();
+  if (!idempotencyKey || !UUID_RE.test(idempotencyKey)) {
+    return { error: "מפתח ייחודיות חסר או לא תקין" };
   }
 
   // ── Parse cart items ───────────────────────────────────────────────────────
@@ -49,35 +62,58 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     return { error: "הסל ריק" };
   }
 
-  // ── Delivery zone ──────────────────────────────────────────────────────────
-  const deliveryZoneSlug = (formData.get("delivery_zone_id") as string | null)?.trim();
-  if (!deliveryZoneSlug) return { error: "נא לבחור עיר שמשרתת את אזור המשלוח" };
-
-  const zoneData = DELIVERY_ZONES[deliveryZoneSlug];
-  if (!zoneData) return { error: "אזור משלוח לא תקין" };
+  // ── Delivery zone ID (UUID) ────────────────────────────────────────────────
+  const deliveryZoneId = (formData.get("delivery_zone_id") as string | null)?.trim();
+  if (!deliveryZoneId) {
+    return { error: "נא לבחור עיר שמשרתת את אזור המשלוח" };
+  }
+  if (!UUID_RE.test(deliveryZoneId)) {
+    return { error: "מזהה אזור משלוח לא תקין" };
+  }
 
   // ── Customer details ───────────────────────────────────────────────────────
-  const customerName = (formData.get("customer_name") as string | null)?.trim() ?? "";
+  const customerName  = (formData.get("customer_name")  as string | null)?.trim() ?? "";
   const customerPhone = (formData.get("customer_phone") as string | null)?.trim() ?? "";
   const customerEmail = (formData.get("customer_email") as string | null)?.trim() ?? "";
   const deliveryNotes = (formData.get("delivery_notes") as string | null)?.trim() || null;
 
-  if (customerName.length < 2) return { error: "נא להזין שם מלא" };
-  if (!/^0\d{8,9}$/.test(customerPhone)) return { error: "מספר טלפון לא תקין (לדוגמה: 0501234567)" };
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) return { error: "כתובת אימייל לא תקינה" };
+  if (customerName.length < 2)
+    return { error: "נא להזין שם מלא" };
+  if (!/^0\d{8,9}$/.test(customerPhone))
+    return { error: "מספר טלפון לא תקין (לדוגמה: 0501234567)" };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail))
+    return { error: "כתובת אימייל לא תקינה" };
 
   // ── Address fields ─────────────────────────────────────────────────────────
-  const addressStreet = (formData.get("address_street") as string | null)?.trim() ?? "";
+  const addressStreet      = (formData.get("address_street")       as string | null)?.trim() ?? "";
   const addressHouseNumber = (formData.get("address_house_number") as string | null)?.trim() ?? "";
-  const addressCity = (formData.get("address_city") as string | null)?.trim() ?? "";
-  const addressApartment = (formData.get("address_apartment") as string | null)?.trim() || null;
+  const addressCity        = (formData.get("address_city")         as string | null)?.trim() ?? "";
+  const addressApartment   = (formData.get("address_apartment")    as string | null)?.trim() || null;
 
-  if (!addressStreet) return { error: "נא להזין שם רחוב" };
+  if (!addressStreet)      return { error: "נא להזין שם רחוב" };
   if (!addressHouseNumber) return { error: "נא להזין מספר בית" };
-  if (!addressCity) return { error: "נא להזין עיר" };
+  if (!addressCity)        return { error: "נא להזין עיר" };
 
-  // ── Server-side price validation ──────────────────────────────────────────
-  // Fetch real variant prices from DB — never trust client-side prices
+  // ── Fetch delivery zone from DB ────────────────────────────────────────────
+  // Admin client: delivery_zones may not have a public SELECT policy in all
+  // environments. This is an internal server-side lookup only.
+  const adminClient = await createAdminClient();
+  const { data: zoneRow, error: zoneError } = await adminClient
+    .from("delivery_zones")
+    .select("id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot")
+    .eq("id", deliveryZoneId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (zoneError || !zoneRow) {
+    console.error("[createOrder] delivery zone lookup failed", {
+      deliveryZoneId,
+      supabaseError: zoneError?.message ?? "no matching row",
+    });
+    return { error: "אזור המשלוח לא נמצא במערכת. נא לפנות לתמיכה." };
+  }
+
+  // ── Fetch and validate product variants ───────────────────────────────────
   const variantIds = cartItems.map((i) => i.variantId);
 
   const { data: variants, error: variantError } = await supabase
@@ -86,23 +122,21 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     .in("id", variantIds);
 
   if (variantError || !variants) {
+    console.error("[createOrder] variant fetch failed", { error: variantError?.message });
     return { error: "שגיאה באימות המוצרים. נא לנסות שוב." };
   }
 
   const variantMap = new Map(variants.map((v) => [v.id, v]));
 
-  // Build validated order items
-  type OrderItemData = {
+  type LineItemData = {
     variantId: string;
     quantity: number;
     unitPriceAgorot: number;
     totalPriceAgorot: number;
-    productName: string;
-    variantLabel: string;
     snapshot: Json;
   };
 
-  const orderItemsData: OrderItemData[] = [];
+  const lineItems: LineItemData[] = [];
 
   for (const cartItem of cartItems) {
     if (!cartItem.variantId || typeof cartItem.quantity !== "number") {
@@ -120,146 +154,144 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       return { error: `כמות לא תקינה עבור "${cartItem.productName}"` };
     }
 
-    const unitPriceAgorot = variant.price_agorot;
+    const unitPriceAgorot  = variant.price_agorot;
     const totalPriceAgorot = unitPriceAgorot * cartItem.quantity;
 
-    // Product name from DB join (with cast since Supabase types nested joins loosely)
-    const product = (variant.products as unknown as { id: string; name: string } | null);
+    const product = variant.products as unknown as { id: string; name: string } | null;
     const productName = product?.name ?? cartItem.productName;
 
-    const snapshot: Json = {
-      product_name: productName,
-      variant_label: variant.label,
-      price_agorot: unitPriceAgorot,
-    };
-
-    orderItemsData.push({
+    lineItems.push({
       variantId: cartItem.variantId,
-      quantity: cartItem.quantity,
+      quantity:  cartItem.quantity,
       unitPriceAgorot,
       totalPriceAgorot,
-      productName,
-      variantLabel: variant.label,
-      snapshot,
+      snapshot: {
+        product_name:  productName,
+        variant_label: variant.label,
+        price_agorot:  unitPriceAgorot,
+      } satisfies Json,
     });
   }
 
   // ── Server-side totals ─────────────────────────────────────────────────────
-  const subtotalAgorot = orderItemsData.reduce((s, i) => s + i.totalPriceAgorot, 0);
-  const quote = getDeliveryQuote(deliveryZoneSlug, subtotalAgorot);
+  const subtotalAgorot = lineItems.reduce((s, i) => s + i.totalPriceAgorot, 0);
 
-  // Enforce minimum order server-side
-  if (!quote.meetsMinimum) {
-    const minFmt = `${(quote.zone.minOrderAgorot / 100).toLocaleString("he-IL")} ₪`;
+  const isFreeDelivery =
+    zoneRow.free_delivery_threshold_agorot !== null &&
+    subtotalAgorot >= zoneRow.free_delivery_threshold_agorot;
+  const deliveryFeeAgorot = isFreeDelivery ? 0 : zoneRow.delivery_fee_agorot;
+
+  if (subtotalAgorot < zoneRow.min_order_agorot) {
+    const minFmt    = (zoneRow.min_order_agorot / 100).toLocaleString("he-IL");
+    const shortfall = zoneRow.min_order_agorot - subtotalAgorot;
+    const shortFmt  = (shortfall / 100).toLocaleString("he-IL");
     return {
-      error: `ההזמנה המינימלית לאזור ${quote.zone.name} היא ${minFmt}. חסרים עוד ${(quote.shortfallAgorot / 100).toLocaleString("he-IL")} ₪.`,
+      error: `ההזמנה המינימלית לאזור ${zoneRow.name} היא ₪${minFmt}. חסרים עוד ₪${shortFmt}.`,
     };
   }
 
-  const deliveryFeeAgorot = quote.feeAgorot;
   const discountAgorot = 0;
-  const totalAgorot = subtotalAgorot + deliveryFeeAgorot - discountAgorot;
+  const totalAgorot    = subtotalAgorot + deliveryFeeAgorot - discountAgorot;
 
-  // ── Resolve delivery zone UUID ─────────────────────────────────────────────
-  // orders.delivery_zone_id is a FK to delivery_zones.id (UUID)
-  const { data: zoneRow, error: zoneError } = await supabase
-    .from("delivery_zones")
-    .select("id")
-    .eq("slug", deliveryZoneSlug)
-    .single();
-
-  if (zoneError || !zoneRow) {
-    return {
-      error: "אזור המשלוח לא נמצא במערכת. נא לפנות לתמיכה.",
-    };
-  }
-
-  // ── Create order record ────────────────────────────────────────────────────
+  // ── Build JSON blobs for the RPC ───────────────────────────────────────────
   const deliveryAddressSnapshot: Json = {
-    street: addressStreet,
+    street:       addressStreet,
     house_number: addressHouseNumber,
-    apartment: addressApartment,
-    city: addressCity,
-    zone_name: zoneData.name,
-    zone_slug: deliveryZoneSlug,
+    apartment:    addressApartment,
+    city:         addressCity,
+    zone_name:    zoneRow.name,
+    zone_id:      zoneRow.id,
   };
 
   const customerSnapshot: Json = {
-    name: customerName,
+    name:  customerName,
     phone: customerPhone,
     email: customerEmail,
   };
 
-  const orderInsert: OrderInsert = {
-    user_id: user.id,
-    delivery_zone_id: zoneRow.id,
-    delivery_address_snapshot: deliveryAddressSnapshot,
-    customer_snapshot: customerSnapshot,
-    subtotal_agorot: subtotalAgorot,
-    delivery_fee_agorot: deliveryFeeAgorot,
-    discount_agorot: discountAgorot,
-    total_agorot: totalAgorot,
-    order_status: "pending_payment",
-    payment_status: "pending",
-    delivery_notes: deliveryNotes,
-  };
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert(orderInsert)
-    .select("id, order_number")
-    .single();
-
-  if (orderError || !order) {
-    console.error("Order insert error:", orderError);
-    return { error: "שגיאה ביצירת ההזמנה. נא לנסות שוב." };
-  }
-
-  // ── Create order items ─────────────────────────────────────────────────────
-  const orderItemsInsert: OrderItemInsert[] = orderItemsData.map((item) => ({
-    order_id: order.id,
+  // Each item matches the structure read by the Postgres function:
+  // { product_variant_id, product_snapshot, quantity, unit_price_agorot, total_price_agorot }
+  const itemsJson: Json = lineItems.map((item) => ({
     product_variant_id: item.variantId,
-    product_snapshot: item.snapshot,
-    quantity: item.quantity,
-    unit_price_agorot: item.unitPriceAgorot,
+    product_snapshot:   item.snapshot,
+    quantity:           item.quantity,
+    unit_price_agorot:  item.unitPriceAgorot,
     total_price_agorot: item.totalPriceAgorot,
   }));
 
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItemsInsert);
+  // ── Atomic order creation via RPC ──────────────────────────────────────────
+  // The function runs under SECURITY DEFINER but derives user_id from auth.uid()
+  // (set by PostgREST from the JWT) — never trusts a caller-supplied user_id.
+  // On duplicate idempotency_key it returns the existing row (out_is_duplicate = true).
+  // The user client is used here so auth.uid() is populated correctly.
+  const { data: rpcResult, error: rpcError } = await supabase.rpc("create_order_atomic", {
+    p_idempotency_key:     idempotencyKey,
+    p_delivery_zone_id:    zoneRow.id,
+    p_delivery_address:    deliveryAddressSnapshot,
+    p_customer:            customerSnapshot,
+    p_subtotal_agorot:     subtotalAgorot,
+    p_delivery_fee_agorot: deliveryFeeAgorot,
+    p_discount_agorot:     discountAgorot,
+    p_total_agorot:        totalAgorot,
+    p_delivery_notes:      deliveryNotes,
+    p_items:               itemsJson,
+  });
 
-  if (itemsError) {
-    console.error("Order items insert error:", itemsError);
-    // Attempt rollback
-    await supabase.from("orders").delete().eq("id", order.id);
-    return { error: "שגיאה בשמירת פריטי ההזמנה. נא לנסות שוב." };
+  if (rpcError || !rpcResult || rpcResult.length === 0) {
+    console.error("[createOrder] create_order_atomic RPC failed", {
+      error: rpcError?.message,
+    });
+    return { error: "שגיאה ביצירת ההזמנה. נא לנסות שוב." };
   }
 
-  // ── Mock payment (card validation happened client-side; no external provider) ─
-  // TODO: Replace this block with PayPlus integration when credentials are ready.
-  // Keep createPaymentPage import — it will be used when PAYPLUS_API_KEY is set.
-  //
-  // Future integration point:
-  //   const paymentResult = await createPaymentPage({ orderId, orderNumber, ... });
-  //   await supabase.from("orders").update({ payment_reference: paymentResult.paypageUid }).eq("id", order.id);
-  //   return { paymentUrl: paymentResult.paymentPageLink, orderNumber: order.order_number };
+  const { out_order_id: orderId, out_order_number: orderNumber, out_is_duplicate: isDuplicate } =
+    rpcResult[0];
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  // ── Mock payment ───────────────────────────────────────────────────────────
+  // If this is an idempotent replay AND the order was already paid, skip the
+  // update and return the success URL immediately — no double payment.
+  if (isDuplicate) {
+    const { data: existingOrder } = await adminClient
+      .from("orders")
+      .select("payment_status")
+      .eq("id", orderId)
+      .single();
 
-  await supabase
+    if (existingOrder?.payment_status === "paid") {
+      // Already completed — return the success URL without touching the order.
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };
+    }
+  }
+
+  // TODO: Replace with PayPlus when PAYPLUS_API_KEY is configured.
+  // Preserved integration point:
+  //   const paymentResult = await createPaymentPage({ orderId, ... });
+  //   await adminClient.from("orders").update({ payment_reference: paymentResult.paypageUid }).eq("id", orderId);
+  //   return { paymentUrl: paymentResult.paymentPageLink, orderNumber };
+
+  // adminClient is used for the payment update because there is no orders_own_update
+  // RLS policy for regular users (payment confirmation in production comes from a webhook,
+  // not from the user session).
+  const { error: paymentUpdateError } = await adminClient
     .from("orders")
     .update({
-      payment_status: "paid",
-      order_status: "paid",
-      payment_method: "card_mock",
+      payment_status:    "paid",
+      order_status:      "confirmed",
+      payment_method:    "card_mock",
       payment_reference: `MOCK-${Date.now()}`,
-      updated_at: new Date().toISOString(),
     })
-    .eq("id", order.id);
+    .eq("id", orderId);
 
-  return {
-    paymentUrl: `${origin}/checkout/success?order=${order.order_number}`,
-    orderNumber: order.order_number,
-  };
+  if (paymentUpdateError) {
+    // Order was created successfully; log the failure but do not surface it to
+    // the user — a real webhook would retry this update independently.
+    console.error("[createOrder] mock payment update failed", {
+      orderId,
+      error: paymentUpdateError.message,
+    });
+  }
+
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };
 }

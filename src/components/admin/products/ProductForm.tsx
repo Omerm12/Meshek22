@@ -9,16 +9,17 @@ import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
 import type { ActionResult } from "@/app/admin/products/actions";
 
-interface Category {
-  id:   string;
-  name: string;
+export interface CategoryOption {
+  id:        string;
+  name:      string;
+  parent_id: string | null;
 }
 
 interface ProductFormProps {
   defaultValues?: Partial<ProductFormData>;
   action:         (formData: FormData) => Promise<ActionResult>;
   submitLabel:    string;
-  categories:     Category[];
+  categories:     CategoryOption[];
 }
 
 // ─── Shared input styles ───────────────────────────────────────────────────────
@@ -44,6 +45,49 @@ function Field({
       {error &&           <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
+}
+
+/**
+ * Build grouped category options for the <select>.
+ *
+ * Returns an array of either:
+ *   { type: "group"; parentName: string; options: CategoryOption[] }
+ *   { type: "option"; cat: CategoryOption }   ← for root-level categories with no children
+ */
+type GroupedCategories =
+  | { type: "group"; parentName: string; options: CategoryOption[] }
+  | { type: "option"; cat: CategoryOption };
+
+function buildGroupedCategories(categories: CategoryOption[]): GroupedCategories[] {
+  const topLevel   = categories.filter((c) => !c.parent_id);
+  const children   = categories.filter((c) => !!c.parent_id);
+  const byParentId = new Map<string, CategoryOption[]>();
+
+  for (const child of children) {
+    if (!byParentId.has(child.parent_id!)) byParentId.set(child.parent_id!, []);
+    byParentId.get(child.parent_id!)!.push(child);
+  }
+
+  const result: GroupedCategories[] = [];
+
+  for (const parent of topLevel) {
+    const kids = byParentId.get(parent.id);
+    if (kids && kids.length > 0) {
+      result.push({ type: "group", parentName: parent.name, options: kids });
+    } else {
+      // Top-level with no children → show as a standalone option
+      result.push({ type: "option", cat: parent });
+    }
+  }
+
+  // Orphaned children (parent inactive or missing)
+  const knownParentIds = new Set(topLevel.map((c) => c.id));
+  const orphans = children.filter((c) => !knownParentIds.has(c.parent_id!));
+  if (orphans.length > 0) {
+    result.push({ type: "group", parentName: "אחר", options: orphans });
+  }
+
+  return result;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -95,9 +139,10 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
       if (result && !result.success) {
         setServerError(result.error);
       }
-      // On success the action calls redirect() — no handling needed here
     });
   };
+
+  const grouped = buildGroupedCategories(categories);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
@@ -105,19 +150,35 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
       {/* ── Product fields ────────────────────────────────────────────────── */}
       <div className="space-y-5">
 
-        {/* Category */}
-        <Field label="קטגוריה" id="category_id" required error={errors.category_id?.message}>
+        {/* Category — grouped by parent */}
+        <Field
+          label="קטגוריה"
+          id="category_id"
+          required
+          hint="בחרו את תת-הקטגוריה המתאימה (למשל: ירקות שורש, פירות הדר)"
+          error={errors.category_id?.message}
+        >
           <select
             id="category_id"
             {...register("category_id")}
             className={errors.category_id ? errInputCls : inputCls}
           >
             <option value="">בחרו קטגוריה...</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
+            {grouped.map((item, idx) =>
+              item.type === "group" ? (
+                <optgroup key={idx} label={item.parentName}>
+                  {item.options.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : (
+                <option key={item.cat.id} value={item.cat.id}>
+                  {item.cat.name}
+                </option>
+              )
+            )}
           </select>
         </Field>
 
