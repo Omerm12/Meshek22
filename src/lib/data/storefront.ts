@@ -364,15 +364,14 @@ export async function fetchFeaturedProducts(
 /**
  * All active products across all categories — for the /products listing page.
  */
-export async function fetchAllProducts(limit = 60): Promise<MockProduct[]> {
+export async function fetchAllProducts(): Promise<MockProduct[]> {
   const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
     .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .limit(limit);
+    .order("sort_order", { ascending: true });
 
   if (error || !data) return [];
 

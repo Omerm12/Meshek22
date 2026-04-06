@@ -3,54 +3,54 @@ import Link from "next/link";
 import {
   Leaf,
   Heart,
-  Clock,
   Star,
   Truck,
   Phone,
   Mail,
   ArrowLeft,
   CheckCircle2,
+  MapPin,
 } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 
 export const metadata: Metadata = {
   title: "אודות משק 22",
   description:
-    "הסיפור מאחורי משק 22 – ירקות ופירות טריים מהשדה ישירות לביתכם. מי אנחנו, מה מייחד אותנו, והתחייבות שלנו לאיכות.",
+    "משק 22, בבעלותו של חגי מעודי, ממוקם במושב ינון. גידול ושיווק תוצרת חקלאית איכותית — ישירות מהשדה אל הלקוח.",
 };
 
 const VALUES = [
   {
     icon: Leaf,
-    title: "ירקות שגדלו בשדה, לא במחסן",
-    desc: "אנחנו עובדים ישירות עם חקלאים מקומיים. כל מה שמגיע אליכם נלקט לכל היותר 48 שעות קודם – לא שבועות.",
+    title: "ישירות מהשדה",
+    desc: "אין פערי תיווך. אתם מקבלים תוצרת ישירות מהחקלאי — כל פרי וכל ירק נבחרים בקפידה להבטחת חוויית קנייה מיטבית.",
     color: "bg-emerald-50 text-emerald-600",
-  },
-  {
-    icon: Clock,
-    title: "משלוח מהיר עד הדלת",
-    desc: "הזמינו עד הערב, קבלו מחר. לרוב אזורי גוש דן – עד 24 שעות. לשאר הארץ – 1 עד 3 ימי עסקים.",
-    color: "bg-sky-50 text-sky-600",
-  },
-  {
-    icon: Heart,
-    title: "שירות אמיתי, לא בוט",
-    desc: "יש שאלה? מישהו עונה. ביטול הזמנה, שינוי כמות, בקשה מיוחדת – אפשר תמיד. אנחנו עסק משפחתי, לא תאגיד.",
-    color: "bg-rose-50 text-rose-600",
   },
   {
     icon: Star,
     title: "איכות ללא פשרות",
-    desc: "כל אצווה עוברת מיון ידני. מה שלא היינו מכניסים לבית שלנו – לא יגיע לבית שלכם.",
+    desc: "כל אצווה עוברת מיון ידני. הטריות היומיומית היא חלק בלתי נפרד מהעשייה שלנו — אנו מקפידים על איכות גבוהה ובחירה קפדנית.",
     color: "bg-amber-50 text-amber-600",
+  },
+  {
+    icon: Heart,
+    title: "שירות אישי ומותאם",
+    desc: "הקשר הישיר עם הלקוח מאפשר שירות אישי ומותאם לצרכים שונים. אנחנו עסק של אנשים — לא תאגיד.",
+    color: "bg-rose-50 text-rose-600",
+  },
+  {
+    icon: Truck,
+    title: "אספקה סדירה ואמינה",
+    desc: "אנו מספקים מענה ללקוחות פרטיים וגם ללקוחות מוסדיים הזקוקים לאספקה סדירה. אנו מקפידים על זמינות ונוחות, כולל אפשרות למשלוחים.",
+    color: "bg-sky-50 text-sky-600",
   },
 ];
 
 const COMMITMENTS = [
-  "אם מוצר הגיע פגום – החלפה מיידית ללא שאלות",
+  "תוצרת טרייה יומיומית — קטיפים שוטפים ישירות מהשדה",
   "מחירים שקופים ויציבים, ללא הפתעות בקופה",
-  "אריזה מינימלית – אנחנו דואגים לסביבה",
-  "תמיד ניתן לעדכן הזמנה עד 24 שעות לפני המשלוח",
+  "שירות אישי ומותאם — ניתן תמיד לעדכן הזמנה לפני אספקה",
+  "אספקה סדירה ואמינה ללקוחות פרטיים ומוסדיים כאחד",
 ];
 
 export default function AboutPage() {
@@ -65,11 +65,11 @@ export default function AboutPage() {
               הסיפור שלנו
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-5 leading-tight">
-              ירקות ופירות כמו שצריך להיות
+              חקלאות ישראלית<br />ישירות מהשדה אליכם
             </h1>
             <p className="text-brand-100 text-lg leading-relaxed">
-              משק 22 הוקם מתוך תסכול פשוט: למה קשה כל כך לקנות ירקות טריים מבלי
-              לנסוע לשוק, להמר על מה שיהיה בסופר, או לקבל אריזה מוזנחת מהמשלוח?
+              משק 22, בבעלותו של חגי מעודי, ממוקם במושב ינון ופועל מתוך אהבה
+              אמיתית לאדמה ולחקלאות הישראלית.
             </p>
           </div>
         </Container>
@@ -86,40 +86,41 @@ export default function AboutPage() {
                   מי אנחנו
                 </h2>
                 <p>
-                  אנחנו משפחת לוי מגדרה. גדלנו על חקלאות, ידענו תמיד מה זה ירק
-                  טרי אמיתי. לפני כמה שנים החלטנו להפסיק לקנות ירקות בסופר
-                  ולחזור לבסיס – לקנות ישירות מהשדה.
+                  משק 22 מתמחה בגידול ושיווק תוצרת חקלאית איכותית לשוק המוסדי
+                  והפרטי כאחד. בכל יום אנו מגדלים פירות וירקות טריים ומובחרים,
+                  תוך הקפדה על איכות גבוהה ובחירה קפדנית של כל תוצרת.
                 </p>
                 <p className="mt-3">
-                  ב-2022 הבנו שאנחנו לא לבד. שכנים ביקשו להצטרף. חברים ביקשו.
-                  ואז החלטנו לפתוח את זה לכולם – ובאו{" "}
-                  <strong className="text-gray-900">משק 22</strong>.
+                  החזון שלנו הוא לספק תוצרת חקלאית ישראלית, טרייה ואיכותית —
+                  ישירות מהשדה אל הלקוח. אנו מאמינים בחקלאות כחול-לבן וגאים
+                  להיות חלק מהעשייה המקומית בישראל 🇮🇱.
                 </p>
               </div>
 
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                  למה בחרנו לעשות את זה
+                  הגישה שלנו
                 </h2>
                 <p>
-                  כי האוכל שאנחנו אוכלים חשוב. כי החקלאי שמגדל את הגזר שלכם ראוי
-                  שתדעו את שמו. וכי הנסיעה לשוק לא תמיד מתאפשרת – ולמה שתצטרכו
-                  לוותר על טריות בגלל זה?
+                  העבודה במשק מתבצעת מתוך מחויבות לאיכות, לטריות ולשירות אישי.
+                  במשק 22 אין פערי תיווך — אתם מקבלים תוצרת ישירות מהחקלאי,
+                  כפי שצריך להיות.
                 </p>
-                <p className="mt-3">
-                  המטרה שלנו פשוטה: לחבר בין האדמה לבין השולחן שלכם, בצורה
-                  ישירה, הגונה וטעימה.
-                </p>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-stone-500">
+                <MapPin className="h-4 w-4 text-brand-500 shrink-0" aria-hidden="true" />
+                <span>מושב ינון — סביבה חקלאית תומכת לצמיחה ולעשייה</span>
               </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
               {[
-                { value: "3,000+", label: "לקוחות מרוצים" },
-                { value: "48h", label: "מהשדה לדלת" },
-                { value: "80+", label: "יישובים בארץ" },
-                { value: "100%", label: "ירקות טריים" },
+                { value: "יומי", label: "קטיף טרי" },
+                { value: "100%", label: "ישירות מהחקלאי" },
+                { value: "א׳–ה׳", label: "9:00–18:00" },
+                { value: "ו׳", label: "7:30–15:00" },
               ].map(({ value, label }) => (
                 <div
                   key={label}
@@ -147,7 +148,7 @@ export default function AboutPage() {
               מה מייחד את משק 22
             </h2>
             <p className="text-stone-500 max-w-xl mx-auto">
-              לא הכל שווה. זו הסיבה שבחרנו לבנות עסק אחרת.
+              חקלאות שבאה מהלב — עם מחויבות אמיתית לאיכות ולשירות.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -157,15 +158,15 @@ export default function AboutPage() {
                 className="bg-white rounded-2xl border border-stone-100 p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
               >
                 <div
-                  className={`h-10 w-10 rounded-xl ${color} bg-opacity-20 flex items-center justify-center mb-4`}
+                  className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4`}
                   style={{
                     backgroundColor: color.includes("emerald")
                       ? "#d1fae5"
-                      : color.includes("sky")
-                        ? "#e0f2fe"
+                      : color.includes("amber")
+                        ? "#fef3c7"
                         : color.includes("rose")
                           ? "#ffe4e6"
-                          : "#fef3c7",
+                          : "#e0f2fe",
                   }}
                 >
                   <Icon
@@ -187,10 +188,10 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                התחייבות שלנו לטריות ואיכות
+                המחויבות שלנו לאיכות ולשירות
               </h2>
               <p className="text-stone-500 leading-relaxed mb-6">
-                אנחנו לא מסתירים מאחורי תנאי שירות. זו ההתחייבות שלנו בכתב –
+                אנחנו לא מסתירים מאחורי תנאי שירות. זו ההתחייבות שלנו בכתב —
                 ובמילה.
               </p>
               <ul className="space-y-3">
@@ -217,15 +218,15 @@ export default function AboutPage() {
               />
               <h3 className="text-2xl font-bold mb-3">מוכנים לנסות?</h3>
               <p className="text-brand-100 mb-6 leading-relaxed">
-                הצטרפו לאלפי לקוחות שכבר גילו שירקות טריים יכולים להגיע לביתם –
-                בלי סופר, בלי תורים, בלי ויתורים.
+                הצטרפו ללקוחות הפרטיים והמוסדיים שכבר נהנים מתוצרת טרייה
+                ואיכותית — ישירות מהשדה לביתם או לעסקם.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link
-                  href="/category/yerakot"
+                  href="/"
                   className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-white text-brand-700 font-semibold text-sm hover:bg-brand-50 transition-colors"
                 >
-                  לחנות
+                  לדף הבית
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <a
@@ -254,7 +255,7 @@ export default function AboutPage() {
               className="flex items-center gap-1.5 hover:text-brand-700 transition-colors"
             >
               <Phone className="h-4 w-4 text-brand-500" />
-              *3722 (א׳–ו׳, 07:00–18:00)
+              *3722 (א׳–ה׳ 9:00–18:00, ו׳ 7:30–15:00)
             </a>
             <a
               href="mailto:hello@meshek22.co.il"

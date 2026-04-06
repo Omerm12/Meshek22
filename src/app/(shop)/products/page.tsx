@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
-import { ProductCard } from "@/components/shop/ProductCard";
+import { ProductsClientShell } from "@/components/shop/ProductsClientShell";
+import { CategoryHero } from "@/components/shop/CategoryHero";
+import { getCategoryHero } from "@/lib/config/category-heroes";
 import { fetchAllProducts } from "@/lib/data/storefront";
 
 export const metadata: Metadata = {
@@ -11,10 +13,12 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function ProductsPage() {
-  const products = await fetchAllProducts(60);
+  const products = await fetchAllProducts();
+  const heroConfig = getCategoryHero("products");
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "var(--color-surface)" }}>
+      <CategoryHero config={heroConfig} />
       <Container className="py-10 lg:py-16">
         {/* Header */}
         <div className="mb-8">
@@ -31,19 +35,7 @@ export default async function ProductsPage() {
           )}
         </div>
 
-        {/* Grid */}
-        {products.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="py-24 text-center text-stone-400">
-            <p className="text-lg font-medium">אין מוצרים להצגה כרגע</p>
-            <p className="text-sm mt-1">נחזור בקרוב עם מוצרים חדשים!</p>
-          </div>
-        )}
+        <ProductsClientShell products={products} totalCount={products.length} />
       </Container>
     </main>
   );

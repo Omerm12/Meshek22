@@ -50,7 +50,13 @@
   100% { transform: scale(1); }
 }
 
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* ── Animation utilities ── */
+.animate-dropdown-in { animation: dropdown-in 0.18s var(--ease-out-quart) both; }
 .animate-fade-up  { animation: fade-up  0.6s var(--ease-out-expo) both; }
 .animate-fade-in  { animation: fade-in  0.45s var(--ease-out-quart) both; }
 .animate-scale-in { animation: scale-in 0.4s var(--ease-out-expo) both; }

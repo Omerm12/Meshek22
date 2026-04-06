@@ -26,6 +26,17 @@ export interface CategoryHeroConfig {
 }
 
 export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
+  products: {
+    title: "כל המוצרים",
+    subtitle: "ירקות ופירות טריים · קטיף יומי · ישירות מהשדה",
+    imageSrc: "/images/heroes/home-all-products.png",
+    imageAlt: "כל המוצרים של משק 22",
+    fallbackBg: "bg-stone-900",
+    containerBg: "#111810",
+    overlayColor: "rgba(10, 20, 8, 0.32)",
+    accentClass: "bg-brand-600",
+    headingColor: "text-white",
+  },
   vegetables: {
     title: "ירקות טריים",
     subtitle: "קטיפים יומיים · ישירות מהשדה לביתכם",

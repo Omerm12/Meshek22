@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, Leaf } from "lucide-react";
+import { X } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 import { useAuthModal } from "@/store/auth-modal";
 import { createClient } from "@/lib/supabase/client";
@@ -120,12 +121,13 @@ export function AuthModal() {
       >
         {/* ── Header: logo + close button ── */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
-              <Leaf className="h-4 w-4 text-white" aria-hidden="true" />
-            </div>
-            <span className="font-bold text-gray-900">משק 22</span>
-          </div>
+          <Image
+            src="/images/heroes/logo.png"
+            alt="משק 22"
+            width={90}
+            height={30}
+            className="h-8 w-auto object-contain"
+          />
           <button
             onClick={closeModal}
             aria-label="סגור"

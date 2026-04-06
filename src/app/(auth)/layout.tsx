@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Leaf } from "lucide-react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -24,11 +24,15 @@ export default async function AuthLayout({
       style={{ backgroundColor: "var(--color-surface)" }}
     >
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mb-8 group">
-        <div className="h-9 w-9 rounded-xl bg-brand-600 flex items-center justify-center shadow-sm group-hover:bg-brand-700 transition-colors">
-          <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
-        </div>
-        <span className="text-xl font-bold text-gray-900">משק 22</span>
+      <Link href="/" className="flex items-center mb-8">
+        <Image
+          src="/images/heroes/logo.png"
+          alt="משק 22"
+          width={140}
+          height={48}
+          className="h-12 w-auto object-contain"
+          priority
+        />
       </Link>
 
       {/* Card */}

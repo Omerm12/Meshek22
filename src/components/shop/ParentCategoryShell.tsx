@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Search, X, ChevronDown, PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Container } from "@/components/ui/Container";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { CategoryHero } from "@/components/shop/CategoryHero";
 import type { MockCategory, MockProduct } from "@/lib/data/mock";
 import type { CategoryHeroConfig } from "@/lib/config/category-heroes";
 
@@ -33,78 +33,6 @@ function getDefaultPrice(product: MockProduct) {
   return (product.variants.find((v) => v.isDefault) ?? product.variants[0])?.priceAgorot ?? 0;
 }
 
-// ─── Hero ─────────────────────────────────────────────────────────────────────
-
-function CategoryHero({ config }: { config: CategoryHeroConfig }) {
-  return (
-    /*
-     * The outer wrapper is `position: relative` so the overlay and text can
-     * be absolutely positioned over the image.
-     * The wrapper height is driven by the image itself (width:100%, height:auto)
-     * — this is the ONLY way to guarantee the full image shows with zero cropping
-     * regardless of the image's natural aspect ratio.
-     * min-h-[280px] prevents a flash of zero-height before the image loads.
-     */
-    <div
-      className="relative w-full overflow-hidden"
-      style={{
-        backgroundColor: config.containerBg,
-        minHeight: "280px",
-      }}
-    >
-      {/* Image — natural size, zero cropping */}
-      {config.imageSrc && (
-        <Image
-          src={config.imageSrc}
-          alt={config.imageAlt}
-          width={1920}
-          height={900}
-          style={{ width: "100%", height: "auto", display: "block" }}
-          priority
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Full-area overlay for text legibility — absolutely covers the image */}
-      <div className="absolute inset-0" style={{ backgroundColor: config.overlayColor }} aria-hidden="true" />
-
-      {/* Bottom gradient — softens transition to page content */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-20 pointer-events-none"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 100%)" }}
-        aria-hidden="true"
-      />
-
-      {/* Text — absolutely centred over the image */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-        <h1
-          className={cn("font-bold tracking-tight", config.headingColor)}
-          style={{
-            fontSize: "clamp(2.4rem, 5vw, 4rem)",
-            lineHeight: 1.1,
-            textShadow: "0 2px 20px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
-          }}
-        >
-          {config.title}
-        </h1>
-
-        {config.subtitle && (
-          <p
-            className="text-white/90 leading-relaxed mt-4 max-w-sm"
-            style={{
-              fontSize: "clamp(0.95rem, 2vw, 1.1rem)",
-              textShadow: "0 1px 10px rgba(0,0,0,0.55)",
-              letterSpacing: "0.01em",
-            }}
-          >
-            {config.subtitle}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Subcategory tabs ─────────────────────────────────────────────────────────
 
 function SubcategoryTabs({
@@ -121,8 +49,8 @@ function SubcategoryTabs({
   const allHref = `/${parentSlug}`;
 
   return (
-    <div className="bg-white border-b border-stone-100 overflow-x-auto">
-      <Container>
+    <div className="lg:hidden bg-white border-b border-stone-100 overflow-x-auto">
+      <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div
           className="flex gap-2 py-3"
           style={{ minWidth: "max-content" }}
@@ -158,7 +86,7 @@ function SubcategoryTabs({
             </Link>
           ))}
         </div>
-      </Container>
+      </div>
     </div>
   );
 }
@@ -264,8 +192,10 @@ export function ParentCategoryShell({
 }: ParentCategoryShellProps) {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("default");
+  const [visible, setVisible] = useState(16); // 4 rows × 4 cols
 
   const filtered = useMemo(() => {
+    setVisible(16);
     if (!search.trim()) return products;
     const q = search.toLowerCase();
     return products.filter(
@@ -276,6 +206,7 @@ export function ParentCategoryShell({
   }, [products, search]);
 
   const sorted = useMemo(() => {
+    setVisible(16);
     const arr = [...filtered];
     switch (sortBy) {
       case "price-asc":
@@ -307,7 +238,7 @@ export function ParentCategoryShell({
       />
 
       {/* ── Main content ── */}
-      <Container className="py-6 lg:py-8">
+      <Container className="py-6 lg:py-8 !max-w-[1400px]">
         {/* Breadcrumb */}
         <nav
           className="flex items-center gap-1.5 text-sm text-stone-400 mb-5"
@@ -415,11 +346,24 @@ export function ParentCategoryShell({
 
             {/* Product grid */}
             {sorted.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
-                {sorted.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+                  {sorted.slice(0, visible).map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+                {visible < sorted.length && (
+                  <div className="flex justify-center mt-8">
+                    <button
+                      onClick={() => setVisible((v) => v + 16)}
+                      className="inline-flex items-center gap-2 h-11 px-8 rounded-full bg-white border border-stone-200 text-stone-700 font-medium text-sm hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50 transition-all duration-200 cursor-pointer"
+                    >
+                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                      הצג עוד ({sorted.length - visible} מוצרים נוספים)
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <EmptyState search={search} onClear={() => setSearch("")} />
             )}

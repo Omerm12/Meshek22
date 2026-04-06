@@ -8,11 +8,11 @@ import {
   Tag,
   ClipboardList,
   LogOut,
-  Leaf,
   ExternalLink,
   Truck,
   MapPin,
 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 import { useUser } from "@/store/user";
 
@@ -48,13 +48,14 @@ export function AdminSidebar({ adminName, adminEmail }: AdminSidebarProps) {
     <aside className="w-60 shrink-0 flex flex-col bg-gray-900 min-h-screen">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-gray-800">
-        <div className="h-8 w-8 rounded-xl bg-brand-600 flex items-center justify-center shrink-0">
-          <Leaf className="h-4 w-4 text-white" aria-hidden="true" />
-        </div>
-        <div className="leading-tight">
-          <p className="text-white font-bold text-sm">משק 22</p>
-          <p className="text-gray-500 text-xs">ניהול</p>
-        </div>
+        <Image
+          src="/images/heroes/logo.png"
+          alt="משק 22"
+          width={90}
+          height={30}
+          className="h-8 w-auto object-contain brightness-0 invert"
+        />
+        <p className="text-gray-500 text-xs">ניהול</p>
       </div>
 
       {/* Nav */}

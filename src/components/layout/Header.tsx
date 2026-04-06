@@ -7,7 +7,6 @@ import {
   ShoppingCart,
   Menu,
   X,
-  Leaf,
   Phone,
   User,
   LogOut,
@@ -15,6 +14,7 @@ import {
   LayoutDashboard,
   Settings,
 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
@@ -104,18 +104,22 @@ export function Header() {
         )}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-[72px]">
 
             {/* ── Logo ──────────────────────────────────────────────────────── */}
             <Link
               href="/"
-              className="flex items-center gap-2 text-brand-700 hover:text-brand-800 transition-colors"
+              className="flex items-center"
               aria-label="דף הבית"
             >
-              <div className="h-8 w-8 bg-brand-600 rounded-xl flex items-center justify-center">
-                <Leaf className="h-[18px] w-[18px] text-white" aria-hidden="true" />
-              </div>
-              <span className="font-bold text-xl tracking-tight">משק 22</span>
+              <Image
+                src="/images/heroes/logo.png"
+                alt="משק 22"
+                width={200}
+                height={68}
+                className="h-[68px] w-auto object-contain"
+                priority
+              />
             </Link>
 
             {/* ── Desktop Nav ───────────────────────────────────────────────── */}
@@ -156,10 +160,10 @@ export function Header() {
                     {cat.label}
                   </Link>
 
-                  {/* Subcategory dropdown — text-only, centered under the parent button */}
+                  {/* Subcategory dropdown — centered under the parent button */}
                   {openDropdown === cat.slug && cat.children.length > 0 && (
                     <div
-                      className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 w-52 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50"
+                      className="animate-dropdown-in absolute top-full mt-2 left-1/2 -translate-x-1/2 w-56 bg-white rounded-2xl border border-stone-100/80 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12),0_2px_8px_-2px_rgba(0,0,0,0.06)] py-2 z-50 overflow-hidden"
                       role="menu"
                       aria-label={`תת-קטגוריות ${cat.label}`}
                     >
@@ -168,9 +172,14 @@ export function Header() {
                           key={child.slug}
                           href={child.href}
                           onClick={() => setOpenDropdown(null)}
-                          className="block px-4 py-2.5 text-sm text-stone-600 hover:text-brand-700 hover:bg-brand-50 transition-colors"
+                          className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50/70 transition-colors duration-150"
                           role="menuitem"
                         >
+                          {child.icon && (
+                            <span className="text-base leading-none shrink-0" aria-hidden="true">
+                              {child.icon}
+                            </span>
+                          )}
                           {child.label}
                         </Link>
                       ))}
