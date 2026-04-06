@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ShoppingCart,
   Plus,
@@ -92,19 +93,34 @@ export function ProductShell({ product, relatedProducts }: ProductShellProps) {
           {/* ── Image column ── */}
           <div className="lg:sticky lg:top-24">
             <div
-              className="aspect-square max-w-sm mx-auto lg:max-w-full rounded-3xl flex items-center justify-center overflow-hidden"
+              className="aspect-square max-w-sm mx-auto lg:max-w-full rounded-3xl overflow-hidden relative"
               style={{
-                background: `radial-gradient(ellipse at 45% 42%, ${product.imageColor} 0%, color-mix(in srgb, ${product.imageColor} 40%, white) 100%)`,
+                background: product.imageUrl
+                  ? undefined
+                  : `radial-gradient(ellipse at 45% 42%, ${product.imageColor} 0%, color-mix(in srgb, ${product.imageColor} 40%, white) 100%)`,
                 boxShadow: "0 24px 64px -12px rgba(0,0,0,0.09)",
               }}
             >
-              <span
-                className="select-none drop-shadow-sm leading-none"
-                style={{ fontSize: "clamp(7rem, 18vw, 12rem)" }}
-                aria-hidden="true"
-              >
-                {product.icon}
-              </span>
+              {product.imageUrl ? (
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 1024px) 384px, 50vw"
+                  className="object-contain p-6"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span
+                    className="select-none drop-shadow-sm leading-none"
+                    style={{ fontSize: "clamp(7rem, 18vw, 12rem)" }}
+                    aria-hidden="true"
+                  >
+                    {product.icon}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Trust badges */}

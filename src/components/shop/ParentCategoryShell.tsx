@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, X, ChevronDown, PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Container } from "@/components/ui/Container";
@@ -36,57 +37,70 @@ function getDefaultPrice(product: MockProduct) {
 
 function CategoryHero({ config }: { config: CategoryHeroConfig }) {
   return (
+    /*
+     * The outer wrapper is `position: relative` so the overlay and text can
+     * be absolutely positioned over the image.
+     * The wrapper height is driven by the image itself (width:100%, height:auto)
+     * — this is the ONLY way to guarantee the full image shows with zero cropping
+     * regardless of the image's natural aspect ratio.
+     * min-h-[280px] prevents a flash of zero-height before the image loads.
+     */
     <div
-      className={cn(
-        "relative w-full overflow-hidden",
-        config.fallbackBg
-      )}
-      style={{ minHeight: "320px" }}
+      className="relative w-full overflow-hidden"
+      style={{
+        backgroundColor: config.containerBg,
+        minHeight: "280px",
+      }}
     >
-      {/* Background image layer */}
+      {/* Image — natural size, zero cropping */}
       {config.imageSrc && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={config.imageSrc}
           alt={config.imageAlt}
-          className="absolute inset-0 w-full h-full object-cover"
+          width={1920}
+          height={900}
+          style={{ width: "100%", height: "auto", display: "block" }}
+          priority
           aria-hidden="true"
         />
       )}
 
-      {/* Color overlay — always present for text readability */}
+      {/* Full-area overlay for text legibility — absolutely covers the image */}
+      <div className="absolute inset-0" style={{ backgroundColor: config.overlayColor }} aria-hidden="true" />
+
+      {/* Bottom gradient — softens transition to page content */}
       <div
-        className="absolute inset-0"
-        style={{ backgroundColor: config.overlayColor }}
+        className="absolute inset-x-0 bottom-0 h-20 pointer-events-none"
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 100%)" }}
         aria-hidden="true"
       />
 
-      {/* Gradient fade at bottom */}
-      <div
-        className="absolute bottom-0 inset-x-0 h-28 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.25) 100%)",
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Content */}
-      <Container className="relative py-16 lg:py-20 flex flex-col items-center text-center gap-4">
+      {/* Text — absolutely centred over the image */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
         <h1
-          className={cn(
-            "text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight drop-shadow-md",
-            config.headingColor
-          )}
+          className={cn("font-bold tracking-tight", config.headingColor)}
+          style={{
+            fontSize: "clamp(2.4rem, 5vw, 4rem)",
+            lineHeight: 1.1,
+            textShadow: "0 2px 20px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
+          }}
         >
           {config.title}
         </h1>
+
         {config.subtitle && (
-          <p className="text-base sm:text-lg text-white/85 max-w-xl leading-relaxed drop-shadow-sm">
+          <p
+            className="text-white/90 leading-relaxed mt-4 max-w-sm"
+            style={{
+              fontSize: "clamp(0.95rem, 2vw, 1.1rem)",
+              textShadow: "0 1px 10px rgba(0,0,0,0.55)",
+              letterSpacing: "0.01em",
+            }}
+          >
             {config.subtitle}
           </p>
         )}
-      </Container>
+      </div>
     </div>
   );
 }

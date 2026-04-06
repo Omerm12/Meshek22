@@ -29,6 +29,8 @@ export const categorySchema = z.object({
     .min(0, "סדר המיון חייב להיות 0 או יותר")
     .max(9999),
   is_active: z.boolean(),
+  /** Show this category in the homepage "קטגוריות מובילות" section. */
+  is_featured: z.boolean(),
   /** UUID of the parent category. Empty string treated as null (no parent). */
   parent_id: z.string().uuid("מזהה קטגוריית אב אינו תקין").optional().or(z.literal("")),
 });

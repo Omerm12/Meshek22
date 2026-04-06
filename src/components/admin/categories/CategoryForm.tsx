@@ -84,6 +84,7 @@ export function CategoryForm({
       image_url:   defaultValues?.image_url   ?? "",
       sort_order:  defaultValues?.sort_order  ?? 0,
       is_active:   defaultValues?.is_active   ?? true,
+      is_featured: defaultValues?.is_featured ?? false,
       parent_id:   defaultValues?.parent_id   ?? "",
     },
   });
@@ -105,6 +106,7 @@ export function CategoryForm({
     fd.set("image_url",   data.image_url ?? "");
     fd.set("sort_order",  String(data.sort_order));
     fd.set("is_active",   String(data.is_active));
+    fd.set("is_featured", String(data.is_featured));
     fd.set("parent_id",   data.parent_id ?? "");
 
     startTransition(async () => {
@@ -201,8 +203,8 @@ export function CategoryForm({
         />
       </Field>
 
-      {/* Sort order + Is active */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Sort order + Is active + Is featured */}
+      <div className="grid grid-cols-3 gap-4">
         <Field label="סדר מיון" id="sort_order" required error={errors.sort_order?.message}>
           <input
             id="sort_order"
@@ -224,6 +226,24 @@ export function CategoryForm({
             />
             <label htmlFor="is_active" className="text-sm text-gray-700 cursor-pointer select-none">
               פעילה
+            </label>
+          </div>
+        </Field>
+
+        <Field
+          label="מובילת"
+          id="is_featured"
+          hint="הצג בדף הבית"
+        >
+          <div className="flex items-center gap-3 h-10">
+            <input
+              id="is_featured"
+              type="checkbox"
+              {...register("is_featured")}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+            />
+            <label htmlFor="is_featured" className="text-sm text-gray-700 cursor-pointer select-none">
+              מובילת
             </label>
           </div>
         </Field>

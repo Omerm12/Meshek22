@@ -1,11 +1,12 @@
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { ProductCard } from "@/components/shop/ProductCard";
+import { ProductCarousel } from "@/components/ui/ProductCarousel";
 import { fetchFeaturedProducts } from "@/lib/data/storefront";
 
 export async function BestSellers() {
-  const products = await fetchFeaturedProducts(8);
+  const products = await fetchFeaturedProducts(12);
 
   if (products.length === 0) return null;
 
@@ -23,29 +24,25 @@ export async function BestSellers() {
             title="הנמכרים ביותר"
             subtitle="המוצרים שכולם אוהבים, טריים כל יום"
           />
-          <a
-            href="/category/yerakot"
-            className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0"
+          <Link
+            href="/products"
+            className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
           >
             כל המוצרים
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </a>
+          </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <ProductCarousel products={products} />
 
-        <div className="mt-8 sm:hidden text-center">
-          <a
-            href="/category/yerakot"
+        <div className="mt-6 sm:hidden text-center">
+          <Link
+            href="/products"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700"
           >
             לכל המוצרים
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </a>
+          </Link>
         </div>
       </Container>
     </section>

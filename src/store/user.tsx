@@ -15,6 +15,8 @@ interface UserContextValue {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  /** True only when the authenticated user's profile role === 'admin'. */
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -22,23 +24,22 @@ const UserContext = createContext<UserContextValue>({
   user: null,
   session: null,
   isLoading: true,
+  isAdmin: false,
   signOut: async () => {},
 });
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  // Stable client instance
   const [supabase] = useState(() => createClient());
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch initial session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setIsLoading(false);
     });
 
-    // Listen for auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -49,6 +50,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
+  // Fetch role from profiles whenever session changes.
+  // Uses the existing profiles_own_select RLS policy — users can only read their own row.
+  useEffect(() => {
+    if (!session?.user) {
+      setRole(null);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .single()
+      .then(({ data }) => {
+        setRole(data?.role ?? null);
+      });
+  }, [session, supabase]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -58,10 +76,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       session,
       isLoading,
+      isAdmin: role === "admin",
       signOut,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [session, isLoading]
+    [session, isLoading, role],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

@@ -23,7 +23,7 @@ export default async function EditCategoryPage({
   const [{ data: category, error }, { data: allTopLevel }] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, name, slug, description, image_url, sort_order, is_active, parent_id")
+      .select("id, name, slug, description, image_url, sort_order, is_active, is_featured, parent_id")
       .eq("id", id)
       .single(),
     // Only top-level categories can be parents; exclude self
@@ -70,6 +70,7 @@ export default async function EditCategoryPage({
             image_url:   category.image_url ?? "",
             sort_order:  category.sort_order,
             is_active:   category.is_active,
+            is_featured: category.is_featured,
             parent_id:   category.parent_id ?? "",
           }}
           action={actionWithId}

@@ -22,7 +22,8 @@ function parseForm(formData: FormData) {
     description: formData.get("description") ?? "",
     image_url:   formData.get("image_url") ?? "",
     sort_order:  Number(formData.get("sort_order")),
-    is_active:   formData.get("is_active") === "true",
+    is_active:   formData.get("is_active")   === "true",
+    is_featured: formData.get("is_featured") === "true",
     parent_id:   rawParentId,
   });
 }
@@ -49,6 +50,7 @@ export async function createCategory(
     image_url:   parsed.data.image_url || null,
     sort_order:  parsed.data.sort_order,
     is_active:   parsed.data.is_active,
+    is_featured: parsed.data.is_featured,
     parent_id:   parentId,
   });
 
@@ -97,6 +99,7 @@ export async function updateCategory(
       image_url:   parsed.data.image_url || null,
       sort_order:  parsed.data.sort_order,
       is_active:   parsed.data.is_active,
+      is_featured: parsed.data.is_featured,
       parent_id:   parentId,
     })
     .eq("id", id);

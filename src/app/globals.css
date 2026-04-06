@@ -104,6 +104,9 @@ h1, h2, h3 {
 ::-webkit-scrollbar-track { background: var(--color-surface-2); }
 ::-webkit-scrollbar-thumb { background: var(--color-brand-300); border-radius: 99px; }
 
+/* ── Product carousel: hide scrollbar on the track element ── */
+.carousel-track-no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* ── RTL number inputs ── */
 input[type="number"],
 input[type="tel"] {

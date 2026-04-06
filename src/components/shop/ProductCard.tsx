@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
@@ -27,7 +28,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const discountPct = hasSale
     ? Math.round(
         ((selectedVariant.comparePriceAgorot! - selectedVariant.priceAgorot) /
-          selectedVariant.comparePriceAgorot!) * 100
+          selectedVariant.comparePriceAgorot!) *
+          100,
       )
     : 0;
 
@@ -45,6 +47,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
   // Show max 3 variants to keep card compact
   const visibleVariants = product.variants.slice(0, 3);
+  const hasImage = !!product.imageUrl;
 
   return (
     <article
@@ -54,30 +57,54 @@ export function ProductCard({ product, className }: ProductCardProps) {
         isInCart
           ? "border-brand-300 shadow-[0_4px_24px_-4px_rgba(46,125,46,0.18)]"
           : "border-stone-100 shadow-sm hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12)] hover:-translate-y-0.5",
-        className
+        className,
       )}
     >
-      {/* ── Image area (links to product page) ── */}
+      {/* ── Image area ─────────────────────────────────────────────────────── */}
       <Link
         href={`/product/${product.slug}`}
-        className="relative h-44 flex items-center justify-center overflow-hidden block"
+        className="relative w-full aspect-[16/9] overflow-hidden block rounded-t-2xl"
         tabIndex={-1}
         aria-hidden="true"
-        style={{
+        style={!hasImage ? {
           background: `radial-gradient(ellipse at 50% 70%, ${product.imageColor} 0%, color-mix(in srgb, ${product.imageColor} 55%, white) 100%)`,
-        }}
+        } : undefined}
       >
-        {/* Emoji */}
-        <span
-          className="text-7xl leading-none select-none transition-transform duration-500 ease-out group-hover:scale-110"
-          aria-hidden="true"
-        >
-          {product.icon}
-        </span>
+        {hasImage ? (
+          <>
+            {/* Background layer (fills width, creates premium feel) */}
+            <Image
+              src={product.imageUrl!}
+              alt=""
+              fill
+              aria-hidden="true"
+              className="object-cover scale-125 blur-2xl opacity-30"
+            />
+
+            {/* Foreground image (FULL image, no cropping) */}
+            <Image
+              src={product.imageUrl!}
+              alt={product.name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
+              className="object-contain z-10 transition-transform duration-500 ease-out group-hover:scale-105"
+            />
+          </>
+        ) : (
+          /* Emoji fallback when no image uploaded */
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span
+              className="text-7xl leading-none select-none transition-transform duration-500 ease-out group-hover:scale-110"
+              aria-hidden="true"
+            >
+              {product.icon}
+            </span>
+          </div>
+        )}
 
         {/* Sale badge */}
         {hasSale && (
-          <span className="absolute top-3 end-3 bg-red-500 text-white text-[11px] font-bold rounded-full px-2 py-0.5 leading-none">
+          <span className="absolute top-3 end-3 bg-red-500 text-white text-[11px] font-bold rounded-full px-2 py-0.5 leading-none z-10">
             -{discountPct}%
           </span>
         )}
@@ -85,7 +112,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
         {/* In-cart quantity indicator */}
         {isInCart && (
           <span
-            className="absolute top-3 start-3 h-6 min-w-6 px-1.5 bg-brand-600 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pop"
+            className="absolute top-3 start-3 h-6 min-w-6 px-1.5 bg-brand-600 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pop z-10"
             aria-label={`${qty} בסל`}
           >
             {qty}
@@ -93,24 +120,30 @@ export function ProductCard({ product, className }: ProductCardProps) {
         )}
       </Link>
 
-      {/* ── Content ── */}
+      {/* ── Content ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col flex-1 px-4 pt-3 pb-4 gap-2">
         {/* Category */}
         <p className="text-[11px] font-medium text-warm-muted uppercase tracking-wider">
           {product.categoryName}
         </p>
 
-        {/* Name (links to product page) */}
+        {/* Name */}
         <Link href={`/product/${product.slug}`}>
           <h3 className="font-bold text-gray-900 text-[15px] leading-snug hover:text-brand-700 transition-colors duration-200">
             {product.name}
           </h3>
         </Link>
 
-        {/* Variant selector */}
-        {product.variants.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            {visibleVariants.map((v) => (
+        {/* Variant selector — always visible so customer knows what they're buying */}
+        <div className="flex flex-wrap gap-1">
+          {product.variants.length === 1 ? (
+            /* Single variant: static pill, styled green so it reads as "selected" */
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-brand-600 text-white border-brand-600">
+              {selectedVariant.label}
+            </span>
+          ) : (
+            /* Multiple variants: interactive selector (max 3 shown) */
+            visibleVariants.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelectedVariant(v)}
@@ -118,19 +151,19 @@ export function ProductCard({ product, className }: ProductCardProps) {
                   "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all duration-150 cursor-pointer",
                   selectedVariant.id === v.id
                     ? "bg-brand-600 text-white border-brand-600"
-                    : "bg-white text-stone-500 border-stone-200 hover:border-brand-300 hover:text-brand-700"
+                    : "bg-white text-stone-500 border-stone-200 hover:border-brand-300 hover:text-brand-700",
                 )}
               >
                 {v.label}
               </button>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
 
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* ── Price + cart control ── */}
+        {/* ── Price + cart control ──────────────────────────────────────── */}
         <div className="flex items-end justify-between gap-2 pt-1">
           {/* Price */}
           <div className="flex flex-col leading-none">
@@ -154,7 +187,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 "bg-brand-600 text-white",
                 "hover:bg-brand-700 active:scale-90",
                 "transition-all duration-150 shadow-sm cursor-pointer",
-                "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+                "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
               )}
             >
               <Plus className="h-5 w-5" aria-hidden="true" />

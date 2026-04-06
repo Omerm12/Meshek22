@@ -39,5 +39,7 @@ export interface MockProduct {
   isFeatured: boolean;
   variants: MockVariant[];
   imageColor: string;  // css color for gradient background
-  icon: string;        // emoji
+  icon: string;        // emoji fallback
+  /** Supabase Storage public URL. Null/undefined → show emoji fallback. */
+  imageUrl: string | null;
 }

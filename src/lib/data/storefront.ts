@@ -43,6 +43,7 @@ type ProductRow = {
   name: string;
   slug: string;
   description: string | null;
+  image_url: string | null;
   is_featured: boolean;
   sort_order: number;
   categories: { id: string; name: string; slug: string } | null;
@@ -97,11 +98,12 @@ function toMockProduct(row: ProductRow): MockProduct {
     variants,
     imageColor: display.imageColor,
     icon: display.icon,
+    imageUrl: row.image_url ?? null,
   };
 }
 
 const PRODUCT_SELECT = `
-  id, name, slug, description, is_featured, sort_order,
+  id, name, slug, description, image_url, is_featured, sort_order,
   categories ( id, name, slug ),
   product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order )
 `;
@@ -140,6 +142,32 @@ export async function fetchTopLevelCategories(): Promise<MockCategory[]> {
     .order("sort_order", { ascending: true });
 
   if (error || !data) return [];
+
+  return (data as CategoryRow[]).map(toMockCategory);
+}
+
+/**
+ * Top-level categories marked as is_featured=true for the homepage.
+ * Falls back to ALL top-level categories when none are featured yet,
+ * so the homepage never shows an empty "קטגוריות מובילות" section.
+ */
+export async function fetchFeaturedCategories(): Promise<MockCategory[]> {
+  const supabase = createPublicClient();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, slug, description, parent_id")
+    .eq("is_active", true)
+    .is("parent_id", null)
+    .eq("is_featured", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) return [];
+
+  // Fallback: if no categories are marked featured yet, show all top-level ones
+  if (!data || data.length === 0) {
+    return fetchTopLevelCategories();
+  }
 
   return (data as CategoryRow[]).map(toMockCategory);
 }
@@ -325,6 +353,24 @@ export async function fetchFeaturedProducts(
     .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .eq("is_featured", true)
+    .order("sort_order", { ascending: true })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  return (data as unknown as ProductRow[]).map(toMockProduct);
+}
+
+/**
+ * All active products across all categories — for the /products listing page.
+ */
+export async function fetchAllProducts(limit = 60): Promise<MockProduct[]> {
+  const supabase = createPublicClient();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .limit(limit);
 

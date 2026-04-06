@@ -2,12 +2,12 @@ import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { CategoryCard } from "@/components/shop/CategoryCard";
-import { fetchTopLevelCategories } from "@/lib/data/storefront";
+import { fetchFeaturedCategories } from "@/lib/data/storefront";
 
 export async function FeaturedCategories() {
-  // Only show top-level parent categories (vegetables, fruits) on the homepage.
-  // Child sub-categories are browsed from within their parent page.
-  const categories = await fetchTopLevelCategories();
+  // Show only featured top-level categories (admin-controlled via is_featured flag).
+  // Falls back to all top-level categories when none are marked featured yet.
+  const categories = await fetchFeaturedCategories();
 
   if (categories.length === 0) return null;
 

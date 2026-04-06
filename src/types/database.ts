@@ -111,6 +111,7 @@ export interface Database {
           image_url: string | null;
           sort_order: number;
           is_active: boolean;
+          is_featured: boolean;
           parent_id: string | null;
           created_at: string;
         };
@@ -122,6 +123,7 @@ export interface Database {
           image_url?: string | null;
           sort_order?: number;
           is_active?: boolean;
+          is_featured?: boolean;
           parent_id?: string | null;
         };
         Update: {
@@ -131,6 +133,7 @@ export interface Database {
           image_url?: string | null;
           sort_order?: number;
           is_active?: boolean;
+          is_featured?: boolean;
           parent_id?: string | null;
         };
         Relationships: [];
