@@ -27,7 +27,7 @@ const NAV_ITEMS = [
 
 interface AdminSidebarProps {
   adminName: string | null;
-  adminEmail: string;
+  adminEmail: string | null;
 }
 
 export function AdminSidebar({ adminName, adminEmail }: AdminSidebarProps) {

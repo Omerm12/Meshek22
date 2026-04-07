@@ -58,6 +58,7 @@ export default function RootLayout({
     <html
       lang="he"
       dir="rtl"
+      data-scroll-behavior="smooth"
       className={`${rubik.variable} ${assistant.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-[var(--color-surface)] text-gray-900 antialiased">

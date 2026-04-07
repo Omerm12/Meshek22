@@ -86,7 +86,7 @@ export function ProfileForm({ profile }: { profile: ProfileRow }) {
           className="h-11 flex items-center px-4 bg-stone-50 border border-stone-100 rounded-xl text-sm text-stone-500"
           dir="ltr"
         >
-          {profile.email}
+          {profile.email ?? <span className="text-stone-300">לא הוזן</span>}
         </p>
         <p className="mt-1 text-xs text-stone-400">לשינוי האימייל פנו לתמיכה</p>
       </div>

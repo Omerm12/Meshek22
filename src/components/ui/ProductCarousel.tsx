@@ -80,8 +80,16 @@ export function ProductCarousel({
   if (products.length === 0) return null;
 
   return (
-    <div className="relative">
-      {/* ── Scroll track ───────────────────────────────────────────────────── */}
+    <div>
+      {/* ── Mobile: vertical list of horizontal cards ──────────────────────── */}
+      <div className="flex flex-col gap-2 md:hidden">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+
+      {/* ── Desktop: horizontal scroll carousel ───────────────────────────── */}
+      <div className="hidden md:block relative">
       <div
         ref={trackRef}
         className="flex gap-4 overflow-x-auto scroll-smooth carousel-track-no-scrollbar"
@@ -164,6 +172,7 @@ export function ProductCarousel({
       >
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </button>
+      </div>{/* end desktop carousel wrapper */}
     </div>
   );
 }

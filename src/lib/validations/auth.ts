@@ -7,14 +7,14 @@ const israeliPhone = z
   .string()
   .regex(/^05\d{8}$/, "מספר טלפון לא תקין (לדוגמה: 0501234567)");
 
-// ── Legacy OTP schemas — preserved for future phone OTP restoration ───────────
+// ── Active schemas: phone OTP auth ────────────────────────────────────────────
 
-/** Phone-OTP login — preserved for future restoration */
+/** Step 1 — phone input for OTP send */
 export const phoneOtpSchema = z.object({
   phone: israeliPhone,
 });
 
-/** OTP verification code — preserved for future restoration */
+/** Step 2 — OTP code verification */
 export const otpVerifySchema = z.object({
   token: z
     .string()
@@ -23,30 +23,31 @@ export const otpVerifySchema = z.object({
 });
 
 /**
- * Registration schema (legacy OTP version) — preserved for future restoration.
- * @deprecated Use emailPasswordRegisterSchema instead.
+ * Step 3 (new users only) — profile completion after OTP.
+ * Phone is already captured and verified via OTP — not collected here.
+ * Both full_name and email are required for new users.
  */
+export const profileSchema = z.object({
+  full_name: z.string().min(2, "נא להזין שם מלא").max(100),
+  email: z.string().email("כתובת אימייל לא תקינה"),
+});
+
+// ── Legacy schemas (kept for reference / possible admin use) ──────────────────
+
+/** @deprecated Use phoneOtpSchema instead */
 export const registerSchema = z.object({
   full_name: z.string().min(2, "נא להזין שם מלא").max(100),
   phone: israeliPhone,
   email: z.string().email("כתובת אימייל לא תקינה"),
 });
 
-// ── Active schemas: email + password (temporary until phone OTP is set up) ────
-
-/**
- * Email + password login.
- * TODO: Replace with phoneOtpSchema when SMS provider is connected.
- */
+/** @deprecated Temporary password-based login schema */
 export const emailPasswordLoginSchema = z.object({
   email: z.string().email("כתובת אימייל לא תקינה"),
   password: z.string().min(6, "הסיסמה חייבת להכיל לפחות 6 תווים"),
 });
 
-/**
- * Email + password registration.
- * TODO: Replace with registerSchema + OTP when SMS provider is connected.
- */
+/** @deprecated Temporary password-based registration schema */
 export const emailPasswordRegisterSchema = z
   .object({
     full_name: z.string().min(2, "נא להזין שם מלא").max(100),
@@ -69,6 +70,7 @@ export const emailOtpSchema = z.object({
 
 export type PhoneOtpFormData = z.infer<typeof phoneOtpSchema>;
 export type OtpVerifyFormData = z.infer<typeof otpVerifySchema>;
+export type ProfileFormData = z.infer<typeof profileSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type EmailOtpFormData = z.infer<typeof emailOtpSchema>;
 export type EmailPasswordLoginFormData = z.infer<typeof emailPasswordLoginSchema>;

@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, Phone, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
+import { User, Phone, Mail, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { emailPasswordRegisterSchema } from "@/lib/validations/auth";
-import type { EmailPasswordRegisterFormData } from "@/lib/validations/auth";
+import { phoneOtpSchema, otpVerifySchema, profileSchema } from "@/lib/validations/auth";
+import type { PhoneOtpFormData, OtpVerifyFormData, ProfileFormData } from "@/lib/validations/auth";
 
 interface RegisterFormProps {
   /**
-   * Called after a successful signup with an active session (email confirmation
-   * disabled). When provided, the form does NOT navigate — the caller handles
-   * what happens next. When omitted (standalone page), the form redirects.
+   * Called after a successful signup. When provided, the form does NOT navigate —
+   * the caller handles what happens next. When omitted (standalone page), the form redirects.
    */
   onSuccess?: () => void;
   /**
@@ -24,131 +23,407 @@ interface RegisterFormProps {
   onSwitchToLogin?: () => void;
 }
 
-/**
- * Temporary email + password registration.
- * TODO: Replace with phone OTP flow when SMS provider is connected.
- */
+type Phase = "phone" | "otp" | "profile";
+
+/** Convert Israeli local format to E.164: 0501234567 → +972501234567 */
+function toE164(phone: string): string {
+  const clean = phone.replace(/[\s\-\(\)]/g, "");
+  if (clean.startsWith("0")) return "+972" + clean.slice(1);
+  if (clean.startsWith("+")) return clean;
+  return "+972" + clean;
+}
+
 export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [serverError, setServerError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  // Shown when Supabase requires email confirmation before the session is active
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
-  const form = useForm<EmailPasswordRegisterFormData>({
-    resolver: zodResolver(emailPasswordRegisterSchema),
+  const [phase, setPhase] = useState<Phase>("phone");
+  const [e164Phone, setE164Phone] = useState("");
+  const [displayPhone, setDisplayPhone] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  const phoneForm = useForm<PhoneOtpFormData>({
+    resolver: zodResolver(phoneOtpSchema),
   });
 
-  const onSubmit = async (data: EmailPasswordRegisterFormData) => {
+  const otpForm = useForm<OtpVerifyFormData>({
+    resolver: zodResolver(otpVerifySchema),
+  });
+
+  const profileForm = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+  });
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
+
+  const handleSendOtp = async (data: PhoneOtpFormData) => {
     setServerError("");
-    const supabase = createClient();
+    const normalized = toE164(data.phone);
 
-    // Pass phone in metadata so the DB trigger (handle_new_user) captures it
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: {
-          full_name: data.full_name,
-          phone: data.phone,
-        },
-      },
+    // Gate: block registration if this phone already has an account
+    const checkRes = await fetch("/api/auth/check-phone", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: normalized }),
     });
+    if (!checkRes.ok) {
+      setServerError("שגיאה בבדיקת המספר. נסו שוב.");
+      return;
+    }
+    const { exists } = await checkRes.json();
+    if (exists) {
+      setServerError("משתמש עם מספר זה כבר קיים, נא להתחבר");
+      return;
+    }
 
-    if (signUpError) {
-      if (
-        signUpError.message.includes("already registered") ||
-        signUpError.message.includes("User already registered")
-      ) {
-        setServerError("כתובת האימייל הזו כבר רשומה. נסו להתחבר.");
-      } else if (signUpError.message.includes("Password should be at least")) {
-        setServerError("הסיסמה חייבת להכיל לפחות 6 תווים.");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
+
+    if (error) {
+      if (error.message.includes("rate") || error.message.includes("too many")) {
+        setServerError("יותר מדי ניסיונות. אנא המתינו מספר דקות.");
+      } else if (error.message.includes("invalid") && error.message.includes("phone")) {
+        setServerError("מספר הטלפון אינו תקין.");
       } else {
-        setServerError("שגיאה בהרשמה. נסו שוב.");
+        setServerError("שגיאה בשליחת הקוד. נסו שוב.");
       }
       return;
     }
 
-    // No session → Supabase requires email confirmation before login
-    if (!authData.session) {
-      setAwaitingConfirmation(true);
+    setE164Phone(normalized);
+    setDisplayPhone(data.phone);
+    setCooldown(60);
+    setPhase("otp");
+  };
+
+  const handleVerifyOtp = async (data: OtpVerifyFormData) => {
+    setServerError("");
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.verifyOtp({
+      phone: e164Phone,
+      token: data.token,
+      type: "sms",
+    });
+
+    if (error) {
+      if (
+        error.message.includes("expired") ||
+        error.message.includes("Token has expired")
+      ) {
+        setServerError("קוד האימות פג תוקף. שלחו קוד חדש.");
+      } else if (
+        error.message.includes("invalid") ||
+        error.message.includes("Invalid")
+      ) {
+        setServerError("קוד האימות שגוי. נסו שוב.");
+      } else {
+        setServerError("שגיאה באימות. נסו שוב.");
+      }
       return;
     }
 
-    // Session is active — immediately logged in (email confirmation disabled)
-    const userId = authData.user?.id;
-    if (userId) {
-      // Ensure phone is saved on profile; trigger may have run before metadata was available
-      await supabase
-        .from("profiles")
-        .update({ phone: data.phone, updated_at: new Date().toISOString() })
-        .eq("id", userId);
+    // Check if the user already has a complete profile
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setServerError("שגיאה בכניסה. נסו שוב.");
+      return;
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.full_name) {
+      // Returning user with complete profile — done
+      completeAuth();
+    } else {
+      // New user or incomplete profile — collect details
+      setPhase("profile");
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0) return;
+    setServerError("");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({ phone: e164Phone });
+    if (error) {
+      setServerError("שגיאה בשליחת הקוד. נסו שוב.");
+      return;
+    }
+    setCooldown(60);
+    otpForm.reset();
+  };
+
+  const handleSaveProfile = async (data: ProfileFormData) => {
+    setServerError("");
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
+      return;
+    }
+
+    // Update the user's metadata with the name (for display/JWT)
+    await supabase.auth.updateUser({
+      data: { full_name: data.full_name },
+    });
+
+    // Save profile details
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: data.full_name,
+        email: data.email,
+        phone: displayPhone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
+      return;
+    }
+
+    completeAuth();
+  };
+
+  const completeAuth = () => {
     if (onSuccess) {
-      // Modal context — let the caller decide what to do next
       onSuccess();
     } else {
-      // Standalone page — navigate to ?next= destination
       const next = searchParams.get("next") ?? "/account";
       router.replace(next);
       router.refresh();
     }
   };
 
-  // ── Email confirmation waiting state ──────────────────────────────────────
-  if (awaitingConfirmation) {
+  // ── Phone step ───────────────────────────────────────────────────────────────
+  if (phase === "phone") {
     return (
-      <div className="text-center py-2">
-        <div className="h-14 w-14 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <CheckCircle2 className="h-7 w-7 text-brand-600" aria-hidden="true" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">בדקו את תיבת הדואר</h2>
-        <p className="text-sm text-stone-500 mb-5 leading-relaxed">
-          שלחנו אימייל אישור לכתובת{" "}
-          <span className="font-semibold text-gray-700" dir="ltr">
-            {form.getValues("email")}
-          </span>
-          .<br />
-          לחצו על הקישור כדי לאמת את החשבון ולהתחבר.
-        </p>
-        {onSwitchToLogin ? (
-          <button
-            type="button"
-            onClick={onSwitchToLogin}
-            className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors"
-          >
-            לכניסה לחשבון
-          </button>
-        ) : (
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors"
-          >
-            לדף הכניסה
-          </Link>
+      <div>
+        {!onSuccess && (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה</h1>
+            <p className="text-sm text-stone-500 mb-7">
+              הזינו את מספר הטלפון כדי להתחיל
+            </p>
+          </>
         )}
+
+        <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} noValidate className="space-y-4">
+          <div>
+            <label
+              htmlFor="reg-phone"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              מספר טלפון נייד
+            </label>
+            <div className="relative">
+              <Phone
+                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                id="reg-phone"
+                type="tel"
+                autoComplete="tel"
+                dir="ltr"
+                placeholder="0501234567"
+                {...phoneForm.register("phone")}
+                className={[
+                  "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
+                  "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                  phoneForm.formState.errors.phone
+                    ? "border-red-400"
+                    : "border-stone-200",
+                ].join(" ")}
+              />
+            </div>
+            {phoneForm.formState.errors.phone && (
+              <p className="mt-1.5 text-xs text-red-500">
+                {phoneForm.formState.errors.phone.message}
+              </p>
+            )}
+          </div>
+
+          {serverError && (
+            <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              {serverError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={phoneForm.formState.isSubmitting}
+            className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {phoneForm.formState.isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              "שלח קוד אימות"
+            )}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-stone-500 mt-5">
+          יש לכם כבר חשבון?{" "}
+          {onSwitchToLogin ? (
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+            >
+              כניסה
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+            >
+              כניסה
+            </Link>
+          )}
+        </p>
       </div>
     );
   }
 
-  // ── Registration form ─────────────────────────────────────────────────────
+  // ── OTP step ─────────────────────────────────────────────────────────────────
+  if (phase === "otp") {
+    return (
+      <div>
+        {!onSuccess && (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה</h1>
+            <p className="text-sm text-stone-500 mb-7">הזינו את קוד האימות שנשלח לטלפון</p>
+          </>
+        )}
+
+        <p className="text-sm text-stone-600 mb-4">
+          שלחנו קוד SMS למספר{" "}
+          <span className="font-semibold text-gray-800" dir="ltr">
+            {displayPhone}
+          </span>
+          .{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setPhase("phone");
+              setServerError("");
+              otpForm.reset();
+            }}
+            className="text-brand-600 hover:text-brand-700 transition-colors"
+          >
+            שינוי מספר
+          </button>
+        </p>
+
+        <form onSubmit={otpForm.handleSubmit(handleVerifyOtp)} noValidate className="space-y-4">
+          <div>
+            <label
+              htmlFor="reg-otp"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              קוד אימות (6 ספרות)
+            </label>
+            <input
+              id="reg-otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              dir="ltr"
+              maxLength={6}
+              placeholder="123456"
+              {...otpForm.register("token")}
+              className={[
+                "w-full h-11 bg-white border rounded-xl px-4 text-sm text-gray-900 placeholder:text-stone-400 text-center tracking-widest",
+                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                otpForm.formState.errors.token ? "border-red-400" : "border-stone-200",
+              ].join(" ")}
+            />
+            {otpForm.formState.errors.token && (
+              <p className="mt-1.5 text-xs text-red-500">
+                {otpForm.formState.errors.token.message}
+              </p>
+            )}
+          </div>
+
+          {serverError && (
+            <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              {serverError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={otpForm.formState.isSubmitting}
+            className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {otpForm.formState.isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              "אמת קוד"
+            )}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-stone-500 mt-5">
+          לא קיבלתם קוד?{" "}
+          {cooldown > 0 ? (
+            <span className="text-stone-400">
+              שלח שוב בעוד {cooldown} שניות
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+            >
+              שלח שוב
+            </button>
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  // ── Profile step (new users) ─────────────────────────────────────────────────
   return (
     <div>
-      {/* Title is shown only on the standalone page; modal has its own header */}
       {!onSuccess && (
         <>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">השלמת פרטים</h1>
           <p className="text-sm text-stone-500 mb-7">
-            פתחו חשבון כדי לעקוב אחר ההזמנות שלכם
+            עוד שלב אחד — הזינו את פרטיכם
           </p>
         </>
       )}
 
+      {onSuccess && (
+        <p className="text-sm text-stone-500 mb-5">
+          ברוכים הבאים! הזינו את פרטיכם להשלמת ההרשמה.
+        </p>
+      )}
+
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={profileForm.handleSubmit(handleSaveProfile)}
         noValidate
         className="space-y-4"
       >
@@ -170,19 +445,19 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
               type="text"
               autoComplete="name"
               placeholder="ישראל ישראלי"
-              {...form.register("full_name")}
+              {...profileForm.register("full_name")}
               className={[
                 "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
                 "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.full_name
+                profileForm.formState.errors.full_name
                   ? "border-red-400"
                   : "border-stone-200",
               ].join(" ")}
             />
           </div>
-          {form.formState.errors.full_name && (
+          {profileForm.formState.errors.full_name && (
             <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.full_name.message}
+              {profileForm.formState.errors.full_name.message}
             </p>
           )}
         </div>
@@ -206,151 +481,19 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
               autoComplete="email"
               dir="ltr"
               placeholder="you@example.com"
-              {...form.register("email")}
+              {...profileForm.register("email")}
               className={[
                 "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
                 "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.email
+                profileForm.formState.errors.email
                   ? "border-red-400"
                   : "border-stone-200",
               ].join(" ")}
             />
           </div>
-          {form.formState.errors.email && (
+          {profileForm.formState.errors.email && (
             <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.email.message}
-            </p>
-          )}
-        </div>
-
-        {/* Phone */}
-        <div>
-          <label
-            htmlFor="reg-phone"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            מספר טלפון נייד <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Phone
-              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              id="reg-phone"
-              type="tel"
-              autoComplete="tel"
-              dir="ltr"
-              placeholder="0501234567"
-              {...form.register("phone")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.phone
-                  ? "border-red-400"
-                  : "border-stone-200",
-              ].join(" ")}
-            />
-          </div>
-          {form.formState.errors.phone && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.phone.message}
-            </p>
-          )}
-        </div>
-
-        {/* Password */}
-        <div>
-          <label
-            htmlFor="reg-password"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            סיסמה <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Lock
-              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              id="reg-password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              dir="ltr"
-              placeholder="לפחות 6 תווים"
-              {...form.register("password")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.password
-                  ? "border-red-400"
-                  : "border-stone-200",
-              ].join(" ")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute top-1/2 -translate-y-1/2 end-3.5 text-stone-400 hover:text-stone-600 transition-colors"
-              aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-          {form.formState.errors.password && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.password.message}
-            </p>
-          )}
-        </div>
-
-        {/* Confirm password */}
-        <div>
-          <label
-            htmlFor="reg-confirm_password"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            אימות סיסמה <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Lock
-              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              id="reg-confirm_password"
-              type={showConfirm ? "text" : "password"}
-              autoComplete="new-password"
-              dir="ltr"
-              placeholder="הזינו שוב את הסיסמה"
-              {...form.register("confirm_password")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.confirm_password
-                  ? "border-red-400"
-                  : "border-stone-200",
-              ].join(" ")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm((v) => !v)}
-              className="absolute top-1/2 -translate-y-1/2 end-3.5 text-stone-400 hover:text-stone-600 transition-colors"
-              aria-label={showConfirm ? "הסתר סיסמה" : "הצג סיסמה"}
-            >
-              {showConfirm ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-          {form.formState.errors.confirm_password && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.confirm_password.message}
+              {profileForm.formState.errors.email.message}
             </p>
           )}
         </div>
@@ -363,37 +506,16 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
         <button
           type="submit"
-          disabled={form.formState.isSubmitting}
+          disabled={profileForm.formState.isSubmitting}
           className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
-          {form.formState.isSubmitting ? (
+          {profileForm.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            "הרשמה"
+            "סיום הרשמה"
           )}
         </button>
       </form>
-
-      {/* Switch to login */}
-      <p className="text-center text-sm text-stone-500 mt-5">
-        יש לכם כבר חשבון?{" "}
-        {onSwitchToLogin ? (
-          <button
-            type="button"
-            onClick={onSwitchToLogin}
-            className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
-          >
-            כניסה
-          </button>
-        ) : (
-          <Link
-            href="/login"
-            className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
-          >
-            כניסה
-          </Link>
-        )}
-      </p>
     </div>
   );
 }

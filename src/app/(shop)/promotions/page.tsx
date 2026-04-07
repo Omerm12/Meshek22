@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Tag, Sparkles, ArrowLeft, Truck } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { CategoryHero } from "@/components/shop/CategoryHero";
+import { getCategoryHero } from "@/lib/config/category-heroes";
 
 export const metadata: Metadata = {
   title: "מבצעים | משק 22",
@@ -106,30 +108,13 @@ function formatShekels(agorot: number) {
 }
 
 export default function PromotionsPage() {
+  const hero = getCategoryHero("sale");
+
   return (
     <main className="flex-1" style={{ backgroundColor: "var(--color-surface)" }}>
 
       {/* Hero banner */}
-      <div className="bg-gradient-to-b from-brand-700 to-brand-600 text-white py-12 lg:py-16">
-        <Container>
-          <div className="flex items-center gap-1.5 mb-3">
-            <Sparkles className="h-4 w-4 text-brand-200" aria-hidden="true" />
-            <span className="text-sm font-semibold text-brand-200 uppercase tracking-wider">
-              מבצעים מיוחדים
-            </span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-3">
-            חבילות חיסכון של משק 22
-          </h1>
-          <p className="text-brand-100 text-lg max-w-xl leading-relaxed">
-            קנו יותר, חסכו יותר – מארזים מוכנים מהשדה, בתמחור מיוחד שלא תמצאו בסופר.
-          </p>
-          <div className="mt-5 inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm text-white">
-            <Truck className="h-3.5 w-3.5 text-brand-200" />
-            משלוח חינם מ-150 ₪ באזורי המרכז
-          </div>
-        </Container>
-      </div>
+      <CategoryHero config={hero} />
 
       {/* Weekly deals grid */}
       <Container className="py-12 lg:py-16">

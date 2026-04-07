@@ -27,7 +27,7 @@ export default async function AccountPage() {
       .from("profiles")
       .insert({
         id: user.id,
-        email: user.email ?? "",
+        email: user.email ?? null,
         full_name: (user.user_metadata?.full_name as string) ?? null,
         phone: (user.user_metadata?.phone as string) ?? null,
       })

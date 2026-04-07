@@ -24,7 +24,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface AdminUser {
   id: string;
-  email: string;
+  email: string | null;
   full_name: string | null;
   role: string;
 }

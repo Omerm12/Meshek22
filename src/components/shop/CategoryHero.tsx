@@ -2,10 +2,21 @@ import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 import type { CategoryHeroConfig } from "@/lib/config/category-heroes";
 
+/**
+ * Toggle: set to `false` to revert to the original (smaller) banner height.
+ * Set to `true` for the slightly taller version that reveals more of the image.
+ */
+const isExpandedImage = true;
+
 export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
   return (
     <div
-      className="relative w-full overflow-hidden h-[220px] sm:h-[270px] lg:h-[320px]"
+      className={cn(
+        "relative w-full overflow-hidden",
+        isExpandedImage
+          ? "h-[250px] sm:h-[310px] lg:h-[370px]" // expanded — ~13% taller, more image visible
+          : "h-[220px] sm:h-[270px] lg:h-[320px]", // original
+      )}
       style={{ backgroundColor: config.containerBg }}
     >
       {config.imageSrc && (
@@ -13,7 +24,11 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
           src={config.imageSrc}
           alt={config.imageAlt}
           fill
-          style={{ objectFit: "cover", objectPosition: "center" }}
+          sizes="100vw"
+          style={{
+            objectFit: config.imageObjectFit ?? "cover",
+            objectPosition: config.imageObjectPosition ?? "center",
+          }}
           priority
           aria-hidden="true"
         />

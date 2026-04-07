@@ -104,7 +104,7 @@ export function Header() {
         )}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-[72px]">
+          <div className="flex items-center justify-between h-[84px]">
 
             {/* ── Logo ──────────────────────────────────────────────────────── */}
             <Link
@@ -117,7 +117,8 @@ export function Header() {
                 alt="משק 22"
                 width={200}
                 height={68}
-                className="h-[68px] w-auto object-contain"
+                className="h-[68px] object-contain"
+                style={{ width: "auto" }}
                 priority
               />
             </Link>
@@ -129,7 +130,7 @@ export function Header() {
               <Link
                 href={ALL_PRODUCTS_LINK.href}
                 className={cn(
-                  "px-3.5 py-2.5 rounded-lg text-[0.9375rem] font-medium transition-all duration-150",
+                  "px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-150",
                   isLinkActive(ALL_PRODUCTS_LINK.href)
                     ? "text-brand-700 bg-brand-100 font-semibold"
                     : "text-stone-600 hover:text-brand-700 hover:bg-brand-50",
@@ -194,7 +195,7 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "px-3.5 py-2.5 rounded-lg text-[0.9375rem] font-medium transition-all duration-150",
+                    "px-4 py-2.5 rounded-lg text-base font-medium transition-all duration-150",
                     isLinkActive(link.href)
                       ? "text-brand-700 bg-brand-100 font-semibold"
                       : "text-stone-600 hover:text-brand-700 hover:bg-brand-50",
@@ -350,7 +351,7 @@ export function Header() {
       <div
         ref={mobileMenuRef}
         className={cn(
-          "fixed top-16 inset-x-0 z-40 bg-white border-b border-stone-100 shadow-lg md:hidden",
+          "fixed top-[84px] inset-x-0 z-40 bg-white border-b border-stone-100 shadow-lg md:hidden",
           "transition-all duration-300 ease-out overflow-hidden",
           mobileOpen ? "max-h-[82vh] opacity-100 overflow-y-auto" : "max-h-0 opacity-0",
         )}

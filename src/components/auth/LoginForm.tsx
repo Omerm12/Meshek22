@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
+import { Phone, User, Mail, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { emailPasswordLoginSchema } from "@/lib/validations/auth";
-import type { EmailPasswordLoginFormData } from "@/lib/validations/auth";
+import { phoneOtpSchema, otpVerifySchema, profileSchema } from "@/lib/validations/auth";
+import type { PhoneOtpFormData, OtpVerifyFormData, ProfileFormData } from "@/lib/validations/auth";
 
 interface LoginFormProps {
   /**
@@ -24,78 +24,447 @@ interface LoginFormProps {
   onSwitchToRegister?: () => void;
 }
 
+type Phase = "phone" | "otp" | "profile";
+
 /**
- * Temporary email + password login.
- * TODO: Replace with phone OTP flow when SMS provider is connected.
+ * Convert Israeli local format to E.164.
+ * Examples: 0504083515 → +972504083515, +972504083515 → +972504083515
  */
+function toE164(phone: string): string {
+  const clean = phone.replace(/[\s\-\(\)]/g, "");
+  if (clean.startsWith("0")) return "+972" + clean.slice(1);
+  if (clean.startsWith("+")) return clean;
+  return "+972" + clean;
+}
+
 export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [serverError, setServerError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<EmailPasswordLoginFormData>({
-    resolver: zodResolver(emailPasswordLoginSchema),
+  const [phase, setPhase] = useState<Phase>("phone");
+  const [e164Phone, setE164Phone] = useState("");
+  const [displayPhone, setDisplayPhone] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  const phoneForm = useForm<PhoneOtpFormData>({
+    resolver: zodResolver(phoneOtpSchema),
   });
 
-  const onSubmit = async (data: EmailPasswordLoginFormData) => {
-    setServerError("");
-    const supabase = createClient();
+  const otpForm = useForm<OtpVerifyFormData>({
+    resolver: zodResolver(otpVerifySchema),
+  });
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
+  const profileForm = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+  });
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
+
+  const handleSendOtp = async (data: PhoneOtpFormData) => {
+    setServerError("");
+    const normalized = toE164(data.phone);
+
+    // Gate: only existing users may log in via the login tab
+    const checkRes = await fetch("/api/auth/check-phone", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: normalized }),
     });
+    if (!checkRes.ok) {
+      setServerError("שגיאה בבדיקת המספר. נסו שוב.");
+      return;
+    }
+    const { exists } = await checkRes.json();
+    if (!exists) {
+      setServerError("לא קיים משתמש עם מספר זה, נא להירשם");
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
 
     if (error) {
-      if (
-        error.message.includes("Invalid login credentials") ||
-        error.message.includes("invalid_credentials")
-      ) {
-        setServerError("אימייל או סיסמה שגויים. נסו שוב.");
-      } else if (error.message.includes("Email not confirmed")) {
-        setServerError(
-          "יש לאמת את כתובת האימייל לפני הכניסה. בדקו את תיבת הדואר."
-        );
+      if (error.message.includes("rate") || error.message.includes("too many")) {
+        setServerError("יותר מדי ניסיונות. אנא המתינו מספר דקות.");
+      } else if (error.message.includes("invalid") && error.message.includes("phone")) {
+        setServerError("מספר הטלפון אינו תקין.");
       } else {
-        setServerError("שגיאה בכניסה. נסו שוב.");
+        setServerError("שגיאה בשליחת הקוד. נסו שוב.");
       }
       return;
     }
 
+    setE164Phone(normalized);
+    setDisplayPhone(data.phone);
+    setCooldown(60);
+    setPhase("otp");
+  };
+
+  const handleVerifyOtp = async (data: OtpVerifyFormData) => {
+    setServerError("");
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.verifyOtp({
+      phone: e164Phone,
+      token: data.token,
+      type: "sms",
+    });
+
+    if (error) {
+      if (
+        error.message.includes("expired") ||
+        error.message.includes("Token has expired")
+      ) {
+        setServerError("קוד האימות פג תוקף. שלחו קוד חדש.");
+      } else if (
+        error.message.includes("invalid") ||
+        error.message.includes("Invalid")
+      ) {
+        setServerError("קוד האימות שגוי. נסו שוב.");
+      } else {
+        setServerError("שגיאה באימות. נסו שוב.");
+      }
+      return;
+    }
+
+    // Check if this user already has a complete profile
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setServerError("שגיאה בכניסה. נסו שוב.");
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.full_name) {
+      // Existing user with complete profile — done
+      completeAuth();
+    } else {
+      // New user or incomplete profile — collect name + email
+      setPhase("profile");
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0) return;
+    setServerError("");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({ phone: e164Phone });
+    if (error) {
+      setServerError("שגיאה בשליחת הקוד. נסו שוב.");
+      return;
+    }
+    setCooldown(60);
+    otpForm.reset();
+  };
+
+  const handleSaveProfile = async (data: ProfileFormData) => {
+    setServerError("");
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
+      return;
+    }
+
+    await supabase.auth.updateUser({
+      data: { full_name: data.full_name },
+    });
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: data.full_name,
+        email: data.email,
+        phone: displayPhone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
+      return;
+    }
+
+    completeAuth();
+  };
+
+  const completeAuth = () => {
     if (onSuccess) {
-      // Modal context — let the caller decide what to do next
       onSuccess();
     } else {
-      // Standalone page — navigate to ?next= destination
       const next = searchParams.get("next") ?? "/account";
       router.replace(next);
       router.refresh();
     }
   };
 
+  // ── Phone step ───────────────────────────────────────────────────────────────
+  if (phase === "phone") {
+    return (
+      <div>
+        {!onSuccess && (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">כניסה לחשבון</h1>
+            <p className="text-sm text-stone-500 mb-7">הזינו את מספר הטלפון שלכם</p>
+          </>
+        )}
+
+        <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} noValidate className="space-y-4">
+          <div>
+            <label
+              htmlFor="login-phone"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              מספר טלפון נייד
+            </label>
+            <div className="relative">
+              <Phone
+                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                id="login-phone"
+                type="tel"
+                autoComplete="tel"
+                dir="ltr"
+                placeholder="0501234567"
+                {...phoneForm.register("phone")}
+                className={[
+                  "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
+                  "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                  phoneForm.formState.errors.phone
+                    ? "border-red-400"
+                    : "border-stone-200",
+                ].join(" ")}
+              />
+            </div>
+            {phoneForm.formState.errors.phone && (
+              <p className="mt-1.5 text-xs text-red-500">
+                {phoneForm.formState.errors.phone.message}
+              </p>
+            )}
+          </div>
+
+          {serverError && (
+            <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              {serverError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={phoneForm.formState.isSubmitting}
+            className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {phoneForm.formState.isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              "שלח קוד אימות"
+            )}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-stone-500 mt-5">
+          לקוחות חדשים?{" "}
+          {onSwitchToRegister ? (
+            <button
+              type="button"
+              onClick={onSwitchToRegister}
+              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+            >
+              הרשמו כאן
+            </button>
+          ) : (
+            <Link
+              href="/register"
+              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+            >
+              הרשמו כאן
+            </Link>
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  // ── OTP step ─────────────────────────────────────────────────────────────────
+  if (phase === "otp") {
+    return (
+      <div>
+        {!onSuccess && (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">כניסה לחשבון</h1>
+            <p className="text-sm text-stone-500 mb-7">הזינו את קוד האימות שנשלח לטלפון</p>
+          </>
+        )}
+
+        <p className="text-sm text-stone-600 mb-4">
+          שלחנו קוד SMS למספר{" "}
+          <span className="font-semibold text-gray-800" dir="ltr">
+            {displayPhone}
+          </span>
+          .{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setPhase("phone");
+              setServerError("");
+              otpForm.reset();
+            }}
+            className="text-brand-600 hover:text-brand-700 transition-colors"
+          >
+            שינוי מספר
+          </button>
+        </p>
+
+        <form onSubmit={otpForm.handleSubmit(handleVerifyOtp)} noValidate className="space-y-4">
+          <div>
+            <label
+              htmlFor="login-otp"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              קוד אימות (6 ספרות)
+            </label>
+            <input
+              id="login-otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              dir="ltr"
+              maxLength={6}
+              placeholder="123456"
+              {...otpForm.register("token")}
+              className={[
+                "w-full h-11 bg-white border rounded-xl px-4 text-sm text-gray-900 placeholder:text-stone-400 text-center tracking-widest",
+                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                otpForm.formState.errors.token ? "border-red-400" : "border-stone-200",
+              ].join(" ")}
+            />
+            {otpForm.formState.errors.token && (
+              <p className="mt-1.5 text-xs text-red-500">
+                {otpForm.formState.errors.token.message}
+              </p>
+            )}
+          </div>
+
+          {serverError && (
+            <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              {serverError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={otpForm.formState.isSubmitting}
+            className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {otpForm.formState.isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              "כניסה"
+            )}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-stone-500 mt-5">
+          לא קיבלתם קוד?{" "}
+          {cooldown > 0 ? (
+            <span className="text-stone-400">שלח שוב בעוד {cooldown} שניות</span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+            >
+              שלח שוב
+            </button>
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  // ── Profile step (new users — after OTP, if no full_name in DB) ──────────────
   return (
     <div>
-      {/* Title is shown only on the standalone page; modal has its own header */}
       {!onSuccess && (
         <>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">כניסה לחשבון</h1>
-          <p className="text-sm text-stone-500 mb-7">הזינו את פרטי הכניסה שלכם</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">השלמת פרטים</h1>
+          <p className="text-sm text-stone-500 mb-7">עוד שלב אחד — הזינו את פרטיכם</p>
         </>
       )}
 
+      {onSuccess && (
+        <p className="text-sm text-stone-500 mb-5">
+          ברוכים הבאים! הזינו את פרטיכם להשלמת ההרשמה.
+        </p>
+      )}
+
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={profileForm.handleSubmit(handleSaveProfile)}
         noValidate
         className="space-y-4"
       >
+        {/* Full name */}
+        <div>
+          <label
+            htmlFor="login-profile-name"
+            className="block text-sm font-medium text-gray-700 mb-1.5"
+          >
+            שם מלא <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <User
+              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="login-profile-name"
+              type="text"
+              autoComplete="name"
+              placeholder="ישראל ישראלי"
+              {...profileForm.register("full_name")}
+              className={[
+                "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
+                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                profileForm.formState.errors.full_name
+                  ? "border-red-400"
+                  : "border-stone-200",
+              ].join(" ")}
+            />
+          </div>
+          {profileForm.formState.errors.full_name && (
+            <p className="mt-1.5 text-xs text-red-500">
+              {profileForm.formState.errors.full_name.message}
+            </p>
+          )}
+        </div>
+
         {/* Email */}
         <div>
           <label
-            htmlFor="login-email"
+            htmlFor="login-profile-email"
             className="block text-sm font-medium text-gray-700 mb-1.5"
           >
-            כתובת אימייל
+            כתובת אימייל <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <Mail
@@ -103,72 +472,24 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
               aria-hidden="true"
             />
             <input
-              id="login-email"
+              id="login-profile-email"
               type="email"
               autoComplete="email"
               dir="ltr"
               placeholder="you@example.com"
-              {...form.register("email")}
+              {...profileForm.register("email")}
               className={[
                 "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
                 "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.email
+                profileForm.formState.errors.email
                   ? "border-red-400"
                   : "border-stone-200",
               ].join(" ")}
             />
           </div>
-          {form.formState.errors.email && (
+          {profileForm.formState.errors.email && (
             <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.email.message}
-            </p>
-          )}
-        </div>
-
-        {/* Password */}
-        <div>
-          <label
-            htmlFor="login-password"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            סיסמה
-          </label>
-          <div className="relative">
-            <Lock
-              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              id="login-password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              dir="ltr"
-              placeholder="••••••••"
-              {...form.register("password")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                form.formState.errors.password
-                  ? "border-red-400"
-                  : "border-stone-200",
-              ].join(" ")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute top-1/2 -translate-y-1/2 end-3.5 text-stone-400 hover:text-stone-600 transition-colors"
-              aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-          {form.formState.errors.password && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {form.formState.errors.password.message}
+              {profileForm.formState.errors.email.message}
             </p>
           )}
         </div>
@@ -181,37 +502,16 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
         <button
           type="submit"
-          disabled={form.formState.isSubmitting}
+          disabled={profileForm.formState.isSubmitting}
           className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
-          {form.formState.isSubmitting ? (
+          {profileForm.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            "כניסה"
+            "סיום הרשמה"
           )}
         </button>
       </form>
-
-      {/* Switch to register */}
-      <p className="text-center text-sm text-stone-500 mt-5">
-        לקוחות חדשים?{" "}
-        {onSwitchToRegister ? (
-          <button
-            type="button"
-            onClick={onSwitchToRegister}
-            className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
-          >
-            הרשמו כאן
-          </button>
-        ) : (
-          <Link
-            href="/register"
-            className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
-          >
-            הרשמו כאן
-          </Link>
-        )}
-      </p>
     </div>
   );
 }

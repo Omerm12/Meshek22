@@ -23,6 +23,16 @@ export interface CategoryHeroConfig {
   accentClass: string;
   /** Tailwind class for hero heading color */
   headingColor: string;
+  /**
+   * CSS object-fit for the banner image. Defaults to "cover".
+   * Use "contain" for images that should be shown without any cropping.
+   */
+  imageObjectFit?: "cover" | "contain";
+  /**
+   * CSS object-position for the banner image. Defaults to "center".
+   * Allows focal-point adjustment per image.
+   */
+  imageObjectPosition?: string;
 }
 
 export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
@@ -58,6 +68,32 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
     overlayColor: "rgba(60, 10, 20, 0.28)",
     accentClass: "bg-rose-600",
     headingColor: "text-white",
+  },
+  sale: {
+    title: "מבצעים",
+    subtitle: "חבילות חיסכון, מבצעי השבוע ומוצרי עונה במחיר מיוחד",
+    imageSrc: "/images/heroes/sale.png",
+    imageAlt: "מבצעים ממשק 22",
+    fallbackBg: "bg-red-950",
+    containerBg: "#1a0a04",
+    overlayColor: "rgba(40, 10, 5, 0.30)",
+    accentClass: "bg-red-600",
+    headingColor: "text-white",
+    imageObjectFit: "cover",
+    imageObjectPosition: "center 40%",
+  },
+  delivery: {
+    title: "אזורי משלוח",
+    subtitle: "משלוח ישירות מהמשק לביתכם – ברחבי ישראל",
+    imageSrc: "/images/heroes/delivery.png",
+    imageAlt: "משלוחים של משק 22",
+    fallbackBg: "bg-sky-950",
+    containerBg: "#041524",
+    overlayColor: "rgba(4, 20, 40, 0.32)",
+    accentClass: "bg-sky-600",
+    headingColor: "text-white",
+    imageObjectFit: "cover",
+    imageObjectPosition: "center 40%",
   },
 };
 
