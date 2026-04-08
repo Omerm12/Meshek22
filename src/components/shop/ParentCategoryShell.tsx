@@ -81,7 +81,6 @@ function SubcategoryTabs({
                   : "bg-stone-100 text-stone-600 hover:bg-brand-50 hover:text-brand-700"
               )}
             >
-              <span aria-hidden="true">{cat.icon}</span>
               {cat.name}
             </Link>
           ))}
@@ -142,8 +141,8 @@ function FilterSidebar({
   accentClass:   string;
 }) {
   return (
-    <aside className="hidden lg:block w-56 shrink-0">
-      <div className="bg-white rounded-2xl border border-stone-100 p-4 sticky top-24">
+    <aside className="hidden lg:block w-56 shrink-0 self-start sticky top-[100px]">
+      <div className="bg-white rounded-2xl border border-stone-100 p-4">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">סנן לפי קטגוריה</h2>
         <ul className="flex flex-col gap-1">
           <li>
@@ -170,7 +169,6 @@ function FilterSidebar({
                     : "text-stone-600 hover:bg-stone-50 hover:text-brand-700"
                 )}
               >
-                <span className="text-base shrink-0" aria-hidden="true">{cat.icon}</span>
                 <span className="leading-tight">{cat.name}</span>
               </Link>
             </li>
