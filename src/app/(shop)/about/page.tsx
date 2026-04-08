@@ -82,7 +82,7 @@ export default function AboutPage() {
             {/* Story text */}
             <div className="space-y-6 text-stone-600 leading-relaxed">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
                   מי אנחנו
                 </h2>
                 <p>
@@ -98,7 +98,7 @@ export default function AboutPage() {
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
                   הגישה שלנו
                 </h2>
                 <p>
@@ -175,7 +175,7 @@ export default function AboutPage() {
                   />
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed">{desc}</p>
+                <p className="text-base text-stone-500 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -198,7 +198,7 @@ export default function AboutPage() {
                 {COMMITMENTS.map((c) => (
                   <li
                     key={c}
-                    className="flex items-start gap-3 text-sm text-stone-700"
+                    className="flex items-start gap-3 text-base text-stone-700"
                   >
                     <CheckCircle2
                       className="h-5 w-5 text-brand-500 shrink-0 mt-0.5"

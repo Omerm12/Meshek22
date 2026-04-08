@@ -127,7 +127,7 @@ export default function PromotionsPage() {
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
               חבילות חיסכון שבועיות
             </h2>
-            <p className="text-stone-500 mt-1">מוחלפות כל שבוע לפי עונה ומלאי</p>
+            <p className="text-base text-stone-500 mt-1">מוחלפות כל שבוע לפי עונה ומלאי</p>
           </div>
         </div>
 

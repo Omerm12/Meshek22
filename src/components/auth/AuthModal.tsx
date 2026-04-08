@@ -115,12 +115,12 @@ export function AuthModal() {
         aria-label={tab === "login" ? "כניסה לחשבון" : "הרשמה"}
         className={cn(
           "fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 mx-auto",
-          "w-full max-w-sm bg-white rounded-2xl shadow-2xl",
+          "w-full max-w-md bg-white rounded-2xl shadow-2xl",
           "flex flex-col overflow-hidden"
         )}
       >
         {/* ── Header: logo + close button ── */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-0">
+        <div className="flex items-center justify-between px-7 pt-6 pb-0">
           <Image
             src="/images/heroes/logo.png"
             alt="משק 22"
@@ -138,7 +138,7 @@ export function AuthModal() {
         </div>
 
         {/* ── Login / Register tabs ── */}
-        <div className="mx-6 mt-4 flex gap-0 border border-stone-200 rounded-xl p-1 bg-stone-50">
+        <div className="mx-7 mt-5 flex gap-0 border border-stone-200 rounded-xl p-1 bg-stone-50">
           <button
             onClick={() => setTab("login")}
             className={cn(
@@ -164,7 +164,7 @@ export function AuthModal() {
         </div>
 
         {/* ── Form area — scrollable on small screens ── */}
-        <div className="px-6 pt-4 pb-6 overflow-y-auto max-h-[70vh]">
+        <div className="px-7 pt-5 pb-7 overflow-y-auto max-h-[70vh]">
           {tab === "login" ? (
             <LoginForm
               onSuccess={handleSuccess}

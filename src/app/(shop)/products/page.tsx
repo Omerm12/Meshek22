@@ -25,11 +25,11 @@ export default async function ProductsPage() {
           <p className="text-xs font-semibold text-brand-600 uppercase tracking-widest mb-2">
             החנות שלנו
           </p>
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl lg:text-5xl">
             כל המוצרים
           </h1>
           {products.length > 0 && (
-            <p className="mt-2 text-stone-500 text-sm">
+            <p className="mt-2 text-stone-500 text-base">
               {products.length} מוצרים
             </p>
           )}
