@@ -48,7 +48,7 @@ function SlidePanel({
           <h2
             className="font-bold leading-tight mb-4"
             style={{
-              fontSize: "clamp(1.9rem, 5vw, 3rem)",
+              fontSize: "clamp(2.2rem, 5vw, 3.6rem)",
               textShadow: "0 2px 12px rgba(0,0,0,0.3)",
             }}
           >
@@ -61,7 +61,7 @@ function SlidePanel({
 
           <p
             className="text-white/85 leading-relaxed mb-7"
-            style={{ fontSize: "clamp(0.9rem, 2vw, 1.05rem)" }}
+            style={{ fontSize: "clamp(1.05rem, 2vw, 1.25rem)" }}
           >
             {slide.subtext}
           </p>

@@ -124,7 +124,7 @@ export default function PromotionsPage() {
               <Tag className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />
               <span className="text-xs font-semibold text-red-600">מבצעי השבוע</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
               חבילות חיסכון שבועיות
             </h2>
             <p className="text-base text-stone-500 mt-1">מוחלפות כל שבוע לפי עונה ומלאי</p>
@@ -162,7 +162,7 @@ export default function PromotionsPage() {
               </div>
 
               <h3 className="font-bold text-gray-900 text-lg mb-1.5">{deal.title}</h3>
-              <p className="text-sm text-stone-500 leading-relaxed mb-5">{deal.desc}</p>
+              <p className="text-base text-stone-500 leading-relaxed mb-5">{deal.desc}</p>
 
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-5">

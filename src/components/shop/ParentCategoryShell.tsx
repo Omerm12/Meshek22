@@ -280,9 +280,9 @@ export function ParentCategoryShell({
           <div className="flex-1 min-w-0">
             {/* Section heading */}
             <div className="flex items-baseline justify-between mb-4 gap-2">
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900">
                 {activeSubCategory ? activeSubCategory.name : `כל ה${heroConfig.title}`}
-                <span className="text-sm font-normal text-stone-400 me-2">
+                <span className="text-base font-normal text-stone-400 me-2">
                   {" "}({products.length} מוצרים)
                 </span>
               </h2>

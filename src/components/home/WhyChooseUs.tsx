@@ -58,8 +58,8 @@ export function WhyChooseUs() {
                   { num: "3+", label: "שנות פעילות" },
                 ].map(({ num, label }) => (
                   <div key={label}>
-                    <p className="text-2xl font-bold text-brand-700 leading-none">{num}</p>
-                    <p className="text-xs text-stone-400 mt-1">{label}</p>
+                    <p className="text-3xl font-bold text-brand-700 leading-none">{num}</p>
+                    <p className="text-sm text-stone-400 mt-1">{label}</p>
                   </div>
                 ))}
               </div>
@@ -74,8 +74,8 @@ export function WhyChooseUs() {
                   <div className="h-10 w-10 rounded-xl bg-white border border-stone-100 flex items-center justify-center text-xl mb-3 group-hover:border-brand-200 transition-colors">
                     <span aria-hidden="true">{emoji}</span>
                   </div>
-                  <h3 className="font-bold text-gray-900 text-sm mb-1">{title}</h3>
-                  <p className="text-xs text-stone-500 leading-relaxed">{desc}</p>
+                  <h3 className="font-bold text-gray-900 text-base mb-1.5">{title}</h3>
+                  <p className="text-sm text-stone-500 leading-relaxed">{desc}</p>
                 </div>
               </Reveal>
             ))}

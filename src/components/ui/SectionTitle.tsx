@@ -19,11 +19,11 @@ export function SectionTitle({
 }: SectionTitleProps) {
   return (
     <div className={cn(centered && "text-center", className)}>
-      <Tag id={id} className="text-2xl font-bold text-gray-900 sm:text-3xl leading-tight">
+      <Tag id={id} className="text-3xl font-bold text-gray-900 sm:text-4xl leading-tight">
         {title}
       </Tag>
       {subtitle && (
-        <p className="mt-2 text-base text-stone-500 leading-relaxed">
+        <p className="mt-3 text-lg text-stone-500 leading-relaxed">
           {subtitle}
         </p>
       )}

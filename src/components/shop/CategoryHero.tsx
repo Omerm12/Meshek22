@@ -46,7 +46,7 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
         <h1
           className={cn("font-bold tracking-tight", config.headingColor)}
           style={{
-            fontSize: "clamp(2.4rem, 5vw, 4rem)",
+            fontSize: "clamp(2.8rem, 5vw, 4.5rem)",
             lineHeight: 1.1,
             textShadow: "0 2px 20px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
           }}
@@ -58,7 +58,7 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
           <p
             className="text-white/90 leading-relaxed mt-4 max-w-sm"
             style={{
-              fontSize: "clamp(0.95rem, 2vw, 1.1rem)",
+              fontSize: "clamp(1.1rem, 2vw, 1.3rem)",
               textShadow: "0 1px 10px rgba(0,0,0,0.55)",
               letterSpacing: "0.01em",
             }}

@@ -31,7 +31,7 @@ export async function FeaturedCategories() {
           </Reveal>
           <a
             href="/vegetables"
-            className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
+            className="hidden sm:flex items-center gap-1.5 text-base font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
           >
             לכל הקטגוריות
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />

@@ -48,7 +48,7 @@ export async function DeliveryAreas() {
                   { icon: MapPin,       text: "מגיעים ליישובים בכל רחבי הארץ" },
                   { icon: CheckCircle2, text: "משלוח חינם מהזמנה מינימלית" },
                 ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-center gap-3 text-sm text-stone-600">
+                  <div key={text} className="flex items-center gap-3 text-base text-stone-600">
                     <div className="h-8 w-8 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
                       <Icon className="h-4 w-4 text-brand-600" aria-hidden="true" />
                     </div>
@@ -77,19 +77,19 @@ export async function DeliveryAreas() {
                       <div className="h-7 w-7 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
                         <MapPin className="h-3.5 w-3.5 text-brand-600" aria-hidden="true" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+                      <h3 className="font-semibold text-gray-900 text-base leading-tight">
                         {zone.name}
                       </h3>
                     </div>
                     <div className="text-end shrink-0">
-                      <p className="text-sm font-bold text-brand-700 leading-tight">
+                      <p className="text-base font-bold text-brand-700 leading-tight">
                         {zone.delivery_fee_agorot === 0 ? "חינם" : formatPrice(zone.delivery_fee_agorot)}
                       </p>
-                      <p className="text-[11px] text-stone-400">משלוח</p>
+                      <p className="text-xs text-stone-400">משלוח</p>
                     </div>
                   </div>
 
-                  <p className="text-xs text-stone-500 mb-3 leading-relaxed pe-1">
+                  <p className="text-sm text-stone-500 mb-3 leading-relaxed pe-1">
                     הזמנה מינימלית {formatPrice(zone.min_order_agorot)}
                     {zone.free_delivery_threshold_agorot
                       ? `. משלוח חינם מ-${formatPrice(zone.free_delivery_threshold_agorot)}`
@@ -97,18 +97,18 @@ export async function DeliveryAreas() {
                   </p>
 
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-xs text-stone-400">
+                    <span className="flex items-center gap-1 text-sm text-stone-400">
                       <Clock className="h-3 w-3" aria-hidden="true" />
                       {zone.estimated_delivery_hours
                         ? `עד ${zone.estimated_delivery_hours} שעות`
                         : "בתיאום"}
                     </span>
                     {zone.free_delivery_threshold_agorot ? (
-                      <span className="text-xs font-semibold text-brand-600 bg-brand-50 rounded-full px-2 py-0.5">
+                      <span className="text-sm font-semibold text-brand-600 bg-brand-50 rounded-full px-2.5 py-0.5">
                         חינם מ-{formatPrice(zone.free_delivery_threshold_agorot)}
                       </span>
                     ) : (
-                      <span className="text-xs text-stone-400 bg-stone-50 rounded-full px-2 py-0.5">
+                      <span className="text-sm text-stone-400 bg-stone-50 rounded-full px-2.5 py-0.5">
                         ללא משלוח חינם
                       </span>
                     )}

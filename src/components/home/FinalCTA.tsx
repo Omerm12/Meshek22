@@ -41,16 +41,16 @@ export function FinalCTA() {
             <h2
               id="final-cta-title"
               className="font-bold text-gray-900 mb-5 leading-tight"
-              style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)" }}
+              style={{ fontSize: "clamp(2.3rem, 3.5vw, 3.2rem)" }}
             >
               מוכנים לאכול טרי יותר?
             </h2>
 
             {/* Two separate sentences — prevents the browser splitting mid-sentence */}
-            <p className="text-stone-500 text-[1.0625rem] leading-relaxed mb-1">
+            <p className="text-stone-500 text-lg leading-relaxed mb-1">
               הצטרפו לאלפי משפחות שקונות ממשק 22 כל שבוע.
             </p>
-            <p className="text-stone-500 text-[1.0625rem] leading-relaxed mb-8">
+            <p className="text-stone-500 text-lg leading-relaxed mb-8">
               ירקות ופירות טריים, ישירות לבית שלכם.
             </p>
 

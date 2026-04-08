@@ -44,16 +44,16 @@ export function TrustBar() {
           {TRUST_ITEMS.map(({ icon: Icon, title, subtitle, color, bg }, i) => (
             <div
               key={title}
-              className="flex items-center gap-3.5 p-4 lg:p-5 bg-white hover:bg-stone-50 transition-colors"
+              className="flex items-center gap-4 p-5 lg:p-6 bg-white hover:bg-stone-50 transition-colors"
             >
               <div
-                className={`shrink-0 h-11 w-11 rounded-xl ${bg} flex items-center justify-center`}
+                className={`shrink-0 h-12 w-12 rounded-xl ${bg} flex items-center justify-center`}
               >
-                <Icon className={`h-[22px] w-[22px] ${color}`} aria-hidden="true" />
+                <Icon className={`h-6 w-6 ${color}`} aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-[13px] text-gray-900 leading-tight">{title}</p>
-                <p className="text-[11.5px] text-stone-400 mt-0.5 leading-snug">{subtitle}</p>
+                <p className="font-bold text-sm text-gray-900 leading-tight">{title}</p>
+                <p className="text-xs text-stone-400 mt-0.5 leading-snug">{subtitle}</p>
               </div>
             </div>
           ))}

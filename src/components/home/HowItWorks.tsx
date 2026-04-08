@@ -68,8 +68,8 @@ export function HowItWorks() {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-gray-900 text-base mb-1.5">{title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed">{desc}</p>
+                <h3 className="font-bold text-gray-900 text-lg mb-2">{title}</h3>
+                <p className="text-base text-stone-500 leading-relaxed">{desc}</p>
               </div>
             </Reveal>
           ))}

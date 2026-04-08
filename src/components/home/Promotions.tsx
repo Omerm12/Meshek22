@@ -52,7 +52,7 @@ export function Promotions() {
               <h2 id="promos-title" className="text-3xl font-bold text-gray-900 sm:text-4xl">
                 חבילות חיסכון
               </h2>
-              <p className="text-stone-500 mt-1.5">קנו יותר, חסכו יותר</p>
+              <p className="text-lg text-stone-500 mt-1.5">קנו יותר, חסכו יותר</p>
             </div>
           </Reveal>
           <a
@@ -85,7 +85,7 @@ export function Promotions() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 text-lg mb-1.5">{deal.title}</h3>
-                <p className="text-sm text-stone-500 leading-relaxed mb-6">{deal.desc}</p>
+                <p className="text-base text-stone-500 leading-relaxed mb-6">{deal.desc}</p>
 
                 {/* Price row */}
                 <div className="flex items-baseline gap-2 mb-5">

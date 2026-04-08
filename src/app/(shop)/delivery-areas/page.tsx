@@ -50,8 +50,8 @@ export default async function DeliveryAreasPage() {
       <div className="py-14 lg:py-20 bg-white border-t border-stone-100">
         <Container>
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">מדיניות ולוח זמנים</h2>
-            <p className="text-base text-stone-500 mb-10">כל מה שצריך לדעת לפני שמזמינים.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">מדיניות ולוח זמנים</h2>
+            <p className="text-lg text-stone-500 mb-10">כל מה שצריך לדעת לפני שמזמינים.</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 mb-10">
               {[
@@ -94,7 +94,7 @@ export default async function DeliveryAreasPage() {
                   >
                     <Icon className={`h-6 w-6 ${iconClass}`} aria-hidden="true" />
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-2 text-base">{title}</h3>
+                  <h3 className="font-bold text-gray-900 mb-2 text-lg">{title}</h3>
                   <p className="text-base text-stone-500 leading-relaxed">{body}</p>
                 </div>
               ))}
