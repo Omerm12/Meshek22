@@ -93,7 +93,7 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
     accentClass: "bg-sky-600",
     headingColor: "text-white",
     imageObjectFit: "cover",
-    imageObjectPosition: "center 40%",
+    imageObjectPosition: "40% center",
   },
 };
 
