@@ -173,14 +173,9 @@ export function Header() {
                           key={child.slug}
                           href={child.href}
                           onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50/70 transition-colors duration-150"
+                          className="block px-4 py-3 text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50/70 transition-colors duration-150"
                           role="menuitem"
                         >
-                          {child.icon && (
-                            <span className="text-base leading-none shrink-0" aria-hidden="true">
-                              {child.icon}
-                            </span>
-                          )}
                           {child.label}
                         </Link>
                       ))}
@@ -381,14 +376,13 @@ export function Header() {
                   href={cat.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex-1 flex items-center gap-2.5 px-4 py-3 rounded-s-xl text-base font-medium transition-colors",
+                    "flex-1 flex items-center px-4 py-3 rounded-s-xl text-base font-medium transition-colors",
                     isCatActive(cat.href)
                       ? "text-brand-700 bg-brand-50 font-semibold"
                       : "text-stone-700 hover:bg-brand-50 hover:text-brand-700",
                   )}
                   aria-current={isCatActive(cat.href) ? "page" : undefined}
                 >
-                  <span aria-hidden="true">{cat.icon}</span>
                   {cat.label}
                 </Link>
                 {cat.children.length > 0 && (
@@ -421,9 +415,8 @@ export function Header() {
                       key={child.slug}
                       href={child.href}
                       onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                      className="block px-4 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
                     >
-                      <span aria-hidden="true">{child.icon}</span>
                       {child.label}
                     </Link>
                   ))}

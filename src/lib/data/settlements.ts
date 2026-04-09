@@ -14,6 +14,19 @@ export interface Settlement {
   name: string;
 }
 
+/**
+ * Search settlements by name prefix/substring.
+ * Normalises both sides: lowercase + collapsed whitespace.
+ * Returns up to `limit` matches (default 20).
+ */
+export function searchSettlements(query: string, limit = 20): Settlement[] {
+  const q = query.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!q) return [];
+  return SETTLEMENTS.filter((s) =>
+    s.name.toLowerCase().replace(/\s+/g, " ").includes(q)
+  ).slice(0, limit);
+}
+
 export const SETTLEMENTS: Settlement[] = [
   // גוש דן מרכזי
   { name: "תל אביב-יפו" },
