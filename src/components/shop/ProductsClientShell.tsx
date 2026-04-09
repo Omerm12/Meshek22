@@ -75,8 +75,8 @@ export function ProductsClientShell({ products, totalCount }: ProductsClientShel
       {displayed.length > 0 ? (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {displayed.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {displayed.map((product, idx) => (
+              <ProductCard key={product.id} product={product} priority={idx < 8} />
             ))}
           </div>
 

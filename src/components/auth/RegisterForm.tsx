@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { User, Phone, Mail, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { recordLogin } from "@/app/actions/auth";
 import { phoneOtpSchema, otpVerifySchema, profileSchema } from "@/lib/validations/auth";
 import type { PhoneOtpFormData, OtpVerifyFormData, ProfileFormData } from "@/lib/validations/auth";
 
@@ -147,7 +148,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
     if (profile?.full_name) {
       // Returning user with complete profile — done
-      completeAuth();
+      await completeAuth();
     } else {
       // New user or incomplete profile — collect details
       setPhase("profile");
@@ -201,10 +202,12 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       return;
     }
 
-    completeAuth();
+    await completeAuth();
   };
 
-  const completeAuth = () => {
+  const completeAuth = async () => {
+    // Record login timestamp in profiles table (DB-backed, admin-client write).
+    await recordLogin();
     if (onSuccess) {
       onSuccess();
     } else {

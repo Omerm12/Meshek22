@@ -8,6 +8,63 @@ import { productFormSchema, type ProductFormData } from "@/lib/validations/admin
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
+// ─── Image upload ─────────────────────────────────────────────────────────────
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const MAX_IMAGE_BYTES      = 5 * 1024 * 1024; // 5 MB
+const STORAGE_BUCKET       = "product-images";
+
+export type UploadResult = { url: string } | { error: string };
+
+/**
+ * Upload a product image to Supabase Storage and return the public URL.
+ *
+ * Security model:
+ *   - requireAdmin() validates the caller is an authenticated admin.
+ *   - Upload uses the admin (service role) client — bypasses storage RLS.
+ *   - File type and size are validated server-side; client values are not trusted.
+ *   - Filename is a random UUID so URLs are not guessable and cannot collide.
+ */
+export async function uploadProductImage(formData: FormData): Promise<UploadResult> {
+  await requireAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "לא נבחר קובץ" };
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return { error: "סוג קובץ לא נתמך. יש לבחור JPEG, PNG או WebP." };
+  }
+
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { error: "הקובץ גדול מדי (מקסימום 5MB)" };
+  }
+
+  // Random UUID filename prevents collisions and predictable URLs.
+  // Extension is derived from the uploaded file's name.
+  const ext      = (file.name.split(".").pop() ?? "jpg").toLowerCase();
+  const filename = `products/${crypto.randomUUID()}.${ext}`;
+
+  const supabase = createAdminClient();
+  const bytes    = await file.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(filename, bytes, { contentType: file.type, upsert: false });
+
+  if (uploadError) {
+    console.error("[uploadProductImage]", uploadError.message);
+    return { error: "שגיאה בהעלאת הקובץ. נסו שוב." };
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from(STORAGE_BUCKET)
+    .getPublicUrl(filename);
+
+  return { url: publicUrl };
+}
+
 function toDbVariant(
   v: ProductFormData["variants"][number],
   productId: string

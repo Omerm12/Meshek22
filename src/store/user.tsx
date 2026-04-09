@@ -11,6 +11,18 @@ import {
 import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * Returns true if the DB-backed last_login_at timestamp is older than 14 days.
+ * When last_login_at is null (legacy user who has not yet logged in under the new
+ * system), returns false — we do not force-expire users without a recorded timestamp.
+ */
+function isLoginExpired(lastLoginAt: string | null): boolean {
+  if (!lastLoginAt) return false;
+  return Date.now() - new Date(lastLoginAt).getTime() > FOURTEEN_DAYS_MS;
+}
+
 interface UserContextValue {
   user: User | null;
   session: Session | null;
@@ -50,7 +62,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // Fetch role from profiles whenever session changes.
+  // Fetch role and last_login_at from profiles whenever session changes.
+  // Combines two concerns into one query to avoid an extra round-trip.
   // Uses the existing profiles_own_select RLS policy — users can only read their own row.
   useEffect(() => {
     if (!session?.user) {
@@ -59,11 +72,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     supabase
       .from("profiles")
-      .select("role")
+      .select("role, last_login_at")
       .eq("id", session.user.id)
       .single()
       .then(({ data }) => {
         setRole(data?.role ?? null);
+
+        // Client-side defense-in-depth: sign out if last_login_at is DB-backed and
+        // older than 14 days. The authoritative enforcement is in middleware; this
+        // catches the case where the user is on a public route (skipped by middleware).
+        if (isLoginExpired(data?.last_login_at ?? null)) {
+          supabase.auth.signOut();
+        }
       });
   }, [session, supabase]);
 

@@ -7,8 +7,16 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
 } from "react";
+import { useUser } from "@/store/user";
+import {
+  dbLoadCart,
+  dbUpsertCartItem,
+  dbRemoveCartItem,
+  dbClearCart,
+} from "@/app/actions/cart";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +54,7 @@ interface CartContextValue extends CartState {
   closeCart: () => void;
   totalItems: number;
   subtotalAgorot: number;
-  /** True once localStorage has been read. Use this to guard redirect-on-empty logic. */
+  /** True once the auth-aware hydration step has completed. */
   isHydrated: boolean;
 }
 
@@ -122,59 +130,121 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const STORAGE_KEY = "meshek22_cart";
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: authLoading } = useUser();
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     isOpen: false,
   });
-  // Separate flag — becomes true after the localStorage read completes.
+  // True once the auth-aware hydration step has completed (guards against empty-
+  // cart flicker before we've loaded from DB).
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const items = JSON.parse(raw) as CartLineItem[];
-        dispatch({ type: "HYDRATE", items });
-      }
-    } catch {
-      // ignore
-    } finally {
-      setIsHydrated(true);
-    }
-  }, []);
+  // Stable refs so callbacks don't need to re-create when state/user changes.
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
 
-  // Persist to localStorage on every change (skip before hydration to avoid
-  // overwriting stored cart with the empty initial state)
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // undefined = auth has not resolved yet (distinguishes "loading" from "guest").
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  // ── Auth-aware DB hydration ───────────────────────────────────────────────
+  //
+  // Rules:
+  //   Initial resolution (authenticated) → load cart from DB
+  //   Initial resolution (guest)         → mark hydrated with empty cart
+  //   Login transition (null → id)       → load cart from DB
+  //   Logout transition (id → null)      → clear in-memory cart; DB cart stays
+  //                                        intact for next login
   useEffect(() => {
-    if (!isHydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
-    } catch {
-      // ignore
+    if (authLoading) return;
+
+    const prevId = prevUserIdRef.current;
+    const currId = user?.id ?? null;
+
+    if (prevId === undefined) {
+      // First resolution after mount
+      prevUserIdRef.current = currId;
+      if (currId) {
+        dbLoadCart()
+          .then((items) => {
+            dispatch({ type: "HYDRATE", items });
+            setIsHydrated(true);
+          })
+          .catch(() => setIsHydrated(true));
+      } else {
+        // Guest: empty cart, no DB load
+        setIsHydrated(true);
+      }
+      return;
     }
-  }, [state.items, isHydrated]);
+
+    if (prevId === currId) return;
+    prevUserIdRef.current = currId;
+
+    if (currId && !prevId) {
+      // Logged in: restore from DB
+      dbLoadCart()
+        .then((items) => dispatch({ type: "HYDRATE", items }))
+        .catch(() => {});
+    } else if (!currId && prevId) {
+      // Logged out: clear in-memory cart (no DB touch — their cart persists for next login)
+      dispatch({ type: "CLEAR" });
+    }
+  }, [authLoading, user?.id]);
+
+  // ── Mutation callbacks (optimistic + background DB sync) ─────────────────
+  //
+  // All mutations update in-memory state synchronously (instant UI feedback),
+  // then fire a Server Action in the background. The Server Action is
+  // fire-and-forget — UI is always consistent via in-memory state.
+  // Stable callbacks via refs: no dependency on state or user directly.
 
   const addItem = useCallback(
     (item: Omit<CartLineItem, "quantity"> & { quantity?: number }) => {
       dispatch({ type: "ADD", payload: item });
+      if (!userRef.current) return;
+      // Compute final quantity matching reducer logic
+      const existing = stateRef.current.items.find(
+        (i) => i.variantId === item.variantId
+      );
+      const finalQty = Math.min(
+        (existing?.quantity ?? 0) + (item.quantity ?? 1),
+        99
+      );
+      dbUpsertCartItem({ ...item, quantity: finalQty }).catch(() => {});
     },
     []
   );
 
   const removeItem = useCallback((variantId: string) => {
     dispatch({ type: "REMOVE", variantId });
+    if (!userRef.current) return;
+    dbRemoveCartItem(variantId).catch(() => {});
   }, []);
 
   const updateQty = useCallback((variantId: string, quantity: number) => {
     dispatch({ type: "UPDATE_QTY", variantId, quantity });
+    if (!userRef.current) return;
+    if (quantity <= 0) {
+      dbRemoveCartItem(variantId).catch(() => {});
+    } else {
+      const item = stateRef.current.items.find((i) => i.variantId === variantId);
+      if (item) {
+        dbUpsertCartItem({ ...item, quantity: Math.min(quantity, 99) }).catch(() => {});
+      }
+    }
   }, []);
 
-  const clearCart = useCallback(() => dispatch({ type: "CLEAR" }), []);
-  const openCart = useCallback(() => dispatch({ type: "OPEN" }), []);
+  const clearCart = useCallback(() => {
+    dispatch({ type: "CLEAR" });
+    if (!userRef.current) return;
+    dbClearCart().catch(() => {});
+  }, []);
+
+  const openCart  = useCallback(() => dispatch({ type: "OPEN" }),  []);
   const closeCart = useCallback(() => dispatch({ type: "CLOSE" }), []);
 
   const totalItems = useMemo(

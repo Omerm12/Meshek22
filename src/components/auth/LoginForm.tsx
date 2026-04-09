@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Phone, User, Mail, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { recordLogin } from "@/app/actions/auth";
 import { phoneOtpSchema, otpVerifySchema, profileSchema } from "@/lib/validations/auth";
 import type { PhoneOtpFormData, OtpVerifyFormData, ProfileFormData } from "@/lib/validations/auth";
 
@@ -151,7 +152,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
     if (profile?.full_name) {
       // Existing user with complete profile — done
-      completeAuth();
+      await completeAuth();
     } else {
       // New user or incomplete profile — collect name + email
       setPhase("profile");
@@ -203,10 +204,13 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       return;
     }
 
-    completeAuth();
+    await completeAuth();
   };
 
-  const completeAuth = () => {
+  const completeAuth = async () => {
+    // Record login timestamp in profiles table (DB-backed, admin-client write).
+    // This is the authoritative source for the 14-day expiry check.
+    await recordLogin();
     if (onSuccess) {
       onSuccess();
     } else {

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import {
   ShoppingCart,
   Plus,
@@ -103,6 +104,7 @@ export function ProductShell({ product, relatedProducts }: ProductShellProps) {
             >
               {product.imageUrl ? (
                 <Image
+                  loader={supabaseImageLoader}
                   src={product.imageUrl}
                   alt={product.name}
                   fill

@@ -7,14 +7,17 @@ import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
+import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import type { MockProduct, MockVariant } from "@/lib/data/mock";
 
 interface ProductCardProps {
   product: MockProduct;
   className?: string;
+  /** Pass true for cards that are visible above the fold — triggers browser preload. */
+  priority?: boolean;
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({ product, className, priority = false }: ProductCardProps) {
   const { addItem, items, updateQty } = useCart();
 
   const defaultVariant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
@@ -86,6 +89,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
           <>
             {/* Blurred background layer — desktop only (too noisy on small mobile thumbnail) */}
             <Image
+              loader={supabaseImageLoader}
               src={product.imageUrl!}
               alt=""
               fill
@@ -94,10 +98,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
               className="hidden md:block object-cover scale-125 blur-2xl opacity-30"
             />
             <Image
+              loader={supabaseImageLoader}
               src={product.imageUrl!}
               alt={product.name}
               fill
-              sizes="(max-width: 768px) 96px, (max-width: 1024px) 33vw, 260px"
+              sizes="(max-width: 768px) 112px, (max-width: 1024px) 33vw, 260px"
+              priority={priority}
               className="object-contain z-10 transition-transform duration-500 ease-out group-hover:scale-105"
             />
           </>

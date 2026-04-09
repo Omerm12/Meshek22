@@ -259,6 +259,8 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
 
     if (existingOrder?.payment_status === "paid") {
       // Already completed — return the success URL without touching the order.
+      // Clear the DB cart (idempotent — may already be empty from the first time).
+      await supabase.from("user_cart_items").delete().eq("user_id", user.id);
       const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
       return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };
     }
@@ -291,6 +293,10 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       error: paymentUpdateError.message,
     });
   }
+
+  // Clear the user's DB cart server-side as part of the order completion response.
+  // Belt-and-suspenders: client-side clearCart() also fires after this returns.
+  await supabase.from("user_cart_items").delete().eq("user_id", user.id);
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };

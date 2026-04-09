@@ -83,8 +83,8 @@ export function ProductCarousel({
     <div>
       {/* ── Mobile: vertical list of horizontal cards ──────────────────────── */}
       <div className="flex flex-col gap-2 md:hidden">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+        {products.map((product, idx) => (
+          <ProductCard key={product.id} product={product} priority={idx < 4} />
         ))}
       </div>
 
@@ -102,13 +102,13 @@ export function ProductCarousel({
         // Hide WebKit scrollbar
         // (cannot use className because Tailwind doesn't ship scrollbar-hide by default)
       >
-        {products.map((product) => (
+        {products.map((product, idx) => (
           <div
             key={product.id}
             className="shrink-0"
             style={{ width: cardWidth }}
           >
-            <ProductCard product={product} />
+            <ProductCard product={product} priority={idx < 4} />
           </div>
         ))}
 

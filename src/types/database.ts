@@ -37,6 +37,9 @@ export interface Database {
           full_name: string | null;
           phone: string | null;
           role: UserRole;
+          /** Timestamp of the user's last successful login. Set exclusively by the
+           *  recordLogin() Server Action (admin client). Used to enforce 14-day expiry. */
+          last_login_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -46,6 +49,7 @@ export interface Database {
           full_name?: string | null;
           phone?: string | null;
           role?: UserRole;
+          last_login_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -55,6 +59,58 @@ export interface Database {
           full_name?: string | null;
           phone?: string | null;
           role?: UserRole;
+          /**
+           * Column-level privilege: REVOKE INSERT, UPDATE ON last_login_at FROM authenticated.
+           * Writable ONLY via the recordLogin() Server Action (service_role / admin client).
+           * The authenticated role cannot write this column even with a valid session.
+           */
+          last_login_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      /**
+       * Flat, user-scoped cart table for authenticated users.
+       * variant_id and product_id are UUID FKs to product_variants and products
+       * respectively (ON DELETE CASCADE — removing a product/variant clears stale
+       * cart items automatically). UNIQUE (user_id, variant_id) enables UPSERT.
+       */
+      user_cart_items: {
+        Row: {
+          id: string;          // UUID PK
+          user_id: string;     // UUID → auth.users(id)
+          variant_id: string;  // UUID → product_variants(id)
+          product_id: string;  // UUID → products(id)
+          product_name: string;
+          variant_label: string;
+          price_agorot: number;
+          quantity: number;
+          image_color: string | null;
+          product_icon: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;     // UUID
+          variant_id: string;  // UUID
+          product_id: string;  // UUID
+          product_name: string;
+          variant_label: string;
+          price_agorot: number;
+          quantity: number;
+          image_color?: string | null;
+          product_icon?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          product_name?: string;
+          variant_label?: string;
+          price_agorot?: number;
+          quantity?: number;
+          image_color?: string | null;
+          product_icon?: string | null;
           updated_at?: string;
         };
         Relationships: [];

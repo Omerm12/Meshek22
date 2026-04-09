@@ -7,6 +7,7 @@ import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
 import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
+import { ProductImageUpload } from "@/components/admin/products/ProductImageUpload";
 import type { ActionResult } from "@/app/admin/products/actions";
 
 export interface CategoryOption {
@@ -95,6 +96,7 @@ function buildGroupedCategories(categories: CategoryOption[]): GroupedCategories
 export function ProductForm({ defaultValues, action, submitLabel, categories }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState("");
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!defaultValues?.slug);
 
   const {
@@ -120,6 +122,9 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
       ],
     },
   });
+
+  // Watch image_url for the upload component preview
+  const imageUrlValue = watch("image_url") ?? "";
 
   // Auto-generate slug from name
   const nameValue = watch("name");
@@ -226,22 +231,20 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
           />
         </Field>
 
-        {/* Image URL */}
-        <Field
-          label="כתובת תמונה (URL)"
-          id="image_url"
-          hint="לא חובה — URL של תמונה מייצגת"
-          error={errors.image_url?.message}
-        >
-          <input
-            id="image_url"
-            type="url"
-            dir="ltr"
-            placeholder="https://..."
-            {...register("image_url")}
-            className={errors.image_url ? errInputCls : inputCls}
+        {/* Image — file upload to Supabase Storage */}
+        <div>
+          <p className="block text-sm font-medium text-gray-700 mb-1.5">
+            תמונת מוצר
+            <span className="text-gray-400 font-normal ms-1 text-xs">(לא חובה)</span>
+          </p>
+          <ProductImageUpload
+            currentUrl={imageUrlValue}
+            onUpload={(url) => setValue("image_url", url, { shouldValidate: true })}
+            onClear={() => setValue("image_url", "", { shouldValidate: false })}
+            onUploadingChange={setIsImageUploading}
+            error={errors.image_url?.message}
           />
-        </Field>
+        </div>
 
         {/* Sort order + flags */}
         <div className="grid grid-cols-3 gap-4">
@@ -310,7 +313,7 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
       <div className="flex items-center gap-3 pt-1">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || isImageUploading}
           className="inline-flex items-center justify-center gap-2 h-10 px-6 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors cursor-pointer disabled:cursor-not-allowed"
         >
           {isPending ? (
@@ -318,7 +321,7 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
           ) : (
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           )}
-          {submitLabel}
+          {isImageUploading ? "ממתין לסיום העלאה..." : submitLabel}
         </button>
       </div>
     </form>
