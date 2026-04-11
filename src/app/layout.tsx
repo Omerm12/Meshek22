@@ -8,6 +8,8 @@ import { AuthModalProvider } from "@/store/auth-modal";
 import { AuthModalLoader } from "@/components/auth/AuthModalLoader";
 import { DeliveryGateProvider } from "@/store/delivery-gate";
 import { DeliveryGateModal } from "@/components/shop/DeliveryGateModal";
+import { AccessibilityProvider } from "@/store/accessibility";
+import { AccessibilityWidget } from "@/components/layout/AccessibilityWidget";
 
 const rubik = Rubik({
   subsets: ["hebrew", "latin"],
@@ -68,10 +70,13 @@ export default function RootLayout({
           <AuthModalProvider>
             <CartProvider>
               <DeliveryGateProvider>
-                {children}
-                <CartDrawer />
-                <AuthModalLoader />
-                <DeliveryGateModal />
+                <AccessibilityProvider>
+                  {children}
+                  <CartDrawer />
+                  <AuthModalLoader />
+                  <DeliveryGateModal />
+                  <AccessibilityWidget />
+                </AccessibilityProvider>
               </DeliveryGateProvider>
             </CartProvider>
           </AuthModalProvider>

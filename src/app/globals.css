@@ -120,6 +120,38 @@ input[type="tel"] {
   text-align: right;
 }
 
+/* ── Accessibility widget overrides ── */
+
+/* Font size scaling — all rem-based sizes scale with the root font-size */
+html[data-a11y-font="1"] { font-size: 112.5%; }
+html[data-a11y-font="2"] { font-size: 125%; }
+
+/* High contrast — boosts contrast via body filter; body fills viewport so
+   position:fixed children remain correctly anchored */
+html[data-a11y-contrast="high"] body {
+  filter: contrast(1.25) saturate(0.9);
+}
+
+/* Underline links — excludes navigation/button links to avoid visual noise */
+html[data-a11y-links="underline"] a:not([role="button"]):not(.no-underline) {
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+}
+
+/* Larger spacing — applies relaxed line-height and letter-spacing to reading content */
+html[data-a11y-spacing="relaxed"] p,
+html[data-a11y-spacing="relaxed"] li,
+html[data-a11y-spacing="relaxed"] td,
+html[data-a11y-spacing="relaxed"] th {
+  line-height: 1.9 !important;
+  letter-spacing: 0.02em;
+}
+html[data-a11y-spacing="relaxed"] h1,
+html[data-a11y-spacing="relaxed"] h2,
+html[data-a11y-spacing="relaxed"] h3 {
+  line-height: 1.5 !important;
+}
+
 /* ── Scroll-reveal (set by JS) ── */
 .reveal-hidden {
   opacity: 0;
