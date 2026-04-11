@@ -1,0 +1,13 @@
+{
+  "slug": "karfit",
+  "name": "כרובית",
+  "category": "vegetables",
+  "model": "gpt-image-1",
+  "prompt": "E-commerce grocery catalog photo of fresh cauliflower head.\n\nARRANGEMENT: one whole cauliflower head. Items fill most of the frame and are touching or lightly overlapping — not floating apart in empty space.\n\nBACKGROUND: Plain white or very light neutral — clean, simple, uniform. No props, no surface texture, no colored backdrop.\n\nPRODUCE SURFACE: Completely dry. No water droplets anywhere. No condensation. No dew. No wet shine. Natural matte or slightly waxy skin texture only.\n\nLIGHTING: Soft, diffused, even from above. No directional spotlight. No dramatic side shadows. Very minimal shadow under the produce only.\n\nSTYLE: Real photograph of real produce. Natural color variations and slight imperfections in shape are expected and correct. NOT a 3D render. NOT CGI. NOT an illustration. NOT a beauty shot or advertisement.\n\nSTRICTLY NO: water drops, condensation, reflections, dramatic shadows, decorative props, text, labels, watermarks, macro close-up, oversaturation, artificial perfection.",
+  "rawImagePath": "output\\raw\\karfit.png",
+  "processedImagePath": "output\\processed\\karfit.png",
+  "uploadedUrl": null,
+  "dbUpdated": false,
+  "status": "success",
+  "generatedAt": "2026-04-11T14:20:55.632Z"
+}

@@ -27,6 +27,7 @@ export interface CartLineItem {
   variantLabel: string;
   priceAgorot: number;
   quantity: number;
+  imageUrl?: string | null;
   imageColor?: string;
   productIcon?: string;
 }
@@ -185,9 +186,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     prevUserIdRef.current = currId;
 
     if (currId && !prevId) {
-      // Logged in: restore from DB
+      // Logged in: merge guest items into DB cart.
+      // Guest items were never synced (addItem skips DB for guests), so we must
+      // write them to the DB now. DB items win on variant conflict (same variantId).
+      const guestItems = stateRef.current.items;
       dbLoadCart()
-        .then((items) => dispatch({ type: "HYDRATE", items }))
+        .then((dbItems) => {
+          if (guestItems.length === 0) {
+            // No guest items — just restore DB cart as-is
+            dispatch({ type: "HYDRATE", items: dbItems });
+            return;
+          }
+          // Merge: keep all DB items, append guest-only items (not already in DB)
+          const dbVariantIds = new Set(dbItems.map((i) => i.variantId));
+          const guestOnlyItems = guestItems.filter((i) => !dbVariantIds.has(i.variantId));
+          const merged = [...dbItems, ...guestOnlyItems];
+          dispatch({ type: "HYDRATE", items: merged });
+          // Persist guest-only items to DB so they survive a page refresh
+          for (const item of guestOnlyItems) {
+            dbUpsertCartItem(item).catch(() => {});
+          }
+        })
         .catch(() => {});
     } else if (!currId && prevId) {
       // Logged out: clear in-memory cart (no DB touch — their cart persists for next login)

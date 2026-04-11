@@ -1,0 +1,31 @@
+[2026-04-11T13:48:40.418Z] Starting image generation: 1 product(s), model=dall-e-3, dry-run=false, upload=false, update-db=false
+[2026-04-11T13:48:40.418Z] Output directory: C:\Projects\Meshek22\output\previews
+[2026-04-11T13:48:40.419Z] [1/1] melafelon: building prompt...
+[2026-04-11T13:48:40.419Z] [1/1] melafelon: prompt → Product catalog photo of fresh cucumber.
+
+COMPOSITION: 3 pieces in a tight natural triangular cluster, items touching, slightly irregular arrangement. Items fill 70-80% of the frame. Items touch or slightly overlap — not spread apart.
+
+BACKGROUND: Seamless pure white background. RGB (255, 255, 255). Not off-white. Not light gray. Not warm white. Not cool white. The background must be the same bright pure white you see in Shufersal or Rami Levy online grocery product photos.
+
+LIGHTING: Soft diffused lighting. Slightly directional from upper-left. Flat and even — no spotlight, no dramatic highlights, no harsh reflections.
+
+SHADOW: A very faint, barely visible soft shadow directly under the produce only. No drop shadow. No shadow cast on the background away from the object.
+
+SURFACE: Natural produce skin texture. No water droplets of any kind. No condensation. No dew drops. No moisture. No wet appearance. The surface may have a slight natural sheen (like real fruit skin) but must not look wet.
+
+REALISM: Real photograph look. Natural texture variations and slight color irregularities are expected and correct. NOT a 3D render. NOT CGI. NOT an illustration. NOT artificially perfect.
+
+NO TEXT: Absolutely no text, no brand names, no labels, no stickers, no price tags, no watermarks of any kind on the image.
+
+DO NOT INCLUDE: water drops, condensation, moisture, dramatic shadows, gray or off-white background, gradient background, studio backdrop, decorative leaves or props, text, labels, watermarks, extreme close-up, advertisement styling, oversaturated unnatural colors, artificial perfection.
+
+REFERENCE STYLE: Israeli online grocery product thumbnail — the same visual style as Shufersal, Rami Levy, or Mega supermarket websites. Simple, clean, trustworthy.
+[2026-04-11T13:48:40.419Z] [1/1] melafelon: calling dall-e-3 API...
+[2026-04-11T13:49:04.471Z] [1/1] melafelon: image URL received
+[2026-04-11T13:49:04.471Z] [1/1] melafelon: downloading image...
+[2026-04-11T13:49:06.262Z] [1/1] melafelon: saved → C:\Projects\Meshek22\output\previews\melafelon.png
+[2026-04-11T13:49:06.264Z] [1/1] melafelon: metadata saved → C:\Projects\Meshek22\output\previews\melafelon.json
+[2026-04-11T13:49:06.267Z] ─────────────────────────────────────
+[2026-04-11T13:49:06.267Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T13:49:06.267Z] Images saved to: C:\Projects\Meshek22\output\previews/
+[2026-04-11T13:49:06.268Z] Tip: re-run with --upload --update-db to push images to Supabase.

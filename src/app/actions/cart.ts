@@ -13,6 +13,7 @@ type CartRow = {
   variant_label: string;
   price_agorot: number;
   quantity: number;
+  image_url: string | null;
   image_color: string | null;
   product_icon: string | null;
 };
@@ -25,6 +26,7 @@ function rowToItem(row: CartRow): CartLineItem {
     variantLabel: row.variant_label,
     priceAgorot:  row.price_agorot,
     quantity:     row.quantity,
+    imageUrl:     row.image_url    ?? null,
     imageColor:   row.image_color  ?? undefined,
     productIcon:  row.product_icon ?? undefined,
   };
@@ -73,7 +75,7 @@ export async function dbLoadCart(): Promise<CartLineItem[]> {
   const { data, error } = await admin
     .from("user_cart_items")
     .select(
-      "variant_id,product_id,product_name,variant_label,price_agorot,quantity,image_color,product_icon"
+      "variant_id,product_id,product_name,variant_label,price_agorot,quantity,image_url,image_color,product_icon"
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
@@ -100,6 +102,7 @@ export async function dbUpsertCartItem(item: CartLineItem): Promise<void> {
       variant_label: item.variantLabel,
       price_agorot:  item.priceAgorot,
       quantity:      item.quantity,
+      image_url:     item.imageUrl    ?? null,
       image_color:   item.imageColor  ?? null,
       product_icon:  item.productIcon ?? null,
       updated_at:    new Date().toISOString(),

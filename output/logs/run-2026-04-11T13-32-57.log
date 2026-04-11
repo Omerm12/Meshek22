@@ -1,0 +1,206 @@
+[2026-04-11T13:32:57.292Z] Starting image generation: 5 product(s), model=dall-e-3, dry-run=false, upload=false, update-db=false
+[2026-04-11T13:32:57.292Z] Output directory: C:\Projects\Meshek22\output\generated
+[2026-04-11T13:32:57.293Z] [1/5] agvaniya: building prompt...
+[2026-04-11T13:32:57.294Z] [1/5] agvaniya: prompt → Ultra realistic grocery product photo of fresh red tomato (3-5 pieces).
+
+STRICT REQUIREMENTS:
+- pure white background (#FFFFFF), completely clean and uniform
+- no gradients, no shadows on background
+- no water droplets
+- no moisture
+- no condensation
+- no reflections
+- no shine or gloss effect
+- no dramatic lighting
+- no studio effects
+- no artistic styling
+- no macro photography
+- no fake perfection
+
+PRODUCT STYLE:
+- natural look, like real supermarket produce
+- slightly imperfect texture
+- matte surface (not glossy)
+
+COMPOSITION:
+- centered
+- simple
+- clean
+- natural arrangement (not perfectly symmetrical)
+
+LIGHTING:
+- soft, flat lighting (like catalog photography)
+- minimal shadow under product only
+
+IMPORTANT:
+This must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).
+It must NOT look like AI-generated or advertisement.
+[2026-04-11T13:32:57.294Z] [1/5] agvaniya: calling dall-e-3 API...
+[2026-04-11T13:33:15.396Z] [1/5] agvaniya: image URL received
+[2026-04-11T13:33:15.396Z] [1/5] agvaniya: downloading image...
+[2026-04-11T13:33:17.229Z] [1/5] agvaniya: saved → C:\Projects\Meshek22\output\generated\agvaniya.png
+[2026-04-11T13:33:17.232Z] [1/5] agvaniya: metadata saved → C:\Projects\Meshek22\output\generated\agvaniya.json
+[2026-04-11T13:33:17.742Z] [2/5] melafelon: building prompt...
+[2026-04-11T13:33:17.744Z] [2/5] melafelon: prompt → Ultra realistic grocery product photo of fresh cucumber (3-5 pieces).
+
+STRICT REQUIREMENTS:
+- pure white background (#FFFFFF), completely clean and uniform
+- no gradients, no shadows on background
+- no water droplets
+- no moisture
+- no condensation
+- no reflections
+- no shine or gloss effect
+- no dramatic lighting
+- no studio effects
+- no artistic styling
+- no macro photography
+- no fake perfection
+
+PRODUCT STYLE:
+- natural look, like real supermarket produce
+- slightly imperfect texture
+- matte surface (not glossy)
+
+COMPOSITION:
+- centered
+- simple
+- clean
+- natural arrangement (not perfectly symmetrical)
+
+LIGHTING:
+- soft, flat lighting (like catalog photography)
+- minimal shadow under product only
+
+IMPORTANT:
+This must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).
+It must NOT look like AI-generated or advertisement.
+[2026-04-11T13:33:17.745Z] [2/5] melafelon: calling dall-e-3 API...
+[2026-04-11T13:33:39.805Z] [2/5] melafelon: image URL received
+[2026-04-11T13:33:39.806Z] [2/5] melafelon: downloading image...
+[2026-04-11T13:33:41.634Z] [2/5] melafelon: saved → C:\Projects\Meshek22\output\generated\melafelon.png
+[2026-04-11T13:33:41.638Z] [2/5] melafelon: metadata saved → C:\Projects\Meshek22\output\generated\melafelon.json
+[2026-04-11T13:33:42.138Z] [3/5] pilpel: building prompt...
+[2026-04-11T13:33:42.139Z] [3/5] pilpel: prompt → Ultra realistic grocery product photo of fresh green and red bell peppers (3-5 pieces).
+
+STRICT REQUIREMENTS:
+- pure white background (#FFFFFF), completely clean and uniform
+- no gradients, no shadows on background
+- no water droplets
+- no moisture
+- no condensation
+- no reflections
+- no shine or gloss effect
+- no dramatic lighting
+- no studio effects
+- no artistic styling
+- no macro photography
+- no fake perfection
+
+PRODUCT STYLE:
+- natural look, like real supermarket produce
+- slightly imperfect texture
+- matte surface (not glossy)
+
+COMPOSITION:
+- centered
+- simple
+- clean
+- natural arrangement (not perfectly symmetrical)
+
+LIGHTING:
+- soft, flat lighting (like catalog photography)
+- minimal shadow under product only
+
+IMPORTANT:
+This must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).
+It must NOT look like AI-generated or advertisement.
+[2026-04-11T13:33:42.140Z] [3/5] pilpel: calling dall-e-3 API...
+[2026-04-11T13:34:00.971Z] [3/5] pilpel: image URL received
+[2026-04-11T13:34:00.972Z] [3/5] pilpel: downloading image...
+[2026-04-11T13:34:03.148Z] [3/5] pilpel: saved → C:\Projects\Meshek22\output\generated\pilpel.png
+[2026-04-11T13:34:03.151Z] [3/5] pilpel: metadata saved → C:\Projects\Meshek22\output\generated\pilpel.json
+[2026-04-11T13:34:03.655Z] [4/5] batzal: building prompt...
+[2026-04-11T13:34:03.656Z] [4/5] batzal: prompt → Ultra realistic grocery product photo of fresh yellow onion (3-5 pieces).
+
+STRICT REQUIREMENTS:
+- pure white background (#FFFFFF), completely clean and uniform
+- no gradients, no shadows on background
+- no water droplets
+- no moisture
+- no condensation
+- no reflections
+- no shine or gloss effect
+- no dramatic lighting
+- no studio effects
+- no artistic styling
+- no macro photography
+- no fake perfection
+
+PRODUCT STYLE:
+- natural look, like real supermarket produce
+- slightly imperfect texture
+- matte surface (not glossy)
+
+COMPOSITION:
+- centered
+- simple
+- clean
+- natural arrangement (not perfectly symmetrical)
+
+LIGHTING:
+- soft, flat lighting (like catalog photography)
+- minimal shadow under product only
+
+IMPORTANT:
+This must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).
+It must NOT look like AI-generated or advertisement.
+[2026-04-11T13:34:03.657Z] [4/5] batzal: calling dall-e-3 API...
+[2026-04-11T13:34:21.465Z] [4/5] batzal: image URL received
+[2026-04-11T13:34:21.466Z] [4/5] batzal: downloading image...
+[2026-04-11T13:34:24.115Z] [4/5] batzal: saved → C:\Projects\Meshek22\output\generated\batzal.png
+[2026-04-11T13:34:24.117Z] [4/5] batzal: metadata saved → C:\Projects\Meshek22\output\generated\batzal.json
+[2026-04-11T13:34:24.621Z] [5/5] shum: building prompt...
+[2026-04-11T13:34:24.622Z] [5/5] shum: prompt → Ultra realistic grocery product photo of fresh garlic bulb (3-5 pieces).
+
+STRICT REQUIREMENTS:
+- pure white background (#FFFFFF), completely clean and uniform
+- no gradients, no shadows on background
+- no water droplets
+- no moisture
+- no condensation
+- no reflections
+- no shine or gloss effect
+- no dramatic lighting
+- no studio effects
+- no artistic styling
+- no macro photography
+- no fake perfection
+
+PRODUCT STYLE:
+- natural look, like real supermarket produce
+- slightly imperfect texture
+- matte surface (not glossy)
+
+COMPOSITION:
+- centered
+- simple
+- clean
+- natural arrangement (not perfectly symmetrical)
+
+LIGHTING:
+- soft, flat lighting (like catalog photography)
+- minimal shadow under product only
+
+IMPORTANT:
+This must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).
+It must NOT look like AI-generated or advertisement.
+[2026-04-11T13:34:24.623Z] [5/5] shum: calling dall-e-3 API...
+[2026-04-11T13:34:43.410Z] [5/5] shum: image URL received
+[2026-04-11T13:34:43.411Z] [5/5] shum: downloading image...
+[2026-04-11T13:34:45.243Z] [5/5] shum: saved → C:\Projects\Meshek22\output\generated\shum.png
+[2026-04-11T13:34:45.245Z] [5/5] shum: metadata saved → C:\Projects\Meshek22\output\generated\shum.json
+[2026-04-11T13:34:45.248Z] ─────────────────────────────────────
+[2026-04-11T13:34:45.248Z] Done. 5 succeeded, 0 failed.
+[2026-04-11T13:34:45.248Z] Images saved to: C:\Projects\Meshek22\output\generated/
+[2026-04-11T13:34:45.249Z] Tip: re-run with --upload --update-db to push images to Supabase.

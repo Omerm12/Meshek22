@@ -1,0 +1,13 @@
+[2026-04-11T13:26:37.032Z] Starting image generation: 1 product(s), model=dall-e-3, dry-run=false, upload=false, update-db=false
+[2026-04-11T13:26:37.032Z] Output directory: C:\Projects\Meshek22\output\previews
+[2026-04-11T13:26:37.033Z] [1/1] agvaniya: building prompt...
+[2026-04-11T13:26:37.033Z] [1/1] agvaniya: prompt → A photograph of fresh red tomato. fresh whole vegetables, vibrant natural colors. professional food product photography, isolated on a pure white background, soft even studio lighting, sharp focus, no text, no labels, no watermarks, no shadows, square crop, centered subject, realistic photograph, high resolution.
+[2026-04-11T13:26:37.034Z] [1/1] agvaniya: calling dall-e-3 API...
+[2026-04-11T13:26:51.169Z] [1/1] agvaniya: image URL received
+[2026-04-11T13:26:51.169Z] [1/1] agvaniya: downloading image...
+[2026-04-11T13:26:53.197Z] [1/1] agvaniya: saved → C:\Projects\Meshek22\output\previews\agvaniya.png
+[2026-04-11T13:26:53.199Z] [1/1] agvaniya: metadata saved → C:\Projects\Meshek22\output\previews\agvaniya.json
+[2026-04-11T13:26:53.201Z] ─────────────────────────────────────
+[2026-04-11T13:26:53.201Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T13:26:53.201Z] Images saved to: C:\Projects\Meshek22\output\previews/
+[2026-04-11T13:26:53.201Z] Tip: re-run with --upload --update-db to push images to Supabase.

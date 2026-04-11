@@ -8,8 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { User, Phone, Mail, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { recordLogin } from "@/app/actions/auth";
-import { phoneOtpSchema, otpVerifySchema, profileSchema } from "@/lib/validations/auth";
-import type { PhoneOtpFormData, OtpVerifyFormData, ProfileFormData } from "@/lib/validations/auth";
+import { registerInfoSchema, otpVerifySchema } from "@/lib/validations/auth";
+import type { RegisterInfoFormData, OtpVerifyFormData } from "@/lib/validations/auth";
 
 interface RegisterFormProps {
   /**
@@ -24,7 +24,17 @@ interface RegisterFormProps {
   onSwitchToLogin?: () => void;
 }
 
-type Phase = "phone" | "otp" | "profile";
+/**
+ * Registration flow phases:
+ *
+ * "info"  → User enters phone + full name + email (all collected BEFORE OTP is sent).
+ *            No Supabase session exists at this point — closing the modal is fully safe.
+ *
+ * "otp"   → User enters the 6-digit SMS code. On success the profile is saved
+ *            immediately in the same handler. If the profile save fails we sign out
+ *            to prevent ghost-auth state. No separate "profile" phase exists.
+ */
+type Phase = "info" | "otp";
 
 /** Convert Israeli local format to E.164: 0501234567 → +972501234567 */
 function toE164(phone: string): string {
@@ -38,22 +48,20 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [phase, setPhase] = useState<Phase>("phone");
+  const [phase, setPhase] = useState<Phase>("info");
   const [e164Phone, setE164Phone] = useState("");
   const [displayPhone, setDisplayPhone] = useState("");
+  // Collected in the info phase, consumed when saving the profile after OTP.
+  const [pendingProfile, setPendingProfile] = useState<{ full_name: string; email: string } | null>(null);
   const [serverError, setServerError] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
-  const phoneForm = useForm<PhoneOtpFormData>({
-    resolver: zodResolver(phoneOtpSchema),
+  const infoForm = useForm<RegisterInfoFormData>({
+    resolver: zodResolver(registerInfoSchema),
   });
 
   const otpForm = useForm<OtpVerifyFormData>({
     resolver: zodResolver(otpVerifySchema),
-  });
-
-  const profileForm = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
   });
 
   // Resend cooldown countdown
@@ -63,7 +71,8 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     return () => clearInterval(t);
   }, [cooldown]);
 
-  const handleSendOtp = async (data: PhoneOtpFormData) => {
+  /** Step 1 — validate info, check phone uniqueness, then send OTP */
+  const handleSubmitInfo = async (data: RegisterInfoFormData) => {
     setServerError("");
     const normalized = toE164(data.phone);
 
@@ -97,62 +106,98 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       return;
     }
 
+    // Stash collected details — will be saved to the profile after OTP verification.
+    // No Supabase session has been created yet; closing the modal at this phase is safe.
     setE164Phone(normalized);
     setDisplayPhone(data.phone);
+    setPendingProfile({ full_name: data.full_name, email: data.email });
     setCooldown(60);
     setPhase("otp");
   };
 
+  /**
+   * Step 2 — verify OTP, then immediately save profile in the same handler.
+   *
+   * Why: verifyOtp() creates a live Supabase session immediately. If we let the user
+   * reach a separate "profile" phase and they close the modal before completing it,
+   * the session remains active and the header shows them as logged in — ghost auth.
+   *
+   * Fix: save the profile atomically in this handler. If the profile save fails,
+   * sign out before showing the error so the app is never left in a partial-auth state.
+   */
   const handleVerifyOtp = async (data: OtpVerifyFormData) => {
     setServerError("");
     const supabase = createClient();
 
-    const { error } = await supabase.auth.verifyOtp({
+    const { error: otpError } = await supabase.auth.verifyOtp({
       phone: e164Phone,
       token: data.token,
       type: "sms",
     });
 
-    if (error) {
-      if (
-        error.message.includes("expired") ||
-        error.message.includes("Token has expired")
-      ) {
+    if (otpError) {
+      const msg = otpError.message.toLowerCase();
+      // Supabase returns "Token has expired or is invalid" for BOTH wrong code and
+      // expired code. Check for the combined phrase first to avoid showing the
+      // misleading "expired" message when the user simply mistyped the digits.
+      if (msg.includes("expired") && msg.includes("invalid")) {
+        setServerError("הקוד שהוזן שגוי. בדקו שהקלדתם נכון, או שלחו קוד חדש.");
+      } else if (msg.includes("expired")) {
         setServerError("קוד האימות פג תוקף. שלחו קוד חדש.");
-      } else if (
-        error.message.includes("invalid") ||
-        error.message.includes("Invalid")
-      ) {
-        setServerError("קוד האימות שגוי. נסו שוב.");
+      } else if (msg.includes("invalid")) {
+        setServerError("הקוד שהוזן שגוי. נסו שוב.");
       } else {
         setServerError("שגיאה באימות. נסו שוב.");
       }
       return;
     }
 
-    // Check if the user already has a complete profile
+    // ── OTP verified: session now exists ────────────────────────────────────────
+    // Save profile immediately. If anything fails from here we sign out to prevent
+    // the user from being left in an authenticated-but-incomplete state.
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
+      await supabase.auth.signOut();
       setServerError("שגיאה בכניסה. נסו שוב.");
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.full_name) {
-      // Returning user with complete profile — done
-      await completeAuth();
-    } else {
-      // New user or incomplete profile — collect details
-      setPhase("profile");
+    const profile = pendingProfile;
+    if (!profile) {
+      // Should never happen (pendingProfile is always set before reaching OTP phase),
+      // but guard defensively.
+      await supabase.auth.signOut();
+      setServerError("שגיאה פנימית. אנא נסו שוב מההתחלה.");
+      setPhase("info");
+      return;
     }
+
+    // Write name to auth user metadata (for display in JWT / session).
+    await supabase.auth.updateUser({ data: { full_name: profile.full_name } });
+
+    // Write to profiles table (DB-backed, authoritative source for name + email).
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        full_name: profile.full_name,
+        email: profile.email,
+        phone: displayPhone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      // Sign out to prevent ghost-auth: user has a session but no completed profile.
+      await supabase.auth.signOut();
+      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
+      return;
+    }
+
+    await completeAuth();
   };
 
   const handleResend = async () => {
@@ -168,43 +213,6 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     otpForm.reset();
   };
 
-  const handleSaveProfile = async (data: ProfileFormData) => {
-    setServerError("");
-    const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
-      return;
-    }
-
-    // Update the user's metadata with the name (for display/JWT)
-    await supabase.auth.updateUser({
-      data: { full_name: data.full_name },
-    });
-
-    // Save profile details
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: data.full_name,
-        email: data.email,
-        phone: displayPhone,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
-
-    if (error) {
-      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
-      return;
-    }
-
-    await completeAuth();
-  };
-
   const completeAuth = async () => {
     // Record login timestamp in profiles table (DB-backed, admin-client write).
     await recordLogin();
@@ -217,26 +225,27 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     }
   };
 
-  // ── Phone step ───────────────────────────────────────────────────────────────
-  if (phase === "phone") {
+  // ── Info step (phone + name + email) ─────────────────────────────────────────
+  if (phase === "info") {
     return (
       <div>
         {!onSuccess && (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה</h1>
-            <p className="text-sm text-stone-500 mb-7">
-              הזינו את מספר הטלפון כדי להתחיל
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">הרשמה</h1>
+            <p className="text-base text-stone-500 mb-7">
+              הזינו את פרטיכם לפתיחת חשבון
             </p>
           </>
         )}
 
-        <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} noValidate className="space-y-4">
+        <form onSubmit={infoForm.handleSubmit(handleSubmitInfo)} noValidate className="space-y-4">
+          {/* Phone */}
           <div>
             <label
               htmlFor="reg-phone"
               className="block text-sm font-medium text-gray-700 mb-1.5"
             >
-              מספר טלפון נייד
+              מספר טלפון נייד <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Phone
@@ -249,19 +258,84 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
                 autoComplete="tel"
                 dir="ltr"
                 placeholder="0501234567"
-                {...phoneForm.register("phone")}
+                {...infoForm.register("phone")}
                 className={[
                   "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
                   "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                  phoneForm.formState.errors.phone
-                    ? "border-red-400"
-                    : "border-stone-200",
+                  infoForm.formState.errors.phone ? "border-red-400" : "border-stone-200",
                 ].join(" ")}
               />
             </div>
-            {phoneForm.formState.errors.phone && (
+            {infoForm.formState.errors.phone && (
               <p className="mt-1.5 text-xs text-red-500">
-                {phoneForm.formState.errors.phone.message}
+                {infoForm.formState.errors.phone.message}
+              </p>
+            )}
+          </div>
+
+          {/* Full name */}
+          <div>
+            <label
+              htmlFor="reg-full_name"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              שם מלא <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <User
+                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                id="reg-full_name"
+                type="text"
+                autoComplete="name"
+                placeholder="ישראל ישראלי"
+                {...infoForm.register("full_name")}
+                className={[
+                  "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
+                  "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                  infoForm.formState.errors.full_name ? "border-red-400" : "border-stone-200",
+                ].join(" ")}
+              />
+            </div>
+            {infoForm.formState.errors.full_name && (
+              <p className="mt-1.5 text-xs text-red-500">
+                {infoForm.formState.errors.full_name.message}
+              </p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label
+              htmlFor="reg-email"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              כתובת אימייל <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Mail
+                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                id="reg-email"
+                type="email"
+                autoComplete="email"
+                dir="ltr"
+                placeholder="you@example.com"
+                {...infoForm.register("email")}
+                className={[
+                  "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
+                  "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+                  infoForm.formState.errors.email ? "border-red-400" : "border-stone-200",
+                ].join(" ")}
+              />
+            </div>
+            {infoForm.formState.errors.email && (
+              <p className="mt-1.5 text-xs text-red-500">
+                {infoForm.formState.errors.email.message}
               </p>
             )}
           </div>
@@ -274,10 +348,10 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
           <button
             type="submit"
-            disabled={phoneForm.formState.isSubmitting}
+            disabled={infoForm.formState.isSubmitting}
             className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            {phoneForm.formState.isSubmitting ? (
+            {infoForm.formState.isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
               "שלח קוד אימות"
@@ -309,194 +383,60 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   }
 
   // ── OTP step ─────────────────────────────────────────────────────────────────
-  if (phase === "otp") {
-    return (
-      <div>
-        {!onSuccess && (
-          <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה</h1>
-            <p className="text-sm text-stone-500 mb-7">הזינו את קוד האימות שנשלח לטלפון</p>
-          </>
-        )}
-
-        <p className="text-sm text-stone-600 mb-4">
-          שלחנו קוד SMS למספר{" "}
-          <span className="font-semibold text-gray-800" dir="ltr">
-            {displayPhone}
-          </span>
-          .{" "}
-          <button
-            type="button"
-            onClick={() => {
-              setPhase("phone");
-              setServerError("");
-              otpForm.reset();
-            }}
-            className="text-brand-600 hover:text-brand-700 transition-colors"
-          >
-            שינוי מספר
-          </button>
-        </p>
-
-        <form onSubmit={otpForm.handleSubmit(handleVerifyOtp)} noValidate className="space-y-4">
-          <div>
-            <label
-              htmlFor="reg-otp"
-              className="block text-sm font-medium text-gray-700 mb-1.5"
-            >
-              קוד אימות (6 ספרות)
-            </label>
-            <input
-              id="reg-otp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              dir="ltr"
-              maxLength={6}
-              placeholder="123456"
-              {...otpForm.register("token")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl px-4 text-sm text-gray-900 placeholder:text-stone-400 text-center tracking-widest",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                otpForm.formState.errors.token ? "border-red-400" : "border-stone-200",
-              ].join(" ")}
-            />
-            {otpForm.formState.errors.token && (
-              <p className="mt-1.5 text-xs text-red-500">
-                {otpForm.formState.errors.token.message}
-              </p>
-            )}
-          </div>
-
-          {serverError && (
-            <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              {serverError}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={otpForm.formState.isSubmitting}
-            className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-          >
-            {otpForm.formState.isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              "אמת קוד"
-            )}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-stone-500 mt-5">
-          לא קיבלתם קוד?{" "}
-          {cooldown > 0 ? (
-            <span className="text-stone-400">
-              שלח שוב בעוד {cooldown} שניות
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={handleResend}
-              className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
-            >
-              שלח שוב
-            </button>
-          )}
-        </p>
-      </div>
-    );
-  }
-
-  // ── Profile step (new users) ─────────────────────────────────────────────────
   return (
     <div>
       {!onSuccess && (
         <>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">השלמת פרטים</h1>
-          <p className="text-sm text-stone-500 mb-7">
-            עוד שלב אחד — הזינו את פרטיכם
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">הרשמה</h1>
+          <p className="text-base text-stone-500 mb-7">הזינו את קוד האימות שנשלח לטלפון</p>
         </>
       )}
 
-      {onSuccess && (
-        <p className="text-sm text-stone-500 mb-5">
-          ברוכים הבאים! הזינו את פרטיכם להשלמת ההרשמה.
-        </p>
-      )}
+      <p className="text-sm text-stone-600 mb-4">
+        שלחנו קוד SMS למספר{" "}
+        <span className="font-semibold text-gray-800" dir="ltr">
+          {displayPhone}
+        </span>
+        .{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setPhase("info");
+            setServerError("");
+            otpForm.reset();
+          }}
+          className="text-brand-600 hover:text-brand-700 transition-colors"
+        >
+          שינוי פרטים
+        </button>
+      </p>
 
-      <form
-        onSubmit={profileForm.handleSubmit(handleSaveProfile)}
-        noValidate
-        className="space-y-4"
-      >
-        {/* Full name */}
+      <form onSubmit={otpForm.handleSubmit(handleVerifyOtp)} noValidate className="space-y-4">
         <div>
           <label
-            htmlFor="reg-full_name"
+            htmlFor="reg-otp"
             className="block text-sm font-medium text-gray-700 mb-1.5"
           >
-            שם מלא <span className="text-red-500">*</span>
+            קוד אימות (6 ספרות)
           </label>
-          <div className="relative">
-            <User
-              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              id="reg-full_name"
-              type="text"
-              autoComplete="name"
-              placeholder="ישראל ישראלי"
-              {...profileForm.register("full_name")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                profileForm.formState.errors.full_name
-                  ? "border-red-400"
-                  : "border-stone-200",
-              ].join(" ")}
-            />
-          </div>
-          {profileForm.formState.errors.full_name && (
+          <input
+            id="reg-otp"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            dir="ltr"
+            maxLength={6}
+            placeholder="123456"
+            {...otpForm.register("token")}
+            className={[
+              "w-full h-11 bg-white border rounded-xl px-4 text-sm text-gray-900 placeholder:text-stone-400 text-center tracking-widest",
+              "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
+              otpForm.formState.errors.token ? "border-red-400" : "border-stone-200",
+            ].join(" ")}
+          />
+          {otpForm.formState.errors.token && (
             <p className="mt-1.5 text-xs text-red-500">
-              {profileForm.formState.errors.full_name.message}
-            </p>
-          )}
-        </div>
-
-        {/* Email */}
-        <div>
-          <label
-            htmlFor="reg-email"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            כתובת אימייל <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Mail
-              className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-              aria-hidden="true"
-            />
-            <input
-              id="reg-email"
-              type="email"
-              autoComplete="email"
-              dir="ltr"
-              placeholder="you@example.com"
-              {...profileForm.register("email")}
-              className={[
-                "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
-                "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
-                profileForm.formState.errors.email
-                  ? "border-red-400"
-                  : "border-stone-200",
-              ].join(" ")}
-            />
-          </div>
-          {profileForm.formState.errors.email && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {profileForm.formState.errors.email.message}
+              {otpForm.formState.errors.token.message}
             </p>
           )}
         </div>
@@ -509,16 +449,33 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
         <button
           type="submit"
-          disabled={profileForm.formState.isSubmitting}
+          disabled={otpForm.formState.isSubmitting}
           className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
-          {profileForm.formState.isSubmitting ? (
+          {otpForm.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
             "סיום הרשמה"
           )}
         </button>
       </form>
+
+      <p className="text-center text-sm text-stone-500 mt-5">
+        לא קיבלתם קוד?{" "}
+        {cooldown > 0 ? (
+          <span className="text-stone-400">
+            שלח שוב בעוד {cooldown} שניות
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+          >
+            שלח שוב
+          </button>
+        )}
+      </p>
     </div>
   );
 }

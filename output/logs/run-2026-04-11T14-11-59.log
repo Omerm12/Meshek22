@@ -1,0 +1,14 @@
+[2026-04-11T14:11:59.232Z] Pipeline start: 1 product(s) | model=gpt-image-1 | dry-run=false | upload=false | update-db=false
+[2026-04-11T14:11:59.233Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T14:11:59.234Z] [1/1] agvaniya: prompt built
+[2026-04-11T14:11:59.234Z] [1/1] agvaniya: calling gpt-image-1...
+[2026-04-11T14:12:32.986Z] [1/1] agvaniya: image received (1542 KB)
+[2026-04-11T14:12:32.990Z] [1/1] agvaniya: raw saved → output\raw\agvaniya.png
+[2026-04-11T14:12:32.991Z] [1/1] agvaniya: removing background...
+[2026-04-11T14:12:33.403Z] [1/1] agvaniya: background removed (1358 KB)
+[2026-04-11T14:12:33.406Z] [1/1] agvaniya: processed saved → output\processed\agvaniya.png
+[2026-04-11T14:12:33.408Z] [1/1] agvaniya: metadata saved → output\processed\agvaniya.json
+[2026-04-11T14:12:33.411Z] ─────────────────────────────────────────────────────
+[2026-04-11T14:12:33.412Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T14:12:33.412Z] Processed images ready at: output/processed/
+[2026-04-11T14:12:33.412Z] Next: re-run with --upload --update-db to push to Supabase.

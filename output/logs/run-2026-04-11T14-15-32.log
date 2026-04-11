@@ -1,0 +1,86 @@
+[2026-04-11T14:15:32.275Z] Pipeline start: 10 product(s) | model=gpt-image-1 | dry-run=false | upload=false | update-db=false
+[2026-04-11T14:15:32.276Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T14:15:32.277Z] [1/10] agvaniya: prompt built
+[2026-04-11T14:15:32.278Z] [1/10] agvaniya: calling gpt-image-1...
+[2026-04-11T14:16:08.933Z] [1/10] agvaniya: image received (1565 KB)
+[2026-04-11T14:16:08.937Z] [1/10] agvaniya: raw saved → output\raw\agvaniya.png
+[2026-04-11T14:16:08.937Z] [1/10] agvaniya: removing background...
+[2026-04-11T14:16:09.320Z] [1/10] agvaniya: background removed (1527 KB)
+[2026-04-11T14:16:09.325Z] [1/10] agvaniya: processed saved → output\processed\agvaniya.png
+[2026-04-11T14:16:09.329Z] [1/10] agvaniya: metadata saved → output\processed\agvaniya.json
+[2026-04-11T14:16:09.943Z] [2/10] melafelon: prompt built
+[2026-04-11T14:16:09.946Z] [2/10] melafelon: calling gpt-image-1...
+[2026-04-11T14:16:43.019Z] [2/10] melafelon: image received (1519 KB)
+[2026-04-11T14:16:43.023Z] [2/10] melafelon: raw saved → output\raw\melafelon.png
+[2026-04-11T14:16:43.024Z] [2/10] melafelon: removing background...
+[2026-04-11T14:16:43.257Z] [2/10] melafelon: background removed (1090 KB)
+[2026-04-11T14:16:43.259Z] [2/10] melafelon: processed saved → output\processed\melafelon.png
+[2026-04-11T14:16:43.261Z] [2/10] melafelon: metadata saved → output\processed\melafelon.json
+[2026-04-11T14:16:43.868Z] [3/10] pilpel: prompt built
+[2026-04-11T14:16:43.869Z] [3/10] pilpel: calling gpt-image-1...
+[2026-04-11T14:17:20.541Z] [3/10] pilpel: image received (1425 KB)
+[2026-04-11T14:17:20.545Z] [3/10] pilpel: raw saved → output\raw\pilpel.png
+[2026-04-11T14:17:20.545Z] [3/10] pilpel: removing background...
+[2026-04-11T14:17:20.807Z] [3/10] pilpel: background removed (1263 KB)
+[2026-04-11T14:17:20.811Z] [3/10] pilpel: processed saved → output\processed\pilpel.png
+[2026-04-11T14:17:20.813Z] [3/10] pilpel: metadata saved → output\processed\pilpel.json
+[2026-04-11T14:17:21.419Z] [4/10] batzal: prompt built
+[2026-04-11T14:17:21.419Z] [4/10] batzal: calling gpt-image-1...
+[2026-04-11T14:17:56.018Z] [4/10] batzal: image received (1454 KB)
+[2026-04-11T14:17:56.024Z] [4/10] batzal: raw saved → output\raw\batzal.png
+[2026-04-11T14:17:56.024Z] [4/10] batzal: removing background...
+[2026-04-11T14:17:56.334Z] [4/10] batzal: background removed (1167 KB)
+[2026-04-11T14:17:56.337Z] [4/10] batzal: processed saved → output\processed\batzal.png
+[2026-04-11T14:17:56.339Z] [4/10] batzal: metadata saved → output\processed\batzal.json
+[2026-04-11T14:17:56.948Z] [5/10] shum: prompt built
+[2026-04-11T14:17:56.948Z] [5/10] shum: calling gpt-image-1...
+[2026-04-11T14:18:32.322Z] [5/10] shum: image received (1475 KB)
+[2026-04-11T14:18:32.325Z] [5/10] shum: raw saved → output\raw\shum.png
+[2026-04-11T14:18:32.326Z] [5/10] shum: removing background...
+[2026-04-11T14:18:32.665Z] [5/10] shum: background removed (985 KB)
+[2026-04-11T14:18:32.668Z] [5/10] shum: processed saved → output\processed\shum.png
+[2026-04-11T14:18:32.670Z] [5/10] shum: metadata saved → output\processed\shum.json
+[2026-04-11T14:18:33.275Z] [6/10] gezer: prompt built
+[2026-04-11T14:18:33.275Z] [6/10] gezer: calling gpt-image-1...
+[2026-04-11T14:19:06.483Z] [6/10] gezer: image received (1494 KB)
+[2026-04-11T14:19:06.486Z] [6/10] gezer: raw saved → output\raw\gezer.png
+[2026-04-11T14:19:06.486Z] [6/10] gezer: removing background...
+[2026-04-11T14:19:06.737Z] [6/10] gezer: background removed (1020 KB)
+[2026-04-11T14:19:06.740Z] [6/10] gezer: processed saved → output\processed\gezer.png
+[2026-04-11T14:19:06.753Z] [6/10] gezer: metadata saved → output\processed\gezer.json
+[2026-04-11T14:19:07.363Z] [7/10] tapuah-adama: prompt built
+[2026-04-11T14:19:07.363Z] [7/10] tapuah-adama: calling gpt-image-1...
+[2026-04-11T14:19:40.803Z] [7/10] tapuah-adama: image received (1531 KB)
+[2026-04-11T14:19:40.806Z] [7/10] tapuah-adama: raw saved → output\raw\tapuah-adama.png
+[2026-04-11T14:19:40.807Z] [7/10] tapuah-adama: removing background...
+[2026-04-11T14:19:41.150Z] [7/10] tapuah-adama: background removed (1449 KB)
+[2026-04-11T14:19:41.153Z] [7/10] tapuah-adama: processed saved → output\processed\tapuah-adama.png
+[2026-04-11T14:19:41.156Z] [7/10] tapuah-adama: metadata saved → output\processed\tapuah-adama.json
+[2026-04-11T14:19:41.764Z] [8/10] broccoli: prompt built
+[2026-04-11T14:19:41.765Z] [8/10] broccoli: calling gpt-image-1...
+[2026-04-11T14:20:16.175Z] [8/10] broccoli: image received (1714 KB)
+[2026-04-11T14:20:16.180Z] [8/10] broccoli: raw saved → output\raw\broccoli.png
+[2026-04-11T14:20:16.181Z] [8/10] broccoli: removing background...
+[2026-04-11T14:20:16.575Z] [8/10] broccoli: background removed (1166 KB)
+[2026-04-11T14:20:16.579Z] [8/10] broccoli: processed saved → output\processed\broccoli.png
+[2026-04-11T14:20:16.581Z] [8/10] broccoli: metadata saved → output\processed\broccoli.json
+[2026-04-11T14:20:17.187Z] [9/10] karfit: prompt built
+[2026-04-11T14:20:17.187Z] [9/10] karfit: calling gpt-image-1...
+[2026-04-11T14:20:55.351Z] [9/10] karfit: image received (1567 KB)
+[2026-04-11T14:20:55.355Z] [9/10] karfit: raw saved → output\raw\karfit.png
+[2026-04-11T14:20:55.355Z] [9/10] karfit: removing background...
+[2026-04-11T14:20:55.628Z] [9/10] karfit: background removed (1333 KB)
+[2026-04-11T14:20:55.632Z] [9/10] karfit: processed saved → output\processed\karfit.png
+[2026-04-11T14:20:55.640Z] [9/10] karfit: metadata saved → output\processed\karfit.json
+[2026-04-11T14:20:56.247Z] [10/10] selek: prompt built
+[2026-04-11T14:20:56.248Z] [10/10] selek: calling gpt-image-1...
+[2026-04-11T14:21:30.831Z] [10/10] selek: image received (1646 KB)
+[2026-04-11T14:21:30.834Z] [10/10] selek: raw saved → output\raw\selek.png
+[2026-04-11T14:21:30.835Z] [10/10] selek: removing background...
+[2026-04-11T14:21:31.084Z] [10/10] selek: background removed (1049 KB)
+[2026-04-11T14:21:31.087Z] [10/10] selek: processed saved → output\processed\selek.png
+[2026-04-11T14:21:31.089Z] [10/10] selek: metadata saved → output\processed\selek.json
+[2026-04-11T14:21:31.092Z] ─────────────────────────────────────────────────────
+[2026-04-11T14:21:31.092Z] Done. 10 succeeded, 0 failed.
+[2026-04-11T14:21:31.093Z] Processed images ready at: output/processed/
+[2026-04-11T14:21:31.093Z] Next: re-run with --upload --update-db to push to Supabase.

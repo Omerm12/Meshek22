@@ -1,0 +1,29 @@
+[2026-04-11T13:46:55.932Z] Starting image generation: 1 product(s), model=dall-e-3, dry-run=false, upload=false, update-db=false
+[2026-04-11T13:46:55.932Z] Output directory: C:\Projects\Meshek22\output\previews
+[2026-04-11T13:46:55.933Z] [1/1] petrozilya: building prompt...
+[2026-04-11T13:46:55.933Z] [1/1] petrozilya: prompt → Product catalog photo of fresh flat-leaf parsley.
+
+COMPOSITION: a natural upright bunch of flat-leaf parsley, cut ends at the bottom. Items fill 70-80% of the frame. Items touch or slightly overlap — not spread apart.
+
+BACKGROUND: Pure white (#FFFFFF). Completely uniform. No gray, no gradient, no colored tint.
+
+LIGHTING: Soft and slightly directional from upper-left. Even, airy, clean. No dramatic highlights. No spotlight. No studio flash look.
+
+SHADOW: Almost none. Just a very faint, soft base shadow directly under the produce — barely visible. No drop shadow. No shadow on background.
+
+SURFACE: Natural skin texture of the produce. Slight natural sheen is fine (real fruit/vegetable skin). Absolutely no water droplets. No condensation. No added moisture. No wet look.
+
+REALISM: Real photograph style. Natural imperfections in color and texture are correct. Slightly irregular shapes are correct. Must NOT look like CGI, 3D render, or AI art.
+
+DO NOT INCLUDE: water drops, condensation, moisture, dramatic shadows, gray background, gradient background, studio backdrop, decorative props, text, labels, watermarks, macro close-up style, advertisement styling, oversaturated colors, fake perfection.
+
+REFERENCE STYLE: Israeli online grocery catalog (Shufersal, Rami Levy, noyhasade.co.il). Clean, simple, trustworthy product thumbnail.
+[2026-04-11T13:46:55.933Z] [1/1] petrozilya: calling dall-e-3 API...
+[2026-04-11T13:47:13.724Z] [1/1] petrozilya: image URL received
+[2026-04-11T13:47:13.724Z] [1/1] petrozilya: downloading image...
+[2026-04-11T13:47:15.482Z] [1/1] petrozilya: saved → C:\Projects\Meshek22\output\previews\petrozilya.png
+[2026-04-11T13:47:15.484Z] [1/1] petrozilya: metadata saved → C:\Projects\Meshek22\output\previews\petrozilya.json
+[2026-04-11T13:47:15.486Z] ─────────────────────────────────────
+[2026-04-11T13:47:15.486Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T13:47:15.486Z] Images saved to: C:\Projects\Meshek22\output\previews/
+[2026-04-11T13:47:15.487Z] Tip: re-run with --upload --update-db to push images to Supabase.

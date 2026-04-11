@@ -1,0 +1,11 @@
+{
+  "slug": "agvaniya",
+  "name": "עגבניה",
+  "prompt": "Ultra realistic grocery product photo of fresh red tomato (3-5 pieces).\n\nSTRICT REQUIREMENTS:\n- pure white background (#FFFFFF), completely clean and uniform\n- no gradients, no shadows on background\n- no water droplets\n- no moisture\n- no condensation\n- no reflections\n- no shine or gloss effect\n- no dramatic lighting\n- no studio effects\n- no artistic styling\n- no macro photography\n- no fake perfection\n\nPRODUCT STYLE:\n- natural look, like real supermarket produce\n- slightly imperfect texture\n- matte surface (not glossy)\n\nCOMPOSITION:\n- centered\n- simple\n- clean\n- natural arrangement (not perfectly symmetrical)\n\nLIGHTING:\n- soft, flat lighting (like catalog photography)\n- minimal shadow under product only\n\nIMPORTANT:\nThis must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).\nIt must NOT look like AI-generated or advertisement.",
+  "model": "dall-e-3",
+  "size": "1024x1024",
+  "generatedAt": "2026-04-11T13:33:17.230Z",
+  "imageFile": "output\\generated\\agvaniya.png",
+  "uploadedUrl": null,
+  "dbUpdated": false
+}

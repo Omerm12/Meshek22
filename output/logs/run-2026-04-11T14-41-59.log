@@ -1,0 +1,58 @@
+[2026-04-11T14:41:59.648Z] Pipeline start: 3 product(s) | model=gpt-image-1 | dry-run=true | upload=false | update-db=false
+[2026-04-11T14:41:59.648Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T14:41:59.649Z] [1/3] tamar-tomatoes: prompt built
+[2026-04-11T14:41:59.649Z] [1/3] tamar-tomatoes: [DRY RUN]
+[2026-04-11T14:41:59.650Z]   id:   a4a8a08e-06bc-4543-a87f-ae99774e816a
+[2026-04-11T14:41:59.650Z]   name: עגבניות תמר
+[2026-04-11T14:41:59.650Z]   slug: tamar-tomatoes
+[2026-04-11T14:41:59.650Z]   prompt → E-commerce grocery catalog photo of Tamar plum tomatoes.
+
+ARRANGEMENT: 3 Tamar (plum-shaped) tomatoes in a tight triangular cluster, touching. Items fill 70-80% of the frame and are touching or slightly overlapping — not floating apart.
+
+BACKGROUND: Plain white or very light neutral — completely clean and uniform. No props, no surface texture, no colored backdrop.
+
+PRODUCE SURFACE: Completely dry. No water droplets anywhere. No condensation. No dew. No wet shine. Natural matte or slightly waxy skin texture only.
+
+LIGHTING: Soft, diffused, even from above. No directional spotlight. No dramatic shadows. Very minimal soft shadow directly under the produce only.
+
+STYLE: Real photograph of real fresh produce. Natural color variations and slight shape imperfections are correct. NOT a 3D render. NOT CGI. NOT an illustration. NOT an advertisement.
+
+STRICTLY AVOID: water drops, condensation, dramatic shadows, reflective surfaces, decorative props, text, labels, watermarks, macro close-up, oversaturation, artificial perfection.
+[2026-04-11T14:41:59.650Z] [2/3] cluster-tomatoes: prompt built
+[2026-04-11T14:41:59.650Z] [2/3] cluster-tomatoes: [DRY RUN]
+[2026-04-11T14:41:59.650Z]   id:   51bad83f-b008-49bf-b223-a2212595180f
+[2026-04-11T14:41:59.650Z]   name: עגבניות אשכולות
+[2026-04-11T14:41:59.650Z]   slug: cluster-tomatoes
+[2026-04-11T14:41:59.651Z]   prompt → E-commerce grocery catalog photo of cluster vine tomatoes.
+
+ARRANGEMENT: a cluster of vine tomatoes still attached to the green vine. Items fill 70-80% of the frame and are touching or slightly overlapping — not floating apart.
+
+BACKGROUND: Plain white or very light neutral — completely clean and uniform. No props, no surface texture, no colored backdrop.
+
+PRODUCE SURFACE: Completely dry. No water droplets anywhere. No condensation. No dew. No wet shine. Natural matte or slightly waxy skin texture only.
+
+LIGHTING: Soft, diffused, even from above. No directional spotlight. No dramatic shadows. Very minimal soft shadow directly under the produce only.
+
+STYLE: Real photograph of real fresh produce. Natural color variations and slight shape imperfections are correct. NOT a 3D render. NOT CGI. NOT an illustration. NOT an advertisement.
+
+STRICTLY AVOID: water drops, condensation, dramatic shadows, reflective surfaces, decorative props, text, labels, watermarks, macro close-up, oversaturation, artificial perfection.
+[2026-04-11T14:41:59.651Z] [3/3] hot-pepper: prompt built
+[2026-04-11T14:41:59.651Z] [3/3] hot-pepper: [DRY RUN]
+[2026-04-11T14:41:59.651Z]   id:   c3b9b9b1-46b1-40fa-8ffa-7196954810c2
+[2026-04-11T14:41:59.651Z]   name: פלפל חריף
+[2026-04-11T14:41:59.651Z]   slug: hot-pepper
+[2026-04-11T14:41:59.651Z]   prompt → E-commerce grocery catalog photo of hot chili peppers.
+
+ARRANGEMENT: 5-6 hot chili peppers in a loose natural pile. Items fill 70-80% of the frame and are touching or slightly overlapping — not floating apart.
+
+BACKGROUND: Plain white or very light neutral — completely clean and uniform. No props, no surface texture, no colored backdrop.
+
+PRODUCE SURFACE: Completely dry. No water droplets anywhere. No condensation. No dew. No wet shine. Natural matte or slightly waxy skin texture only.
+
+LIGHTING: Soft, diffused, even from above. No directional spotlight. No dramatic shadows. Very minimal soft shadow directly under the produce only.
+
+STYLE: Real photograph of real fresh produce. Natural color variations and slight shape imperfections are correct. NOT a 3D render. NOT CGI. NOT an illustration. NOT an advertisement.
+
+STRICTLY AVOID: water drops, condensation, dramatic shadows, reflective surfaces, decorative props, text, labels, watermarks, macro close-up, oversaturation, artificial perfection.
+[2026-04-11T14:41:59.653Z] ─────────────────────────────────────────────────────
+[2026-04-11T14:41:59.653Z] Done. 3 succeeded, 0 failed.

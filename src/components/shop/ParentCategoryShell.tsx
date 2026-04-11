@@ -346,8 +346,8 @@ export function ParentCategoryShell({
             {sorted.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
-                  {sorted.slice(0, visible).map((product, idx) => (
-                    <ProductCard key={product.id} product={product} priority={idx < 8} />
+                  {sorted.slice(0, visible).map((product) => (
+                    <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
                 {visible < sorted.length && (

@@ -115,34 +115,34 @@ export function AuthModal() {
         aria-label={tab === "login" ? "כניסה לחשבון" : "הרשמה"}
         className={cn(
           "fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 mx-auto",
-          "w-full max-w-md bg-white rounded-2xl shadow-2xl",
+          "w-full max-w-[520px] bg-white rounded-2xl shadow-2xl",
           "flex flex-col overflow-hidden"
         )}
       >
         {/* ── Header: logo + close button ── */}
-        <div className="flex items-center justify-between px-7 pt-6 pb-0">
+        <div className="flex items-center justify-between px-8 pt-7 pb-0">
           <Image
             src="/images/heroes/logo.png"
             alt="משק 22"
-            width={90}
-            height={30}
-            className="h-8 w-auto object-contain"
+            width={110}
+            height={37}
+            className="h-9 w-auto object-contain"
           />
           <button
             onClick={closeModal}
             aria-label="סגור"
-            className="h-8 w-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+            className="h-9 w-9 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* ── Login / Register tabs ── */}
-        <div className="mx-7 mt-5 flex gap-0 border border-stone-200 rounded-xl p-1 bg-stone-50">
+        <div className="mx-8 mt-6 flex gap-0 border border-stone-200 rounded-xl p-1 bg-stone-50">
           <button
             onClick={() => setTab("login")}
             className={cn(
-              "flex-1 h-8 rounded-lg text-sm font-medium transition-all",
+              "flex-1 h-9 rounded-lg text-sm font-semibold transition-all",
               tab === "login"
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-stone-500 hover:text-gray-700"
@@ -153,7 +153,7 @@ export function AuthModal() {
           <button
             onClick={() => setTab("register")}
             className={cn(
-              "flex-1 h-8 rounded-lg text-sm font-medium transition-all",
+              "flex-1 h-9 rounded-lg text-sm font-semibold transition-all",
               tab === "register"
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-stone-500 hover:text-gray-700"
@@ -164,7 +164,7 @@ export function AuthModal() {
         </div>
 
         {/* ── Form area — scrollable on small screens ── */}
-        <div className="px-7 pt-5 pb-7 overflow-y-auto max-h-[70vh]">
+        <div className="px-8 pt-6 pb-8 overflow-y-auto max-h-[78vh]">
           {tab === "login" ? (
             <LoginForm
               onSuccess={handleSuccess}

@@ -118,16 +118,16 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     });
 
     if (error) {
-      if (
-        error.message.includes("expired") ||
-        error.message.includes("Token has expired")
-      ) {
+      const msg = error.message.toLowerCase();
+      // Supabase returns "Token has expired or is invalid" for BOTH wrong code and
+      // expired code. Check for the combined phrase first to avoid showing the
+      // misleading "expired" message when the user simply entered the wrong digits.
+      if (msg.includes("expired") && msg.includes("invalid")) {
+        setServerError("הקוד שהוזן שגוי. בדקו שהקלדתם נכון, או שלחו קוד חדש.");
+      } else if (msg.includes("expired")) {
         setServerError("קוד האימות פג תוקף. שלחו קוד חדש.");
-      } else if (
-        error.message.includes("invalid") ||
-        error.message.includes("Invalid")
-      ) {
-        setServerError("קוד האימות שגוי. נסו שוב.");
+      } else if (msg.includes("invalid")) {
+        setServerError("הקוד שהוזן שגוי. נסו שוב.");
       } else {
         setServerError("שגיאה באימות. נסו שוב.");
       }
@@ -226,8 +226,8 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       <div>
         {!onSuccess && (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">כניסה לחשבון</h1>
-            <p className="text-sm text-stone-500 mb-7">הזינו את מספר הטלפון שלכם</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">כניסה לחשבון</h1>
+            <p className="text-base text-stone-500 mb-7">הזינו את מספר הטלפון שלכם</p>
           </>
         )}
 
@@ -315,8 +315,8 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       <div>
         {!onSuccess && (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">כניסה לחשבון</h1>
-            <p className="text-sm text-stone-500 mb-7">הזינו את קוד האימות שנשלח לטלפון</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">כניסה לחשבון</h1>
+            <p className="text-base text-stone-500 mb-7">הזינו את קוד האימות שנשלח לטלפון</p>
           </>
         )}
 
@@ -411,8 +411,8 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     <div>
       {!onSuccess && (
         <>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">השלמת פרטים</h1>
-          <p className="text-sm text-stone-500 mb-7">עוד שלב אחד — הזינו את פרטיכם</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">השלמת פרטים</h1>
+          <p className="text-base text-stone-500 mb-7">עוד שלב אחד — הזינו את פרטיכם</p>
         </>
       )}
 

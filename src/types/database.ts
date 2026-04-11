@@ -85,6 +85,7 @@ export interface Database {
           variant_label: string;
           price_agorot: number;
           quantity: number;
+          image_url: string | null;
           image_color: string | null;
           product_icon: string | null;
           created_at: string;
@@ -99,6 +100,7 @@ export interface Database {
           variant_label: string;
           price_agorot: number;
           quantity: number;
+          image_url?: string | null;
           image_color?: string | null;
           product_icon?: string | null;
           created_at?: string;
@@ -109,6 +111,7 @@ export interface Database {
           variant_label?: string;
           price_agorot?: number;
           quantity?: number;
+          image_url?: string | null;
           image_color?: string | null;
           product_icon?: string | null;
           updated_at?: string;

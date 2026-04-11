@@ -48,6 +48,7 @@ export function ProductShell({ product, relatedProducts }: ProductShellProps) {
       productName: product.name,
       variantLabel: selectedVariant.label,
       priceAgorot: selectedVariant.priceAgorot,
+      imageUrl: product.imageUrl,
       imageColor: product.imageColor,
       productIcon: product.icon,
       quantity: qty,

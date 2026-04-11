@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import { X, ShoppingCart, Minus, Plus, Trash2, Leaf, ArrowLeft } from "lucide-react";
+import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
@@ -113,13 +115,26 @@ export function CartDrawer() {
             <ul className="divide-y divide-stone-100 px-5" role="list">
               {items.map((item) => (
                 <li key={item.variantId} className="py-4 flex gap-3">
-                  {/* Image placeholder */}
+                  {/* Product image */}
                   <div
-                    className="h-16 w-16 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                    className="h-16 w-16 rounded-xl shrink-0 relative overflow-hidden"
                     style={{ backgroundColor: item.imageColor ?? "#f0fdf0" }}
                     aria-hidden="true"
                   >
-                    {item.productIcon ?? "🛒"}
+                    {item.imageUrl ? (
+                      <Image
+                        loader={supabaseImageLoader}
+                        src={item.imageUrl}
+                        alt={item.productName}
+                        fill
+                        sizes="64px"
+                        className="object-contain p-1"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 flex items-center justify-center text-2xl">
+                        {item.productIcon ?? "🛒"}
+                      </span>
+                    )}
                   </div>
 
                   {/* Details */}

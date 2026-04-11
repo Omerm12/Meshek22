@@ -9,9 +9,20 @@ const israeliPhone = z
 
 // ── Active schemas: phone OTP auth ────────────────────────────────────────────
 
-/** Step 1 — phone input for OTP send */
+/** Step 1 — phone input for OTP send (login flow) */
 export const phoneOtpSchema = z.object({
   phone: israeliPhone,
+});
+
+/**
+ * Registration info step — phone + name + email collected BEFORE OTP is sent.
+ * Ensures name and email are available to write to the profile immediately after
+ * OTP verification, so there is never a partial-auth / ghost-auth state.
+ */
+export const registerInfoSchema = z.object({
+  phone: israeliPhone,
+  full_name: z.string().min(2, "נא להזין שם מלא").max(100),
+  email: z.string().email("כתובת אימייל לא תקינה"),
 });
 
 /** Step 2 — OTP code verification */
@@ -69,6 +80,7 @@ export const emailOtpSchema = z.object({
 // ── Inferred types ────────────────────────────────────────────────────────────
 
 export type PhoneOtpFormData = z.infer<typeof phoneOtpSchema>;
+export type RegisterInfoFormData = z.infer<typeof registerInfoSchema>;
 export type OtpVerifyFormData = z.infer<typeof otpVerifySchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;

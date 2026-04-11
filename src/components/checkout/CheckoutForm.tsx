@@ -15,8 +15,10 @@ import {
   CreditCard,
   ArrowRight,
 } from "lucide-react";
+import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { formatPrice } from "@/lib/utils/money";
+import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import { getDeliveryQuote } from "@/lib/delivery";
 import type { DeliveryZone } from "@/lib/delivery";
 import { createOrder } from "@/app/(shop)/checkout/actions";
@@ -134,7 +136,9 @@ export function CheckoutForm({
   // ── Customer details ───────────────────────────────────────────────────────
   const [name, setName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
-  const [email, setEmail] = useState(userEmail ?? "");
+  // Prefer profile.email (set during registration) over user.email (often null for
+  // phone-based auth where the Auth system has no email attached to the account).
+  const [email, setEmail] = useState(profile?.email ?? userEmail ?? "");
   const [notes, setNotes] = useState("");
 
   // ── Payment fields ─────────────────────────────────────────────────────────
@@ -158,9 +162,13 @@ export function CheckoutForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
+  // Set to true immediately before clearCart() on order success so the
+  // empty-cart redirect below does NOT fire and briefly show the cart page.
+  const navigatingToSuccessRef = useRef(false);
+
   // ── Redirect if cart empty ─────────────────────────────────────────────────
   useEffect(() => {
-    if (isHydrated && items.length === 0) {
+    if (isHydrated && items.length === 0 && !navigatingToSuccessRef.current) {
       router.replace("/cart");
     }
   }, [isHydrated, items.length, router]);
@@ -248,8 +256,10 @@ export function CheckoutForm({
       errors.cardHolder = "נא להזין שם בעל הכרטיס";
     }
     const cleanCard = cardNumber.replace(/\s/g, "");
-    if (!/^\d{13,19}$/.test(cleanCard)) {
-      errors.cardNumber = "מספר כרטיס לא תקין";
+    if (cleanCard.length > 0 && cleanCard.length < 16) {
+      errors.cardNumber = "מספר הכרטיס קצר מדי — הזינו 16 ספרות";
+    } else if (!/^\d{16}$/.test(cleanCard)) {
+      errors.cardNumber = "מספר כרטיס לא תקין — נדרש כרטיס בן 16 ספרות";
     } else if (!luhn(cleanCard)) {
       errors.cardNumber = "מספר הכרטיס אינו תקין — בדקו שוב";
     }
@@ -325,8 +335,13 @@ export function CheckoutForm({
         setError(result.error);
         setIsPending(false);
       } else {
+        // Set the flag BEFORE clearCart() so the empty-cart redirect effect
+        // does not fire and flash the cart/previous page during navigation.
+        // isPending intentionally stays true — the button shows "מעבד..." until
+        // the router navigation completes.
+        navigatingToSuccessRef.current = true;
         clearCart();
-        window.location.href = result.paymentUrl;
+        router.replace(`/checkout/success?order=${result.orderNumber}`);
       }
     } catch {
       setError("שגיאה לא צפויה. נא לנסות שוב.");
@@ -770,10 +785,23 @@ export function CheckoutForm({
               {items.map((item) => (
                 <li key={item.variantId} className="flex items-center gap-2.5">
                   <div
-                    className="h-10 w-10 rounded-lg shrink-0 flex items-center justify-center text-xl"
+                    className="h-10 w-10 rounded-lg shrink-0 relative overflow-hidden"
                     style={{ backgroundColor: item.imageColor ?? "#f0fdf0" }}
                   >
-                    {item.productIcon ?? "🛒"}
+                    {item.imageUrl ? (
+                      <Image
+                        loader={supabaseImageLoader}
+                        src={item.imageUrl}
+                        alt={item.productName}
+                        fill
+                        sizes="40px"
+                        className="object-contain p-0.5"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 flex items-center justify-center text-xl">
+                        {item.productIcon ?? "🛒"}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>

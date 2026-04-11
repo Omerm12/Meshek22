@@ -1,0 +1,7 @@
+[2026-04-11T13:11:14.249Z] Starting image generation: 1 product(s), model=dall-e-3, dry-run=true, upload=false, update-db=false
+[2026-04-11T13:11:14.251Z] Output directory: C:\Projects\Meshek22\output\previews
+[2026-04-11T13:11:14.251Z] [1/1] agvaniya: building prompt...
+[2026-04-11T13:11:14.251Z] [1/1] agvaniya: prompt → A photograph of fresh red tomato. fresh whole vegetables, vibrant natural colors. professional food product photography, isolated on a pure white background, soft even studio lighting, sharp focus, no text, no labels, no watermarks, no shadows, square crop, centered subject, realistic photograph, high resolution.
+[2026-04-11T13:11:14.252Z] [1/1] agvaniya: [DRY RUN] skipping API call
+[2026-04-11T13:11:14.254Z] ─────────────────────────────────────
+[2026-04-11T13:11:14.254Z] Done. 0 succeeded, 0 failed.

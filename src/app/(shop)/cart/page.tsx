@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import {
   ShoppingCart,
   Minus,
@@ -128,10 +130,23 @@ export default function CartPage() {
                       aria-hidden="true"
                     >
                       <div
-                        className="h-20 w-20 rounded-xl flex items-center justify-center text-3xl hover:opacity-90 transition-opacity"
+                        className="h-20 w-20 rounded-xl relative overflow-hidden hover:opacity-90 transition-opacity"
                         style={{ backgroundColor: item.imageColor ?? "#f0fdf0" }}
                       >
-                        {item.productIcon ?? "🛒"}
+                        {item.imageUrl ? (
+                          <Image
+                            loader={supabaseImageLoader}
+                            src={item.imageUrl}
+                            alt={item.productName}
+                            fill
+                            sizes="80px"
+                            className="object-contain p-1"
+                          />
+                        ) : (
+                          <span className="absolute inset-0 flex items-center justify-center text-3xl">
+                            {item.productIcon ?? "🛒"}
+                          </span>
+                        )}
                       </div>
                     </Link>
 

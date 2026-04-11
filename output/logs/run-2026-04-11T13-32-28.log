@@ -1,0 +1,40 @@
+[2026-04-11T13:32:28.851Z] Starting image generation: 1 product(s), model=dall-e-3, dry-run=true, upload=false, update-db=false
+[2026-04-11T13:32:28.851Z] Output directory: C:\Projects\Meshek22\output\previews
+[2026-04-11T13:32:28.852Z] [1/1] agvaniya: building prompt...
+[2026-04-11T13:32:28.852Z] [1/1] agvaniya: prompt → Ultra realistic grocery product photo of fresh red tomato (3-5 pieces).
+
+STRICT REQUIREMENTS:
+- pure white background (#FFFFFF), completely clean and uniform
+- no gradients, no shadows on background
+- no water droplets
+- no moisture
+- no condensation
+- no reflections
+- no shine or gloss effect
+- no dramatic lighting
+- no studio effects
+- no artistic styling
+- no macro photography
+- no fake perfection
+
+PRODUCT STYLE:
+- natural look, like real supermarket produce
+- slightly imperfect texture
+- matte surface (not glossy)
+
+COMPOSITION:
+- centered
+- simple
+- clean
+- natural arrangement (not perfectly symmetrical)
+
+LIGHTING:
+- soft, flat lighting (like catalog photography)
+- minimal shadow under product only
+
+IMPORTANT:
+This must look like a real grocery store catalog image (Shufersal, Walmart, Tesco).
+It must NOT look like AI-generated or advertisement.
+[2026-04-11T13:32:28.852Z] [1/1] agvaniya: [DRY RUN] skipping API call
+[2026-04-11T13:32:28.854Z] ─────────────────────────────────────
+[2026-04-11T13:32:28.854Z] Done. 0 succeeded, 0 failed.

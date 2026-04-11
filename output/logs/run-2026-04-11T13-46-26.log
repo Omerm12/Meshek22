@@ -1,0 +1,29 @@
+[2026-04-11T13:46:26.127Z] Starting image generation: 1 product(s), model=dall-e-3, dry-run=false, upload=false, update-db=false
+[2026-04-11T13:46:26.127Z] Output directory: C:\Projects\Meshek22\output\previews
+[2026-04-11T13:46:26.127Z] [1/1] melafelon: building prompt...
+[2026-04-11T13:46:26.128Z] [1/1] melafelon: prompt → Product catalog photo of fresh cucumber.
+
+COMPOSITION: 3 pieces in a tight natural triangular cluster, items touching, slightly irregular arrangement. Items fill 70-80% of the frame. Items touch or slightly overlap — not spread apart.
+
+BACKGROUND: Pure white (#FFFFFF). Completely uniform. No gray, no gradient, no colored tint.
+
+LIGHTING: Soft and slightly directional from upper-left. Even, airy, clean. No dramatic highlights. No spotlight. No studio flash look.
+
+SHADOW: Almost none. Just a very faint, soft base shadow directly under the produce — barely visible. No drop shadow. No shadow on background.
+
+SURFACE: Natural skin texture of the produce. Slight natural sheen is fine (real fruit/vegetable skin). Absolutely no water droplets. No condensation. No added moisture. No wet look.
+
+REALISM: Real photograph style. Natural imperfections in color and texture are correct. Slightly irregular shapes are correct. Must NOT look like CGI, 3D render, or AI art.
+
+DO NOT INCLUDE: water drops, condensation, moisture, dramatic shadows, gray background, gradient background, studio backdrop, decorative props, text, labels, watermarks, macro close-up style, advertisement styling, oversaturated colors, fake perfection.
+
+REFERENCE STYLE: Israeli online grocery catalog (Shufersal, Rami Levy, noyhasade.co.il). Clean, simple, trustworthy product thumbnail.
+[2026-04-11T13:46:26.128Z] [1/1] melafelon: calling dall-e-3 API...
+[2026-04-11T13:46:48.193Z] [1/1] melafelon: image URL received
+[2026-04-11T13:46:48.193Z] [1/1] melafelon: downloading image...
+[2026-04-11T13:46:50.142Z] [1/1] melafelon: saved → C:\Projects\Meshek22\output\previews\melafelon.png
+[2026-04-11T13:46:50.155Z] [1/1] melafelon: metadata saved → C:\Projects\Meshek22\output\previews\melafelon.json
+[2026-04-11T13:46:50.157Z] ─────────────────────────────────────
+[2026-04-11T13:46:50.157Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T13:46:50.157Z] Images saved to: C:\Projects\Meshek22\output\previews/
+[2026-04-11T13:46:50.157Z] Tip: re-run with --upload --update-db to push images to Supabase.

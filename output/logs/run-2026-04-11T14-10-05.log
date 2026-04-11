@@ -1,0 +1,14 @@
+[2026-04-11T14:10:05.078Z] Pipeline start: 1 product(s) | model=gpt-image-1 | dry-run=false | upload=false | update-db=false
+[2026-04-11T14:10:05.078Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T14:10:05.079Z] [1/1] melafelon: prompt built
+[2026-04-11T14:10:05.079Z] [1/1] melafelon: calling gpt-image-1...
+[2026-04-11T14:10:40.937Z] [1/1] melafelon: image received (1595 KB)
+[2026-04-11T14:10:40.941Z] [1/1] melafelon: raw saved → output\raw\melafelon.png
+[2026-04-11T14:10:40.942Z] [1/1] melafelon: removing background...
+[2026-04-11T14:10:41.214Z] [1/1] melafelon: background removed (1301 KB)
+[2026-04-11T14:10:41.217Z] [1/1] melafelon: processed saved → output\processed\melafelon.png
+[2026-04-11T14:10:41.219Z] [1/1] melafelon: metadata saved → output\processed\melafelon.json
+[2026-04-11T14:10:41.222Z] ─────────────────────────────────────────────────────
+[2026-04-11T14:10:41.222Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T14:10:41.222Z] Processed images ready at: output/processed/
+[2026-04-11T14:10:41.222Z] Next: re-run with --upload --update-db to push to Supabase.
