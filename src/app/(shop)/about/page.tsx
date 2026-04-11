@@ -128,8 +128,8 @@ export default function AboutPage() {
               {[
                 { value: "יומי", label: "קטיף טרי" },
                 { value: "100%", label: "ישירות מהחקלאי" },
-                { value: "א׳–ה׳", label: "9:00–18:00" },
-                { value: "ו׳", label: "7:30–15:00" },
+                { value: "א׳–ה׳", label: "08:00–18:00" },
+                { value: "ו׳", label: "08:00–14:00" },
               ].map(({ value, label }) => (
                 <div
                   key={label}
@@ -239,11 +239,11 @@ export default function AboutPage() {
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <a
-                  href="tel:*3722"
+                  href="tel:0508863030"
                   className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full border border-white/30 text-white font-semibold text-sm hover:bg-white/10 transition-colors"
                 >
                   <Phone className="h-4 w-4" />
-                  *3722
+                  050-8863030
                 </a>
               </div>
             </div>
@@ -260,18 +260,18 @@ export default function AboutPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-stone-500">
             <span className="font-medium text-gray-900">יש לכם שאלה?</span>
             <a
-              href="tel:*3722"
+              href="tel:0508863030"
               className="flex items-center gap-1.5 hover:text-brand-700 transition-colors"
             >
               <Phone className="h-4 w-4 text-brand-500" />
-              *3722 (א׳–ה׳ 9:00–18:00, ו׳ 7:30–15:00)
+              050-8863030 (א׳–ה׳ 08:00–18:00, ו׳ 08:00–14:00)
             </a>
             <a
-              href="mailto:hello@meshek22.co.il"
+              href="mailto:ysmeshek22@gmail.com"
               className="flex items-center gap-1.5 hover:text-brand-700 transition-colors"
             >
               <Mail className="h-4 w-4 text-brand-500" />
-              hello@meshek22.co.il
+              ysmeshek22@gmail.com
             </a>
           </div>
         </Container>

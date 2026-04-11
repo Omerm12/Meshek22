@@ -210,15 +210,6 @@ export function Header() {
             {/* ── Actions ───────────────────────────────────────────────────── */}
             <div className="flex items-center gap-2">
 
-              {/* Phone (desktop) */}
-              <a
-                href="tel:*3722"
-                className="hidden lg:flex items-center gap-1.5 text-sm text-stone-500 hover:text-brand-700 transition-colors"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                <span>*3722</span>
-              </a>
-
               {/* Auth area (desktop) */}
               <div className="hidden md:flex items-center gap-1">
                 {authLoading ? (
@@ -509,9 +500,9 @@ export function Header() {
         </div>
 
         <div className="border-t border-stone-100 px-4 py-3">
-          <a href="tel:*3722" className="flex items-center gap-2 text-sm text-stone-500">
+          <a href="tel:0508863030" className="flex items-center gap-2 text-sm text-stone-500">
             <Phone className="h-4 w-4 text-brand-500" />
-            שירות לקוחות: *3722
+            שירות לקוחות: 050-8863030
           </a>
         </div>
       </div>
