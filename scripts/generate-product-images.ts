@@ -35,6 +35,8 @@ import fs   from "fs";
 import path from "path";
 import sharp from "sharp";
 
+import { createClient } from "@supabase/supabase-js";
+
 import { buildImagePrompt } from "./lib/buildImagePrompt.js";
 import { removeBg          } from "./lib/removeBackground.js";
 import type { ProductEntry } from "./lib/buildImagePrompt.js";
@@ -226,53 +228,54 @@ async function processToWhiteBackground(rawBuffer: Buffer): Promise<Buffer> {
 }
 
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
+//
+// Uses @supabase/supabase-js so both the legacy JWT format (eyJ...) and the
+// new opaque key format (sb_secret_...) are handled correctly by the library.
+// Raw fetch with Bearer <key> only works for JWT keys; the client abstracts this.
+
+function createAdminClient() {
+  return createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      autoRefreshToken:  false,
+      persistSession:    false,
+      detectSessionInUrl: false,
+    },
+  });
+}
 
 async function uploadToSupabase(slug: string, imageBuffer: Buffer): Promise<string> {
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required for --upload");
-  }
-
+  const supabase    = createAdminClient();
   const storagePath = `${slug}.png`;
-  const uploadUrl   = `${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${storagePath}`;
 
-  const res = await fetch(uploadUrl, {
-    method:  "POST",
-    headers: {
-      Authorization:  `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "image/png",
-      "x-upsert":     "true",
-    },
-    body: imageBuffer,
-  });
+  const { error } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .upload(storagePath, imageBuffer, {
+      contentType: "image/png",
+      upsert:      true,
+    });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => res.statusText);
-    throw new Error(`Supabase upload failed ${res.status}: ${errText}`);
+  if (error) {
+    throw new Error(`Supabase upload failed: ${error.message}`);
   }
 
-  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${storagePath}`;
+  // Return the public URL (bucket must have public access enabled in Supabase dashboard)
+  const { data } = supabase.storage
+    .from(SUPABASE_BUCKET)
+    .getPublicUrl(storagePath);
+
+  return data.publicUrl;
 }
 
 async function updateDbImageUrl(id: string, imageUrl: string): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required for --update-db");
-  }
+  const supabase = createAdminClient();
 
-  const url = `${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(id)}`;
-  const res = await fetch(url, {
-    method:  "PATCH",
-    headers: {
-      Authorization:  `Bearer ${SUPABASE_KEY}`,
-      apikey:         SUPABASE_KEY,
-      "Content-Type": "application/json",
-      Prefer:         "return=minimal",
-    },
-    body: JSON.stringify({ image_url: imageUrl }),
-  });
+  const { error } = await supabase
+    .from("products")
+    .update({ image_url: imageUrl })
+    .eq("id", id);
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => res.statusText);
-    throw new Error(`DB update failed ${res.status}: ${errText}`);
+  if (error) {
+    throw new Error(`DB update failed: ${error.message}`);
   }
 }
 
@@ -422,9 +425,17 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  if ((doUpload || doUpdateDb) && (!SUPABASE_URL || !SUPABASE_KEY)) {
-    console.error("❌  NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required for --upload / --update-db.");
-    process.exit(1);
+  if (doUpload || doUpdateDb) {
+    if (!SUPABASE_URL) {
+      console.error("❌  NEXT_PUBLIC_SUPABASE_URL is missing. Set it in .env.local.");
+      process.exit(1);
+    }
+    if (!SUPABASE_KEY) {
+      console.error("❌  SUPABASE_SERVICE_ROLE_KEY is missing. Set it in .env.local.");
+      process.exit(1);
+    }
+    // Presence check only — key format (sb_secret_... or legacy JWT) is handled by supabase-js
+    log(`Supabase: URL present ✓  |  Service role key present ✓  |  Bucket: ${SUPABASE_BUCKET}`);
   }
 
   ensureDirs();
