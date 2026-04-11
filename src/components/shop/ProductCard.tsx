@@ -6,6 +6,8 @@ import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
+import { useUser } from "@/store/user";
+import { useDeliveryGate } from "@/store/delivery-gate";
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import type { MockProduct, MockVariant } from "@/lib/data/mock";
 
@@ -18,6 +20,8 @@ interface ProductCardProps {
 
 export function ProductCard({ product, className, priority = false }: ProductCardProps) {
   const { addItem, items, updateQty } = useCart();
+  const { user } = useUser();
+  const { requestAdd } = useDeliveryGate();
 
   const defaultVariant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
   const [selectedVariant, setSelectedVariant] = useState<MockVariant>(defaultVariant);
@@ -36,17 +40,24 @@ export function ProductCard({ product, className, priority = false }: ProductCar
     : 0;
 
   const handleAdd = useCallback(() => {
-    addItem({
-      variantId: selectedVariant.id,
-      productId: product.id,
-      productName: product.name,
+    const item = {
+      variantId:    selectedVariant.id,
+      productId:    product.id,
+      productName:  product.name,
       variantLabel: selectedVariant.label,
-      priceAgorot: selectedVariant.priceAgorot,
-      imageUrl: product.imageUrl,
-      imageColor: product.imageColor,
-      productIcon: product.icon,
-    });
-  }, [addItem, selectedVariant, product]);
+      priceAgorot:  selectedVariant.priceAgorot,
+      imageUrl:     product.imageUrl,
+      imageColor:   product.imageColor,
+      productIcon:  product.icon,
+    };
+
+    // For logged-out visitors, route through the delivery gate on the first
+    // add-to-cart. requestAdd returns true if the gate opened (item is held
+    // pending delivery confirmation) or false if already confirmed (add directly).
+    if (!user && requestAdd(item)) return;
+
+    addItem(item);
+  }, [addItem, requestAdd, user, selectedVariant, product]);
 
   // Show max 3 variants to keep card compact
   const visibleVariants = product.variants.slice(0, 3);

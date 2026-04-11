@@ -6,6 +6,8 @@ import { CartDrawer } from "@/components/layout/CartDrawer";
 import { UserProvider } from "@/store/user";
 import { AuthModalProvider } from "@/store/auth-modal";
 import { AuthModalLoader } from "@/components/auth/AuthModalLoader";
+import { DeliveryGateProvider } from "@/store/delivery-gate";
+import { DeliveryGateModal } from "@/components/shop/DeliveryGateModal";
 
 const rubik = Rubik({
   subsets: ["hebrew", "latin"],
@@ -65,9 +67,12 @@ export default function RootLayout({
         <UserProvider>
           <AuthModalProvider>
             <CartProvider>
-              {children}
-              <CartDrawer />
-              <AuthModalLoader />
+              <DeliveryGateProvider>
+                {children}
+                <CartDrawer />
+                <AuthModalLoader />
+                <DeliveryGateModal />
+              </DeliveryGateProvider>
             </CartProvider>
           </AuthModalProvider>
         </UserProvider>
