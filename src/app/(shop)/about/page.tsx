@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Leaf,
@@ -57,8 +58,16 @@ export default function AboutPage() {
   return (
     <main className="flex-1">
       {/* Hero */}
-      <div className="bg-gradient-to-b from-brand-700 to-brand-600 text-white py-16 lg:py-24">
-        <Container>
+      <div className="relative bg-brand-800 text-white py-16 lg:py-24 overflow-hidden">
+        <Image
+          src="/images/heroes/photo-meshek22.png"
+          alt=""
+          fill
+          className="object-cover opacity-40"
+          priority
+          aria-hidden="true"
+        />
+        <Container className="relative z-10">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-1.5 bg-white/15 border border-white/20 rounded-full px-3 py-1.5 mb-4 text-sm font-semibold text-brand-100">
               <Leaf className="h-3.5 w-3.5" aria-hidden="true" />
