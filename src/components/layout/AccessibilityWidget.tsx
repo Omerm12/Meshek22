@@ -165,6 +165,7 @@ export function AccessibilityWidget() {
           aria-label="אפשרויות נגישות"
           aria-modal="false"
           dir="rtl"
+          onMouseDown={(e) => e.stopPropagation()}
           className={cn(
             "w-72 bg-white rounded-2xl shadow-2xl border border-stone-100",
             "flex flex-col overflow-hidden",

@@ -94,27 +94,15 @@ export function ProductCard({ product, className, priority = false }: ProductCar
         )}
       >
         {hasImage ? (
-          <>
-            {/* Blurred background layer — desktop only (too noisy on small mobile thumbnail) */}
-            <Image
-              loader={supabaseImageLoader}
-              src={product.imageUrl!}
-              alt=""
-              fill
-              sizes="(max-width: 1024px) 33vw, 260px"
-              aria-hidden="true"
-              className="hidden md:block object-cover scale-125 blur-2xl opacity-30"
-            />
-            <Image
-              loader={supabaseImageLoader}
-              src={product.imageUrl!}
-              alt={product.name}
-              fill
-              sizes="(max-width: 768px) 112px, (max-width: 1024px) 33vw, 260px"
-              priority={priority}
-              className="object-contain z-10 transition-transform duration-500 ease-out group-hover:scale-105"
-            />
-          </>
+          <Image
+            loader={supabaseImageLoader}
+            src={product.imageUrl!}
+            alt={product.name}
+            fill
+            sizes="(max-width: 768px) 112px, (max-width: 1024px) 33vw, 260px"
+            priority={priority}
+            className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+          />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <span

@@ -1,5 +1,6 @@
 import { Leaf, Phone, Mail, MapPin } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { FooterAccountLinks } from "@/components/layout/FooterAccountLinks";
 
 const FOOTER_LINKS = {
   shop: [
@@ -16,10 +17,6 @@ const FOOTER_LINKS = {
     { label: "תנאי שימוש",      href: "/terms" },
     { label: "מדיניות פרטיות",  href: "/privacy" },
     { label: "הצהרת נגישות",   href: "/accessibility" },
-  ],
-  account: [
-    { label: "ההזמנות שלי", href: "/account/orders" },
-    { label: "הפרופיל שלי", href: "/account" },
   ],
 };
 
@@ -126,23 +123,12 @@ export function Footer() {
               </ul>
             </div>
 
-            {/* Account links */}
+            {/* Account links — auth-aware: opens login modal when logged out */}
             <div>
               <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
                 החשבון שלי
               </h3>
-              <ul className="flex flex-col gap-2">
-                {FOOTER_LINKS.account.map((l) => (
-                  <li key={l.href}>
-                    <a
-                      href={l.href}
-                      className="text-sm text-stone-400 hover:text-brand-400 transition-colors"
-                    >
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <FooterAccountLinks />
             </div>
           </div>
         </Container>

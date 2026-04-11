@@ -126,11 +126,8 @@ input[type="tel"] {
 html[data-a11y-font="1"] { font-size: 112.5%; }
 html[data-a11y-font="2"] { font-size: 125%; }
 
-/* High contrast — boosts contrast via body filter; body fills viewport so
-   position:fixed children remain correctly anchored */
-html[data-a11y-contrast="high"] body {
-  filter: contrast(1.25) saturate(0.9);
-}
+/* High contrast — filter is applied via the A11yFilter wrapper in layout.tsx,
+   NOT here on body, to avoid breaking position:fixed overlay elements. */
 
 /* Underline links — excludes navigation/button links to avoid visual noise */
 html[data-a11y-links="underline"] a:not([role="button"]):not(.no-underline) {

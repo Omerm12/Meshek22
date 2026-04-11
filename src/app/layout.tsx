@@ -10,6 +10,7 @@ import { DeliveryGateProvider } from "@/store/delivery-gate";
 import { DeliveryGateModal } from "@/components/shop/DeliveryGateModal";
 import { AccessibilityProvider } from "@/store/accessibility";
 import { AccessibilityWidget } from "@/components/layout/AccessibilityWidget";
+import { A11yFilter } from "@/components/layout/A11yFilter";
 
 const rubik = Rubik({
   subsets: ["hebrew", "latin"],
@@ -71,7 +72,7 @@ export default function RootLayout({
             <CartProvider>
               <DeliveryGateProvider>
                 <AccessibilityProvider>
-                  {children}
+                  <A11yFilter>{children}</A11yFilter>
                   <CartDrawer />
                   <AuthModalLoader />
                   <DeliveryGateModal />

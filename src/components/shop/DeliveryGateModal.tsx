@@ -168,8 +168,11 @@ export function DeliveryGateModal() {
 
         {/* ── Body ── */}
         <div className="px-8 py-7">
-          <p className="text-base text-stone-500 leading-relaxed mb-6">
-            אנחנו רוצים לוודא שאפשר לספק משלוח לאזור שלכם לפני תחילת הקנייה.
+          <p className="text-base text-stone-500 leading-relaxed mb-1.5">
+            אנחנו רוצים לוודא שאפשר לספק משלוח לאזורכם לפני תחילת הקנייה.
+          </p>
+          <p className="text-sm text-stone-400 leading-relaxed mb-6">
+            יש להזין את שם היישוב בלבד — לא כתובת מלאה.
           </p>
 
           {/* Input row */}
@@ -188,7 +191,7 @@ export function DeliveryGateModal() {
                   if (result) setResult(null);
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder="הקלידו את שם היישוב"
+                placeholder="לדוגמה: פתח תקווה, רחובות, ראשון לציון"
                 disabled={dataLoading}
                 dir="rtl"
                 aria-label="שם היישוב"
