@@ -1,0 +1,16 @@
+[2026-04-11T16:34:41.250Z] Supabase: URL present ✓  |  Service role key present ✓  |  Bucket: product-images
+[2026-04-11T16:34:41.253Z] Pipeline start: 1 product(s) | model=gpt-image-1 | dry-run=false | upload=true | update-db=false
+[2026-04-11T16:34:41.254Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T16:34:41.255Z] [1/1] cucumber: prompt built
+[2026-04-11T16:34:41.255Z] [1/1] cucumber: calling gpt-image-1...
+[2026-04-11T16:35:14.483Z] [1/1] cucumber: image received (1585 KB)
+[2026-04-11T16:35:14.498Z] [1/1] cucumber: raw saved → output\raw\cucumber.png
+[2026-04-11T16:35:14.499Z] [1/1] cucumber: removing background...
+[2026-04-11T16:35:14.770Z] [1/1] cucumber: background removed (1194 KB)
+[2026-04-11T16:35:14.775Z] [1/1] cucumber: processed saved → output\processed\cucumber.png
+[2026-04-11T16:35:14.776Z] [1/1] cucumber: uploading to Supabase...
+[2026-04-11T16:35:16.906Z] [1/1] cucumber: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/cucumber.png
+[2026-04-11T16:35:16.908Z] [1/1] cucumber: metadata saved → output\processed\cucumber.json
+[2026-04-11T16:35:16.910Z] ─────────────────────────────────────────────────────
+[2026-04-11T16:35:16.911Z] Done. 1 succeeded, 0 failed.
+[2026-04-11T16:35:16.911Z] Processed images ready at: output/processed/

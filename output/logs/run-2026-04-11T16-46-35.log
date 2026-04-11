@@ -1,0 +1,796 @@
+[2026-04-11T16:46:35.775Z] Supabase: URL present ✓  |  Service role key present ✓  |  Bucket: product-images
+[2026-04-11T16:46:35.780Z] Pipeline start: 79 product(s) | model=gpt-image-1 | dry-run=false | upload=true | update-db=false
+[2026-04-11T16:46:35.780Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T16:46:35.782Z] [1/79] tamar-tomatoes: prompt built
+[2026-04-11T16:46:35.782Z] [1/79] tamar-tomatoes: calling gpt-image-1...
+[2026-04-11T16:47:14.277Z] [1/79] tamar-tomatoes: image received (1585 KB)
+[2026-04-11T16:47:14.292Z] [1/79] tamar-tomatoes: raw saved → output\raw\tamar-tomatoes.png
+[2026-04-11T16:47:14.293Z] [1/79] tamar-tomatoes: removing background...
+[2026-04-11T16:47:14.608Z] [1/79] tamar-tomatoes: background removed (1329 KB)
+[2026-04-11T16:47:14.612Z] [1/79] tamar-tomatoes: processed saved → output\processed\tamar-tomatoes.png
+[2026-04-11T16:47:14.612Z] [1/79] tamar-tomatoes: uploading to Supabase...
+[2026-04-11T16:47:17.068Z] [1/79] tamar-tomatoes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/tamar-tomatoes.png
+[2026-04-11T16:47:17.070Z] [1/79] tamar-tomatoes: metadata saved → output\processed\tamar-tomatoes.json
+[2026-04-11T16:47:17.684Z] [2/79] cluster-tomatoes: prompt built
+[2026-04-11T16:47:17.686Z] [2/79] cluster-tomatoes: calling gpt-image-1...
+[2026-04-11T16:47:53.061Z] [2/79] cluster-tomatoes: image received (1577 KB)
+[2026-04-11T16:47:53.064Z] [2/79] cluster-tomatoes: raw saved → output\raw\cluster-tomatoes.png
+[2026-04-11T16:47:53.065Z] [2/79] cluster-tomatoes: removing background...
+[2026-04-11T16:47:53.332Z] [2/79] cluster-tomatoes: background removed (1218 KB)
+[2026-04-11T16:47:53.335Z] [2/79] cluster-tomatoes: processed saved → output\processed\cluster-tomatoes.png
+[2026-04-11T16:47:53.336Z] [2/79] cluster-tomatoes: uploading to Supabase...
+[2026-04-11T16:47:54.884Z] [2/79] cluster-tomatoes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/cluster-tomatoes.png
+[2026-04-11T16:47:54.886Z] [2/79] cluster-tomatoes: metadata saved → output\processed\cluster-tomatoes.json
+[2026-04-11T16:47:55.496Z] [3/79] hot-pepper: prompt built
+[2026-04-11T16:47:55.497Z] [3/79] hot-pepper: calling gpt-image-1...
+[2026-04-11T16:48:28.717Z] [3/79] hot-pepper: image received (1397 KB)
+[2026-04-11T16:48:28.720Z] [3/79] hot-pepper: raw saved → output\raw\hot-pepper.png
+[2026-04-11T16:48:28.721Z] [3/79] hot-pepper: removing background...
+[2026-04-11T16:48:28.981Z] [3/79] hot-pepper: background removed (767 KB)
+[2026-04-11T16:48:28.983Z] [3/79] hot-pepper: processed saved → output\processed\hot-pepper.png
+[2026-04-11T16:48:28.984Z] [3/79] hot-pepper: uploading to Supabase...
+[2026-04-11T16:48:30.414Z] [3/79] hot-pepper: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/hot-pepper.png
+[2026-04-11T16:48:30.416Z] [3/79] hot-pepper: metadata saved → output\processed\hot-pepper.json
+[2026-04-11T16:48:31.035Z] [4/79] artichoke: prompt built
+[2026-04-11T16:48:31.036Z] [4/79] artichoke: calling gpt-image-1...
+[2026-04-11T16:49:19.543Z] [4/79] artichoke: image received (1576 KB)
+[2026-04-11T16:49:19.546Z] [4/79] artichoke: raw saved → output\raw\artichoke.png
+[2026-04-11T16:49:19.547Z] [4/79] artichoke: removing background...
+[2026-04-11T16:49:19.841Z] [4/79] artichoke: background removed (1148 KB)
+[2026-04-11T16:49:19.844Z] [4/79] artichoke: processed saved → output\processed\artichoke.png
+[2026-04-11T16:49:19.844Z] [4/79] artichoke: uploading to Supabase...
+[2026-04-11T16:49:20.820Z] [4/79] artichoke: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/artichoke.png
+[2026-04-11T16:49:20.822Z] [4/79] artichoke: metadata saved → output\processed\artichoke.json
+[2026-04-11T16:49:21.433Z] [5/79] cauliflower: prompt built
+[2026-04-11T16:49:21.434Z] [5/79] cauliflower: calling gpt-image-1...
+[2026-04-11T16:49:57.205Z] [5/79] cauliflower: image received (1444 KB)
+[2026-04-11T16:49:57.220Z] [5/79] cauliflower: raw saved → output\raw\cauliflower.png
+[2026-04-11T16:49:57.220Z] [5/79] cauliflower: removing background...
+[2026-04-11T16:49:57.489Z] [5/79] cauliflower: background removed (1154 KB)
+[2026-04-11T16:49:57.492Z] [5/79] cauliflower: processed saved → output\processed\cauliflower.png
+[2026-04-11T16:49:57.493Z] [5/79] cauliflower: uploading to Supabase...
+[2026-04-11T16:49:59.523Z] [5/79] cauliflower: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/cauliflower.png
+[2026-04-11T16:49:59.525Z] [5/79] cauliflower: metadata saved → output\processed\cauliflower.json
+[2026-04-11T16:50:00.135Z] [6/79] greenhouse-eggplant: prompt built
+[2026-04-11T16:50:00.136Z] [6/79] greenhouse-eggplant: calling gpt-image-1...
+[2026-04-11T16:50:37.737Z] [6/79] greenhouse-eggplant: image received (1409 KB)
+[2026-04-11T16:50:37.740Z] [6/79] greenhouse-eggplant: raw saved → output\raw\greenhouse-eggplant.png
+[2026-04-11T16:50:37.741Z] [6/79] greenhouse-eggplant: removing background...
+[2026-04-11T16:50:38.007Z] [6/79] greenhouse-eggplant: background removed (1102 KB)
+[2026-04-11T16:50:38.010Z] [6/79] greenhouse-eggplant: processed saved → output\processed\greenhouse-eggplant.png
+[2026-04-11T16:50:38.010Z] [6/79] greenhouse-eggplant: uploading to Supabase...
+[2026-04-11T16:50:39.893Z] [6/79] greenhouse-eggplant: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/greenhouse-eggplant.png
+[2026-04-11T16:50:39.906Z] [6/79] greenhouse-eggplant: metadata saved → output\processed\greenhouse-eggplant.json
+[2026-04-11T16:50:40.508Z] [7/79] baladi-eggplant: prompt built
+[2026-04-11T16:50:40.509Z] [7/79] baladi-eggplant: calling gpt-image-1...
+[2026-04-11T16:51:13.382Z] [7/79] baladi-eggplant: image received (1482 KB)
+[2026-04-11T16:51:13.386Z] [7/79] baladi-eggplant: raw saved → output\raw\baladi-eggplant.png
+[2026-04-11T16:51:13.386Z] [7/79] baladi-eggplant: removing background...
+[2026-04-11T16:51:13.703Z] [7/79] baladi-eggplant: background removed (949 KB)
+[2026-04-11T16:51:13.707Z] [7/79] baladi-eggplant: processed saved → output\processed\baladi-eggplant.png
+[2026-04-11T16:51:13.707Z] [7/79] baladi-eggplant: uploading to Supabase...
+[2026-04-11T16:51:14.572Z] [7/79] baladi-eggplant: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/baladi-eggplant.png
+[2026-04-11T16:51:14.574Z] [7/79] baladi-eggplant: metadata saved → output\processed\baladi-eggplant.json
+[2026-04-11T16:51:15.190Z] [8/79] zucchini: prompt built
+[2026-04-11T16:51:15.190Z] [8/79] zucchini: calling gpt-image-1...
+[2026-04-11T16:51:55.757Z] [8/79] zucchini: image received (1712 KB)
+[2026-04-11T16:51:55.761Z] [8/79] zucchini: raw saved → output\raw\zucchini.png
+[2026-04-11T16:51:55.761Z] [8/79] zucchini: removing background...
+[2026-04-11T16:51:56.054Z] [8/79] zucchini: background removed (1180 KB)
+[2026-04-11T16:51:56.058Z] [8/79] zucchini: processed saved → output\processed\zucchini.png
+[2026-04-11T16:51:56.058Z] [8/79] zucchini: uploading to Supabase...
+[2026-04-11T16:51:57.442Z] [8/79] zucchini: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/zucchini.png
+[2026-04-11T16:51:57.445Z] [8/79] zucchini: metadata saved → output\processed\zucchini.json
+[2026-04-11T16:51:58.050Z] [9/79] leek: prompt built
+[2026-04-11T16:51:58.051Z] [9/79] leek: calling gpt-image-1...
+[2026-04-11T16:52:33.457Z] [9/79] leek: image received (1526 KB)
+[2026-04-11T16:52:33.460Z] [9/79] leek: raw saved → output\raw\leek.png
+[2026-04-11T16:52:33.461Z] [9/79] leek: removing background...
+[2026-04-11T16:52:33.734Z] [9/79] leek: background removed (842 KB)
+[2026-04-11T16:52:33.737Z] [9/79] leek: processed saved → output\processed\leek.png
+[2026-04-11T16:52:33.737Z] [9/79] leek: uploading to Supabase...
+[2026-04-11T16:52:34.772Z] [9/79] leek: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/leek.png
+[2026-04-11T16:52:34.775Z] [9/79] leek: metadata saved → output\processed\leek.json
+[2026-04-11T16:52:35.389Z] [10/79] broad-beans: prompt built
+[2026-04-11T16:52:35.389Z] [10/79] broad-beans: calling gpt-image-1...
+[2026-04-11T16:53:07.960Z] [10/79] broad-beans: image received (1549 KB)
+[2026-04-11T16:53:07.964Z] [10/79] broad-beans: raw saved → output\raw\broad-beans.png
+[2026-04-11T16:53:07.964Z] [10/79] broad-beans: removing background...
+[2026-04-11T16:53:08.326Z] [10/79] broad-beans: background removed (1207 KB)
+[2026-04-11T16:53:08.329Z] [10/79] broad-beans: processed saved → output\processed\broad-beans.png
+[2026-04-11T16:53:08.329Z] [10/79] broad-beans: uploading to Supabase...
+[2026-04-11T16:53:10.343Z] [10/79] broad-beans: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/broad-beans.png
+[2026-04-11T16:53:10.346Z] [10/79] broad-beans: metadata saved → output\processed\broad-beans.json
+[2026-04-11T16:53:10.958Z] [11/79] white-onion: prompt built
+[2026-04-11T16:53:10.960Z] [11/79] white-onion: calling gpt-image-1...
+[2026-04-11T16:53:48.718Z] [11/79] white-onion: image received (1403 KB)
+[2026-04-11T16:53:48.722Z] [11/79] white-onion: raw saved → output\raw\white-onion.png
+[2026-04-11T16:53:48.723Z] [11/79] white-onion: removing background...
+[2026-04-11T16:53:48.976Z] [11/79] white-onion: background removed (788 KB)
+[2026-04-11T16:53:48.979Z] [11/79] white-onion: processed saved → output\processed\white-onion.png
+[2026-04-11T16:53:48.979Z] [11/79] white-onion: uploading to Supabase...
+[2026-04-11T16:53:50.735Z] [11/79] white-onion: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/white-onion.png
+[2026-04-11T16:53:50.737Z] [11/79] white-onion: metadata saved → output\processed\white-onion.json
+[2026-04-11T16:53:51.346Z] [12/79] red-onion: prompt built
+[2026-04-11T16:53:51.346Z] [12/79] red-onion: calling gpt-image-1...
+[2026-04-11T16:54:27.116Z] [12/79] red-onion: image received (1558 KB)
+[2026-04-11T16:54:27.119Z] [12/79] red-onion: raw saved → output\raw\red-onion.png
+[2026-04-11T16:54:27.120Z] [12/79] red-onion: removing background...
+[2026-04-11T16:54:27.377Z] [12/79] red-onion: background removed (1213 KB)
+[2026-04-11T16:54:27.380Z] [12/79] red-onion: processed saved → output\processed\red-onion.png
+[2026-04-11T16:54:27.381Z] [12/79] red-onion: uploading to Supabase...
+[2026-04-11T16:54:28.459Z] [12/79] red-onion: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-onion.png
+[2026-04-11T16:54:28.462Z] [12/79] red-onion: metadata saved → output\processed\red-onion.json
+[2026-04-11T16:54:29.074Z] [13/79] packed-garlic: prompt built
+[2026-04-11T16:54:29.074Z] [13/79] packed-garlic: calling gpt-image-1...
+[2026-04-11T16:55:10.921Z] [13/79] packed-garlic: image received (1493 KB)
+[2026-04-11T16:55:10.924Z] [13/79] packed-garlic: raw saved → output\raw\packed-garlic.png
+[2026-04-11T16:55:10.925Z] [13/79] packed-garlic: removing background...
+[2026-04-11T16:55:11.264Z] [13/79] packed-garlic: background removed (966 KB)
+[2026-04-11T16:55:11.267Z] [13/79] packed-garlic: processed saved → output\processed\packed-garlic.png
+[2026-04-11T16:55:11.267Z] [13/79] packed-garlic: uploading to Supabase...
+[2026-04-11T16:55:12.284Z] [13/79] packed-garlic: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/packed-garlic.png
+[2026-04-11T16:55:12.298Z] [13/79] packed-garlic: metadata saved → output\processed\packed-garlic.json
+[2026-04-11T16:55:12.907Z] [14/79] beetroot: prompt built
+[2026-04-11T16:55:12.907Z] [14/79] beetroot: calling gpt-image-1...
+[2026-04-11T16:55:48.343Z] [14/79] beetroot: image received (1562 KB)
+[2026-04-11T16:55:48.346Z] [14/79] beetroot: raw saved → output\raw\beetroot.png
+[2026-04-11T16:55:48.347Z] [14/79] beetroot: removing background...
+[2026-04-11T16:55:48.605Z] [14/79] beetroot: background removed (1079 KB)
+[2026-04-11T16:55:48.607Z] [14/79] beetroot: processed saved → output\processed\beetroot.png
+[2026-04-11T16:55:48.608Z] [14/79] beetroot: uploading to Supabase...
+[2026-04-11T16:55:50.556Z] [14/79] beetroot: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/beetroot.png
+[2026-04-11T16:55:50.558Z] [14/79] beetroot: metadata saved → output\processed\beetroot.json
+[2026-04-11T16:55:51.170Z] [15/79] turnip: prompt built
+[2026-04-11T16:55:51.170Z] [15/79] turnip: calling gpt-image-1...
+[2026-04-11T16:56:29.989Z] [15/79] turnip: image received (1568 KB)
+[2026-04-11T16:56:30.003Z] [15/79] turnip: raw saved → output\raw\turnip.png
+[2026-04-11T16:56:30.004Z] [15/79] turnip: removing background...
+[2026-04-11T16:56:30.311Z] [15/79] turnip: background removed (1442 KB)
+[2026-04-11T16:56:30.314Z] [15/79] turnip: processed saved → output\processed\turnip.png
+[2026-04-11T16:56:30.314Z] [15/79] turnip: uploading to Supabase...
+[2026-04-11T16:56:31.537Z] [15/79] turnip: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/turnip.png
+[2026-04-11T16:56:31.541Z] [15/79] turnip: metadata saved → output\processed\turnip.json
+[2026-04-11T16:56:32.149Z] [16/79] kohlrabi: prompt built
+[2026-04-11T16:56:32.150Z] [16/79] kohlrabi: calling gpt-image-1...
+[2026-04-11T16:57:07.813Z] [16/79] kohlrabi: image received (1446 KB)
+[2026-04-11T16:57:07.817Z] [16/79] kohlrabi: raw saved → output\raw\kohlrabi.png
+[2026-04-11T16:57:07.818Z] [16/79] kohlrabi: removing background...
+[2026-04-11T16:57:08.119Z] [16/79] kohlrabi: background removed (1122 KB)
+[2026-04-11T16:57:08.122Z] [16/79] kohlrabi: processed saved → output\processed\kohlrabi.png
+[2026-04-11T16:57:08.122Z] [16/79] kohlrabi: uploading to Supabase...
+[2026-04-11T16:57:09.819Z] [16/79] kohlrabi: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/kohlrabi.png
+[2026-04-11T16:57:09.822Z] [16/79] kohlrabi: metadata saved → output\processed\kohlrabi.json
+[2026-04-11T16:57:10.438Z] [17/79] radish-bunch: prompt built
+[2026-04-11T16:57:10.441Z] [17/79] radish-bunch: calling gpt-image-1...
+[2026-04-11T16:57:55.890Z] [17/79] radish-bunch: image received (1509 KB)
+[2026-04-11T16:57:55.894Z] [17/79] radish-bunch: raw saved → output\raw\radish-bunch.png
+[2026-04-11T16:57:55.894Z] [17/79] radish-bunch: removing background...
+[2026-04-11T16:57:56.185Z] [17/79] radish-bunch: background removed (1319 KB)
+[2026-04-11T16:57:56.190Z] [17/79] radish-bunch: processed saved → output\processed\radish-bunch.png
+[2026-04-11T16:57:56.191Z] [17/79] radish-bunch: uploading to Supabase...
+[2026-04-11T16:57:57.787Z] [17/79] radish-bunch: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/radish-bunch.png
+[2026-04-11T16:57:57.789Z] [17/79] radish-bunch: metadata saved → output\processed\radish-bunch.json
+[2026-04-11T16:57:58.393Z] [18/79] ginger: prompt built
+[2026-04-11T16:57:58.394Z] [18/79] ginger: calling gpt-image-1...
+[2026-04-11T16:58:32.714Z] [18/79] ginger: image received (1667 KB)
+[2026-04-11T16:58:32.718Z] [18/79] ginger: raw saved → output\raw\ginger.png
+[2026-04-11T16:58:32.719Z] [18/79] ginger: removing background...
+[2026-04-11T16:58:32.957Z] [18/79] ginger: background removed (1162 KB)
+[2026-04-11T16:58:32.960Z] [18/79] ginger: processed saved → output\processed\ginger.png
+[2026-04-11T16:58:32.961Z] [18/79] ginger: uploading to Supabase...
+[2026-04-11T16:58:33.828Z] [18/79] ginger: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/ginger.png
+[2026-04-11T16:58:33.831Z] [18/79] ginger: metadata saved → output\processed\ginger.json
+[2026-04-11T16:58:34.433Z] [19/79] white-cabbage: prompt built
+[2026-04-11T16:58:34.434Z] [19/79] white-cabbage: calling gpt-image-1...
+[2026-04-11T16:59:14.386Z] [19/79] white-cabbage: image received (1414 KB)
+[2026-04-11T16:59:14.400Z] [19/79] white-cabbage: raw saved → output\raw\white-cabbage.png
+[2026-04-11T16:59:14.401Z] [19/79] white-cabbage: removing background...
+[2026-04-11T16:59:14.674Z] [19/79] white-cabbage: background removed (1121 KB)
+[2026-04-11T16:59:14.677Z] [19/79] white-cabbage: processed saved → output\processed\white-cabbage.png
+[2026-04-11T16:59:14.678Z] [19/79] white-cabbage: uploading to Supabase...
+[2026-04-11T16:59:16.872Z] [19/79] white-cabbage: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/white-cabbage.png
+[2026-04-11T16:59:16.874Z] [19/79] white-cabbage: metadata saved → output\processed\white-cabbage.json
+[2026-04-11T16:59:17.480Z] [20/79] red-cabbage: prompt built
+[2026-04-11T16:59:17.481Z] [20/79] red-cabbage: calling gpt-image-1...
+[2026-04-11T17:00:01.388Z] [20/79] red-cabbage: image received (1716 KB)
+[2026-04-11T17:00:01.391Z] [20/79] red-cabbage: raw saved → output\raw\red-cabbage.png
+[2026-04-11T17:00:01.392Z] [20/79] red-cabbage: removing background...
+[2026-04-11T17:00:01.730Z] [20/79] red-cabbage: background removed (1388 KB)
+[2026-04-11T17:00:01.734Z] [20/79] red-cabbage: processed saved → output\processed\red-cabbage.png
+[2026-04-11T17:00:01.734Z] [20/79] red-cabbage: uploading to Supabase...
+[2026-04-11T17:00:03.848Z] [20/79] red-cabbage: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-cabbage.png
+[2026-04-11T17:00:03.852Z] [20/79] red-cabbage: metadata saved → output\processed\red-cabbage.json
+[2026-04-11T17:00:04.459Z] [21/79] parsley-pack: prompt built
+[2026-04-11T17:00:04.460Z] [21/79] parsley-pack: calling gpt-image-1...
+[2026-04-11T17:00:40.679Z] [21/79] parsley-pack: image received (1648 KB)
+[2026-04-11T17:00:40.682Z] [21/79] parsley-pack: raw saved → output\raw\parsley-pack.png
+[2026-04-11T17:00:40.683Z] [21/79] parsley-pack: removing background...
+[2026-04-11T17:00:40.963Z] [21/79] parsley-pack: background removed (1277 KB)
+[2026-04-11T17:00:40.968Z] [21/79] parsley-pack: processed saved → output\processed\parsley-pack.png
+[2026-04-11T17:00:40.969Z] [21/79] parsley-pack: uploading to Supabase...
+[2026-04-11T17:00:42.357Z] [21/79] parsley-pack: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/parsley-pack.png
+[2026-04-11T17:00:42.360Z] [21/79] parsley-pack: metadata saved → output\processed\parsley-pack.json
+[2026-04-11T17:00:42.969Z] [22/79] mixed-cherry-tomatoes: prompt built
+[2026-04-11T17:00:42.972Z] [22/79] mixed-cherry-tomatoes: calling gpt-image-1...
+[2026-04-11T17:01:17.880Z] [22/79] mixed-cherry-tomatoes: image received (1291 KB)
+[2026-04-11T17:01:17.888Z] [22/79] mixed-cherry-tomatoes: raw saved → output\raw\mixed-cherry-tomatoes.png
+[2026-04-11T17:01:17.889Z] [22/79] mixed-cherry-tomatoes: removing background...
+[2026-04-11T17:01:18.154Z] [22/79] mixed-cherry-tomatoes: background removed (1134 KB)
+[2026-04-11T17:01:18.156Z] [22/79] mixed-cherry-tomatoes: processed saved → output\processed\mixed-cherry-tomatoes.png
+[2026-04-11T17:01:18.157Z] [22/79] mixed-cherry-tomatoes: uploading to Supabase...
+[2026-04-11T17:01:19.210Z] [22/79] mixed-cherry-tomatoes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/mixed-cherry-tomatoes.png
+[2026-04-11T17:01:19.211Z] [22/79] mixed-cherry-tomatoes: metadata saved → output\processed\mixed-cherry-tomatoes.json
+[2026-04-11T17:01:19.819Z] [23/79] fennel: prompt built
+[2026-04-11T17:01:19.822Z] [23/79] fennel: calling gpt-image-1...
+[2026-04-11T17:02:01.471Z] [23/79] fennel: image received (1614 KB)
+[2026-04-11T17:02:01.474Z] [23/79] fennel: raw saved → output\raw\fennel.png
+[2026-04-11T17:02:01.475Z] [23/79] fennel: removing background...
+[2026-04-11T17:02:01.786Z] [23/79] fennel: background removed (1341 KB)
+[2026-04-11T17:02:01.789Z] [23/79] fennel: processed saved → output\processed\fennel.png
+[2026-04-11T17:02:01.790Z] [23/79] fennel: uploading to Supabase...
+[2026-04-11T17:02:04.247Z] [23/79] fennel: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/fennel.png
+[2026-04-11T17:02:04.249Z] [23/79] fennel: metadata saved → output\processed\fennel.json
+[2026-04-11T17:02:04.850Z] [24/79] spaghetti-squash: prompt built
+[2026-04-11T17:02:04.851Z] [24/79] spaghetti-squash: calling gpt-image-1...
+[2026-04-11T17:02:44.120Z] [24/79] spaghetti-squash: image received (1319 KB)
+[2026-04-11T17:02:44.123Z] [24/79] spaghetti-squash: raw saved → output\raw\spaghetti-squash.png
+[2026-04-11T17:02:44.124Z] [24/79] spaghetti-squash: removing background...
+[2026-04-11T17:02:44.365Z] [24/79] spaghetti-squash: background removed (938 KB)
+[2026-04-11T17:02:44.368Z] [24/79] spaghetti-squash: processed saved → output\processed\spaghetti-squash.png
+[2026-04-11T17:02:44.368Z] [24/79] spaghetti-squash: uploading to Supabase...
+[2026-04-11T17:02:45.588Z] [24/79] spaghetti-squash: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/spaghetti-squash.png
+[2026-04-11T17:02:45.591Z] [24/79] spaghetti-squash: metadata saved → output\processed\spaghetti-squash.json
+[2026-04-11T17:02:46.206Z] [25/79] japanese-pumpkin: prompt built
+[2026-04-11T17:02:46.207Z] [25/79] japanese-pumpkin: calling gpt-image-1...
+[2026-04-11T17:03:27.285Z] [25/79] japanese-pumpkin: image received (1484 KB)
+[2026-04-11T17:03:27.300Z] [25/79] japanese-pumpkin: raw saved → output\raw\japanese-pumpkin.png
+[2026-04-11T17:03:27.300Z] [25/79] japanese-pumpkin: removing background...
+[2026-04-11T17:03:27.525Z] [25/79] japanese-pumpkin: background removed (1030 KB)
+[2026-04-11T17:03:27.527Z] [25/79] japanese-pumpkin: processed saved → output\processed\japanese-pumpkin.png
+[2026-04-11T17:03:27.528Z] [25/79] japanese-pumpkin: uploading to Supabase...
+[2026-04-11T17:03:28.684Z] [25/79] japanese-pumpkin: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/japanese-pumpkin.png
+[2026-04-11T17:03:28.688Z] [25/79] japanese-pumpkin: metadata saved → output\processed\japanese-pumpkin.json
+[2026-04-11T17:03:29.292Z] [26/79] arabic-lettuce: prompt built
+[2026-04-11T17:03:29.292Z] [26/79] arabic-lettuce: calling gpt-image-1...
+[2026-04-11T17:04:02.570Z] [26/79] arabic-lettuce: image received (1487 KB)
+[2026-04-11T17:04:02.573Z] [26/79] arabic-lettuce: raw saved → output\raw\arabic-lettuce.png
+[2026-04-11T17:04:02.574Z] [26/79] arabic-lettuce: removing background...
+[2026-04-11T17:04:02.823Z] [26/79] arabic-lettuce: background removed (1163 KB)
+[2026-04-11T17:04:02.825Z] [26/79] arabic-lettuce: processed saved → output\processed\arabic-lettuce.png
+[2026-04-11T17:04:02.826Z] [26/79] arabic-lettuce: uploading to Supabase...
+[2026-04-11T17:04:05.280Z] [26/79] arabic-lettuce: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/arabic-lettuce.png
+[2026-04-11T17:04:05.282Z] [26/79] arabic-lettuce: metadata saved → output\processed\arabic-lettuce.json
+[2026-04-11T17:04:05.887Z] [27/79] salanova: prompt built
+[2026-04-11T17:04:05.887Z] [27/79] salanova: calling gpt-image-1...
+[2026-04-11T17:04:42.651Z] [27/79] salanova: image received (1611 KB)
+[2026-04-11T17:04:42.666Z] [27/79] salanova: raw saved → output\raw\salanova.png
+[2026-04-11T17:04:42.667Z] [27/79] salanova: removing background...
+[2026-04-11T17:04:42.925Z] [27/79] salanova: background removed (1505 KB)
+[2026-04-11T17:04:42.928Z] [27/79] salanova: processed saved → output\processed\salanova.png
+[2026-04-11T17:04:42.928Z] [27/79] salanova: uploading to Supabase...
+[2026-04-11T17:04:45.059Z] [27/79] salanova: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/salanova.png
+[2026-04-11T17:04:45.062Z] [27/79] salanova: metadata saved → output\processed\salanova.json
+[2026-04-11T17:04:45.678Z] [28/79] lettuce: prompt built
+[2026-04-11T17:04:45.678Z] [28/79] lettuce: calling gpt-image-1...
+[2026-04-11T17:05:32.020Z] [28/79] lettuce: image received (1482 KB)
+[2026-04-11T17:05:32.023Z] [28/79] lettuce: raw saved → output\raw\lettuce.png
+[2026-04-11T17:05:32.024Z] [28/79] lettuce: removing background...
+[2026-04-11T17:05:32.287Z] [28/79] lettuce: background removed (1387 KB)
+[2026-04-11T17:05:32.301Z] [28/79] lettuce: processed saved → output\processed\lettuce.png
+[2026-04-11T17:05:32.301Z] [28/79] lettuce: uploading to Supabase...
+[2026-04-11T17:05:33.447Z] [28/79] lettuce: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/lettuce.png
+[2026-04-11T17:05:33.449Z] [28/79] lettuce: metadata saved → output\processed\lettuce.json
+[2026-04-11T17:05:34.051Z] [29/79] beet-leaves: prompt built
+[2026-04-11T17:05:34.052Z] [29/79] beet-leaves: calling gpt-image-1...
+[2026-04-11T17:06:30.170Z] [29/79] beet-leaves: image received (1607 KB)
+[2026-04-11T17:06:30.185Z] [29/79] beet-leaves: raw saved → output\raw\beet-leaves.png
+[2026-04-11T17:06:30.186Z] [29/79] beet-leaves: removing background...
+[2026-04-11T17:06:30.430Z] [29/79] beet-leaves: background removed (1233 KB)
+[2026-04-11T17:06:30.432Z] [29/79] beet-leaves: processed saved → output\processed\beet-leaves.png
+[2026-04-11T17:06:30.433Z] [29/79] beet-leaves: uploading to Supabase...
+[2026-04-11T17:06:31.646Z] [29/79] beet-leaves: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/beet-leaves.png
+[2026-04-11T17:06:31.649Z] [29/79] beet-leaves: metadata saved → output\processed\beet-leaves.json
+[2026-04-11T17:06:32.267Z] [30/79] celery: prompt built
+[2026-04-11T17:06:32.268Z] [30/79] celery: calling gpt-image-1...
+[2026-04-11T17:07:04.778Z] [30/79] celery: image received (1537 KB)
+[2026-04-11T17:07:04.781Z] [30/79] celery: raw saved → output\raw\celery.png
+[2026-04-11T17:07:04.781Z] [30/79] celery: removing background...
+[2026-04-11T17:07:05.018Z] [30/79] celery: background removed (1069 KB)
+[2026-04-11T17:07:05.022Z] [30/79] celery: processed saved → output\processed\celery.png
+[2026-04-11T17:07:05.022Z] [30/79] celery: uploading to Supabase...
+[2026-04-11T17:07:06.415Z] [30/79] celery: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/celery.png
+[2026-04-11T17:07:06.417Z] [30/79] celery: metadata saved → output\processed\celery.json
+[2026-04-11T17:07:07.021Z] [31/79] green-onion: prompt built
+[2026-04-11T17:07:07.021Z] [31/79] green-onion: calling gpt-image-1...
+[2026-04-11T17:07:39.109Z] [31/79] green-onion: image received (1460 KB)
+[2026-04-11T17:07:39.112Z] [31/79] green-onion: raw saved → output\raw\green-onion.png
+[2026-04-11T17:07:39.113Z] [31/79] green-onion: removing background...
+[2026-04-11T17:07:39.337Z] [31/79] green-onion: background removed (1000 KB)
+[2026-04-11T17:07:39.339Z] [31/79] green-onion: processed saved → output\processed\green-onion.png
+[2026-04-11T17:07:39.339Z] [31/79] green-onion: uploading to Supabase...
+[2026-04-11T17:07:41.333Z] [31/79] green-onion: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/green-onion.png
+[2026-04-11T17:07:41.336Z] [31/79] green-onion: metadata saved → output\processed\green-onion.json
+[2026-04-11T17:07:41.949Z] [32/79] parsley: prompt built
+[2026-04-11T17:07:41.950Z] [32/79] parsley: calling gpt-image-1...
+[2026-04-11T17:08:17.249Z] [32/79] parsley: image received (1649 KB)
+[2026-04-11T17:08:17.253Z] [32/79] parsley: raw saved → output\raw\parsley.png
+[2026-04-11T17:08:17.253Z] [32/79] parsley: removing background...
+[2026-04-11T17:08:17.517Z] [32/79] parsley: background removed (1069 KB)
+[2026-04-11T17:08:17.520Z] [32/79] parsley: processed saved → output\processed\parsley.png
+[2026-04-11T17:08:17.520Z] [32/79] parsley: uploading to Supabase...
+[2026-04-11T17:08:18.698Z] [32/79] parsley: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/parsley.png
+[2026-04-11T17:08:18.705Z] [32/79] parsley: metadata saved → output\processed\parsley.json
+[2026-04-11T17:08:19.318Z] [33/79] cilantro: prompt built
+[2026-04-11T17:08:19.319Z] [33/79] cilantro: calling gpt-image-1...
+[2026-04-11T17:08:55.877Z] [33/79] cilantro: image received (1517 KB)
+[2026-04-11T17:08:55.881Z] [33/79] cilantro: raw saved → output\raw\cilantro.png
+[2026-04-11T17:08:55.881Z] [33/79] cilantro: removing background...
+[2026-04-11T17:08:56.141Z] [33/79] cilantro: background removed (1079 KB)
+[2026-04-11T17:08:56.143Z] [33/79] cilantro: processed saved → output\processed\cilantro.png
+[2026-04-11T17:08:56.144Z] [33/79] cilantro: uploading to Supabase...
+[2026-04-11T17:08:58.102Z] [33/79] cilantro: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/cilantro.png
+[2026-04-11T17:08:58.104Z] [33/79] cilantro: metadata saved → output\processed\cilantro.json
+[2026-04-11T17:08:58.718Z] [34/79] dill: prompt built
+[2026-04-11T17:08:58.719Z] [34/79] dill: calling gpt-image-1...
+[2026-04-11T17:09:32.557Z] [34/79] dill: image received (1748 KB)
+[2026-04-11T17:09:32.561Z] [34/79] dill: raw saved → output\raw\dill.png
+[2026-04-11T17:09:32.562Z] [34/79] dill: removing background...
+[2026-04-11T17:09:32.835Z] [34/79] dill: background removed (1070 KB)
+[2026-04-11T17:09:32.837Z] [34/79] dill: processed saved → output\processed\dill.png
+[2026-04-11T17:09:32.838Z] [34/79] dill: uploading to Supabase...
+[2026-04-11T17:09:34.114Z] [34/79] dill: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/dill.png
+[2026-04-11T17:09:34.116Z] [34/79] dill: metadata saved → output\processed\dill.json
+[2026-04-11T17:09:34.722Z] [35/79] mint: prompt built
+[2026-04-11T17:09:34.723Z] [35/79] mint: calling gpt-image-1...
+[2026-04-11T17:10:16.515Z] [35/79] mint: image received (1649 KB)
+[2026-04-11T17:10:16.519Z] [35/79] mint: raw saved → output\raw\mint.png
+[2026-04-11T17:10:16.519Z] [35/79] mint: removing background...
+[2026-04-11T17:10:16.770Z] [35/79] mint: background removed (1259 KB)
+[2026-04-11T17:10:16.773Z] [35/79] mint: processed saved → output\processed\mint.png
+[2026-04-11T17:10:16.774Z] [35/79] mint: uploading to Supabase...
+[2026-04-11T17:10:17.859Z] [35/79] mint: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/mint.png
+[2026-04-11T17:10:17.861Z] [35/79] mint: metadata saved → output\processed\mint.json
+[2026-04-11T17:10:18.469Z] [36/79] lemon-verbena: prompt built
+[2026-04-11T17:10:18.470Z] [36/79] lemon-verbena: calling gpt-image-1...
+[2026-04-11T17:10:57.129Z] [36/79] lemon-verbena: image received (1560 KB)
+[2026-04-11T17:10:57.142Z] [36/79] lemon-verbena: raw saved → output\raw\lemon-verbena.png
+[2026-04-11T17:10:57.142Z] [36/79] lemon-verbena: removing background...
+[2026-04-11T17:10:57.454Z] [36/79] lemon-verbena: background removed (876 KB)
+[2026-04-11T17:10:57.457Z] [36/79] lemon-verbena: processed saved → output\processed\lemon-verbena.png
+[2026-04-11T17:10:57.457Z] [36/79] lemon-verbena: uploading to Supabase...
+[2026-04-11T17:10:58.645Z] [36/79] lemon-verbena: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/lemon-verbena.png
+[2026-04-11T17:10:58.648Z] [36/79] lemon-verbena: metadata saved → output\processed\lemon-verbena.json
+[2026-04-11T17:10:59.253Z] [37/79] cucumber: prompt built
+[2026-04-11T17:10:59.256Z] [37/79] cucumber: calling gpt-image-1...
+[2026-04-11T17:11:32.713Z] [37/79] cucumber: image received (1667 KB)
+[2026-04-11T17:11:32.728Z] [37/79] cucumber: raw saved → output\raw\cucumber.png
+[2026-04-11T17:11:32.728Z] [37/79] cucumber: removing background...
+[2026-04-11T17:11:32.995Z] [37/79] cucumber: background removed (1345 KB)
+[2026-04-11T17:11:32.998Z] [37/79] cucumber: processed saved → output\processed\cucumber.png
+[2026-04-11T17:11:32.999Z] [37/79] cucumber: uploading to Supabase...
+[2026-04-11T17:11:34.970Z] [37/79] cucumber: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/cucumber.png
+[2026-04-11T17:11:34.972Z] [37/79] cucumber: metadata saved → output\processed\cucumber.json
+[2026-04-11T17:11:35.574Z] [38/79] maggie-tomatoes: prompt built
+[2026-04-11T17:11:35.574Z] [38/79] maggie-tomatoes: calling gpt-image-1...
+[2026-04-11T17:12:10.968Z] [38/79] maggie-tomatoes: image received (1507 KB)
+[2026-04-11T17:12:10.971Z] [38/79] maggie-tomatoes: raw saved → output\raw\maggie-tomatoes.png
+[2026-04-11T17:12:10.971Z] [38/79] maggie-tomatoes: removing background...
+[2026-04-11T17:12:11.207Z] [38/79] maggie-tomatoes: background removed (1185 KB)
+[2026-04-11T17:12:11.222Z] [38/79] maggie-tomatoes: processed saved → output\processed\maggie-tomatoes.png
+[2026-04-11T17:12:11.223Z] [38/79] maggie-tomatoes: uploading to Supabase...
+[2026-04-11T17:12:12.393Z] [38/79] maggie-tomatoes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/maggie-tomatoes.png
+[2026-04-11T17:12:12.396Z] [38/79] maggie-tomatoes: metadata saved → output\processed\maggie-tomatoes.json
+[2026-04-11T17:12:13.006Z] [39/79] broccoli: prompt built
+[2026-04-11T17:12:13.012Z] [39/79] broccoli: calling gpt-image-1...
+[2026-04-11T17:12:51.565Z] [39/79] broccoli: image received (1737 KB)
+[2026-04-11T17:12:51.569Z] [39/79] broccoli: raw saved → output\raw\broccoli.png
+[2026-04-11T17:12:51.570Z] [39/79] broccoli: removing background...
+[2026-04-11T17:12:51.850Z] [39/79] broccoli: background removed (1157 KB)
+[2026-04-11T17:12:51.853Z] [39/79] broccoli: processed saved → output\processed\broccoli.png
+[2026-04-11T17:12:51.854Z] [39/79] broccoli: uploading to Supabase...
+[2026-04-11T17:12:52.765Z] [39/79] broccoli: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/broccoli.png
+[2026-04-11T17:12:52.777Z] [39/79] broccoli: metadata saved → output\processed\broccoli.json
+[2026-04-11T17:12:53.382Z] [40/79] sweet-potato: prompt built
+[2026-04-11T17:12:53.383Z] [40/79] sweet-potato: calling gpt-image-1...
+[2026-04-11T17:13:25.952Z] [40/79] sweet-potato: image received (1653 KB)
+[2026-04-11T17:13:25.955Z] [40/79] sweet-potato: raw saved → output\raw\sweet-potato.png
+[2026-04-11T17:13:25.955Z] [40/79] sweet-potato: removing background...
+[2026-04-11T17:13:26.198Z] [40/79] sweet-potato: background removed (1267 KB)
+[2026-04-11T17:13:26.201Z] [40/79] sweet-potato: processed saved → output\processed\sweet-potato.png
+[2026-04-11T17:13:26.201Z] [40/79] sweet-potato: uploading to Supabase...
+[2026-04-11T17:13:27.128Z] [40/79] sweet-potato: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/sweet-potato.png
+[2026-04-11T17:13:27.130Z] [40/79] sweet-potato: metadata saved → output\processed\sweet-potato.json
+[2026-04-11T17:13:27.740Z] [41/79] carrot: prompt built
+[2026-04-11T17:13:27.742Z] [41/79] carrot: calling gpt-image-1...
+[2026-04-11T17:14:06.420Z] [41/79] carrot: image received (1466 KB)
+[2026-04-11T17:14:06.424Z] [41/79] carrot: raw saved → output\raw\carrot.png
+[2026-04-11T17:14:06.424Z] [41/79] carrot: removing background...
+[2026-04-11T17:14:06.628Z] [41/79] carrot: background removed (1006 KB)
+[2026-04-11T17:14:06.630Z] [41/79] carrot: processed saved → output\processed\carrot.png
+[2026-04-11T17:14:06.631Z] [41/79] carrot: uploading to Supabase...
+[2026-04-11T17:14:08.518Z] [41/79] carrot: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/carrot.png
+[2026-04-11T17:14:08.522Z] [41/79] carrot: metadata saved → output\processed\carrot.json
+[2026-04-11T17:14:09.129Z] [42/79] chili-mix: prompt built
+[2026-04-11T17:14:09.131Z] [42/79] chili-mix: calling gpt-image-1...
+[2026-04-11T17:14:43.484Z] [42/79] chili-mix: image received (1390 KB)
+[2026-04-11T17:14:43.498Z] [42/79] chili-mix: raw saved → output\raw\chili-mix.png
+[2026-04-11T17:14:43.499Z] [42/79] chili-mix: removing background...
+[2026-04-11T17:14:43.746Z] [42/79] chili-mix: background removed (1011 KB)
+[2026-04-11T17:14:43.749Z] [42/79] chili-mix: processed saved → output\processed\chili-mix.png
+[2026-04-11T17:14:43.749Z] [42/79] chili-mix: uploading to Supabase...
+[2026-04-11T17:14:45.044Z] [42/79] chili-mix: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/chili-mix.png
+[2026-04-11T17:14:45.048Z] [42/79] chili-mix: metadata saved → output\processed\chili-mix.json
+[2026-04-11T17:14:45.652Z] [43/79] strawberry-box-haslat: prompt built
+[2026-04-11T17:14:45.654Z] [43/79] strawberry-box-haslat: calling gpt-image-1...
+[2026-04-11T17:15:20.481Z] [43/79] strawberry-box-haslat: image received (1526 KB)
+[2026-04-11T17:15:20.495Z] [43/79] strawberry-box-haslat: raw saved → output\raw\strawberry-box-haslat.png
+[2026-04-11T17:15:20.498Z] [43/79] strawberry-box-haslat: removing background...
+[2026-04-11T17:15:20.728Z] [43/79] strawberry-box-haslat: background removed (859 KB)
+[2026-04-11T17:15:20.731Z] [43/79] strawberry-box-haslat: processed saved → output\processed\strawberry-box-haslat.png
+[2026-04-11T17:15:20.732Z] [43/79] strawberry-box-haslat: uploading to Supabase...
+[2026-04-11T17:15:21.882Z] [43/79] strawberry-box-haslat: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/strawberry-box-haslat.png
+[2026-04-11T17:15:21.885Z] [43/79] strawberry-box-haslat: metadata saved → output\processed\strawberry-box-haslat.json
+[2026-04-11T17:15:22.498Z] [44/79] red-cabbage-haslat: prompt built
+[2026-04-11T17:15:22.500Z] [44/79] red-cabbage-haslat: calling gpt-image-1...
+[2026-04-11T17:15:59.780Z] [44/79] red-cabbage-haslat: image received (1724 KB)
+[2026-04-11T17:15:59.784Z] [44/79] red-cabbage-haslat: raw saved → output\raw\red-cabbage-haslat.png
+[2026-04-11T17:15:59.784Z] [44/79] red-cabbage-haslat: removing background...
+[2026-04-11T17:16:00.056Z] [44/79] red-cabbage-haslat: background removed (1369 KB)
+[2026-04-11T17:16:00.059Z] [44/79] red-cabbage-haslat: processed saved → output\processed\red-cabbage-haslat.png
+[2026-04-11T17:16:00.060Z] [44/79] red-cabbage-haslat: uploading to Supabase...
+[2026-04-11T17:16:01.764Z] [44/79] red-cabbage-haslat: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-cabbage-haslat.png
+[2026-04-11T17:16:01.767Z] [44/79] red-cabbage-haslat: metadata saved → output\processed\red-cabbage-haslat.json
+[2026-04-11T17:16:02.376Z] [45/79] white-cabbage-haslat: prompt built
+[2026-04-11T17:16:02.376Z] [45/79] white-cabbage-haslat: calling gpt-image-1...
+[2026-04-11T17:16:40.023Z] [45/79] white-cabbage-haslat: image received (1375 KB)
+[2026-04-11T17:16:40.026Z] [45/79] white-cabbage-haslat: raw saved → output\raw\white-cabbage-haslat.png
+[2026-04-11T17:16:40.027Z] [45/79] white-cabbage-haslat: removing background...
+[2026-04-11T17:16:40.286Z] [45/79] white-cabbage-haslat: background removed (1077 KB)
+[2026-04-11T17:16:40.289Z] [45/79] white-cabbage-haslat: processed saved → output\processed\white-cabbage-haslat.png
+[2026-04-11T17:16:40.289Z] [45/79] white-cabbage-haslat: uploading to Supabase...
+[2026-04-11T17:16:41.177Z] [45/79] white-cabbage-haslat: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/white-cabbage-haslat.png
+[2026-04-11T17:16:41.178Z] [45/79] white-cabbage-haslat: metadata saved → output\processed\white-cabbage-haslat.json
+[2026-04-11T17:16:41.784Z] [46/79] mushrooms-pack: prompt built
+[2026-04-11T17:16:41.785Z] [46/79] mushrooms-pack: calling gpt-image-1...
+[2026-04-11T17:17:19.320Z] [46/79] mushrooms-pack: image received (1422 KB)
+[2026-04-11T17:17:19.363Z] [46/79] mushrooms-pack: raw saved → output\raw\mushrooms-pack.png
+[2026-04-11T17:17:19.364Z] [46/79] mushrooms-pack: removing background...
+[2026-04-11T17:17:19.616Z] [46/79] mushrooms-pack: background removed (1232 KB)
+[2026-04-11T17:17:19.619Z] [46/79] mushrooms-pack: processed saved → output\processed\mushrooms-pack.png
+[2026-04-11T17:17:19.619Z] [46/79] mushrooms-pack: uploading to Supabase...
+[2026-04-11T17:17:20.975Z] [46/79] mushrooms-pack: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/mushrooms-pack.png
+[2026-04-11T17:17:20.979Z] [46/79] mushrooms-pack: metadata saved → output\processed\mushrooms-pack.json
+[2026-04-11T17:17:21.580Z] [47/79] pomelit: prompt built
+[2026-04-11T17:17:21.580Z] [47/79] pomelit: calling gpt-image-1...
+[2026-04-11T17:17:55.009Z] [47/79] pomelit: image received (1430 KB)
+[2026-04-11T17:17:55.012Z] [47/79] pomelit: raw saved → output\raw\pomelit.png
+[2026-04-11T17:17:55.013Z] [47/79] pomelit: removing background...
+[2026-04-11T17:17:55.257Z] [47/79] pomelit: background removed (1380 KB)
+[2026-04-11T17:17:55.260Z] [47/79] pomelit: processed saved → output\processed\pomelit.png
+[2026-04-11T17:17:55.260Z] [47/79] pomelit: uploading to Supabase...
+[2026-04-11T17:17:57.310Z] [47/79] pomelit: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/pomelit.png
+[2026-04-11T17:17:57.313Z] [47/79] pomelit: metadata saved → output\processed\pomelit.json
+[2026-04-11T17:17:57.924Z] [48/79] red-grapefruit: prompt built
+[2026-04-11T17:17:57.924Z] [48/79] red-grapefruit: calling gpt-image-1...
+[2026-04-11T17:18:33.264Z] [48/79] red-grapefruit: image received (1584 KB)
+[2026-04-11T17:18:33.267Z] [48/79] red-grapefruit: raw saved → output\raw\red-grapefruit.png
+[2026-04-11T17:18:33.267Z] [48/79] red-grapefruit: removing background...
+[2026-04-11T17:18:33.522Z] [48/79] red-grapefruit: background removed (1458 KB)
+[2026-04-11T17:18:33.525Z] [48/79] red-grapefruit: processed saved → output\processed\red-grapefruit.png
+[2026-04-11T17:18:33.526Z] [48/79] red-grapefruit: uploading to Supabase...
+[2026-04-11T17:18:35.148Z] [48/79] red-grapefruit: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-grapefruit.png
+[2026-04-11T17:18:35.150Z] [48/79] red-grapefruit: metadata saved → output\processed\red-grapefruit.json
+[2026-04-11T17:18:35.767Z] [49/79] orange: prompt built
+[2026-04-11T17:18:35.768Z] [49/79] orange: calling gpt-image-1...
+[2026-04-11T17:19:07.662Z] [49/79] orange: image received (1437 KB)
+[2026-04-11T17:19:07.665Z] [49/79] orange: raw saved → output\raw\orange.png
+[2026-04-11T17:19:07.666Z] [49/79] orange: removing background...
+[2026-04-11T17:19:07.919Z] [49/79] orange: background removed (1196 KB)
+[2026-04-11T17:19:07.922Z] [49/79] orange: processed saved → output\processed\orange.png
+[2026-04-11T17:19:07.922Z] [49/79] orange: uploading to Supabase...
+[2026-04-11T17:19:09.869Z] [49/79] orange: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/orange.png
+[2026-04-11T17:19:09.872Z] [49/79] orange: metadata saved → output\processed\orange.json
+[2026-04-11T17:19:10.485Z] [50/79] lemon: prompt built
+[2026-04-11T17:19:10.486Z] [50/79] lemon: calling gpt-image-1...
+[2026-04-11T17:19:51.412Z] [50/79] lemon: image received (1356 KB)
+[2026-04-11T17:19:51.416Z] [50/79] lemon: raw saved → output\raw\lemon.png
+[2026-04-11T17:19:51.416Z] [50/79] lemon: removing background...
+[2026-04-11T17:19:51.651Z] [50/79] lemon: background removed (1094 KB)
+[2026-04-11T17:19:51.654Z] [50/79] lemon: processed saved → output\processed\lemon.png
+[2026-04-11T17:19:51.654Z] [50/79] lemon: uploading to Supabase...
+[2026-04-11T17:19:53.599Z] [50/79] lemon: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/lemon.png
+[2026-04-11T17:19:53.601Z] [50/79] lemon: metadata saved → output\processed\lemon.json
+[2026-04-11T17:19:54.202Z] [51/79] clementine: prompt built
+[2026-04-11T17:19:54.203Z] [51/79] clementine: calling gpt-image-1...
+[2026-04-11T17:20:30.187Z] [51/79] clementine: image received (1413 KB)
+[2026-04-11T17:20:30.190Z] [51/79] clementine: raw saved → output\raw\clementine.png
+[2026-04-11T17:20:30.191Z] [51/79] clementine: removing background...
+[2026-04-11T17:20:30.416Z] [51/79] clementine: background removed (1041 KB)
+[2026-04-11T17:20:30.430Z] [51/79] clementine: processed saved → output\processed\clementine.png
+[2026-04-11T17:20:30.431Z] [51/79] clementine: uploading to Supabase...
+[2026-04-11T17:20:31.550Z] [51/79] clementine: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/clementine.png
+[2026-04-11T17:20:31.552Z] [51/79] clementine: metadata saved → output\processed\clementine.json
+[2026-04-11T17:20:32.157Z] [52/79] pomelo: prompt built
+[2026-04-11T17:20:32.158Z] [52/79] pomelo: calling gpt-image-1...
+[2026-04-11T17:21:05.232Z] [52/79] pomelo: image received (1484 KB)
+[2026-04-11T17:21:05.236Z] [52/79] pomelo: raw saved → output\raw\pomelo.png
+[2026-04-11T17:21:05.236Z] [52/79] pomelo: removing background...
+[2026-04-11T17:21:05.473Z] [52/79] pomelo: background removed (1226 KB)
+[2026-04-11T17:21:05.476Z] [52/79] pomelo: processed saved → output\processed\pomelo.png
+[2026-04-11T17:21:05.477Z] [52/79] pomelo: uploading to Supabase...
+[2026-04-11T17:21:07.306Z] [52/79] pomelo: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/pomelo.png
+[2026-04-11T17:21:07.308Z] [52/79] pomelo: metadata saved → output\processed\pomelo.json
+[2026-04-11T17:21:07.917Z] [53/79] watermelon: prompt built
+[2026-04-11T17:21:07.917Z] [53/79] watermelon: calling gpt-image-1...
+[2026-04-11T17:21:48.624Z] [53/79] watermelon: image received (1731 KB)
+[2026-04-11T17:21:48.628Z] [53/79] watermelon: raw saved → output\raw\watermelon.png
+[2026-04-11T17:21:48.628Z] [53/79] watermelon: removing background...
+[2026-04-11T17:21:48.883Z] [53/79] watermelon: background removed (1460 KB)
+[2026-04-11T17:21:48.886Z] [53/79] watermelon: processed saved → output\processed\watermelon.png
+[2026-04-11T17:21:48.887Z] [53/79] watermelon: uploading to Supabase...
+[2026-04-11T17:21:51.076Z] [53/79] watermelon: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/watermelon.png
+[2026-04-11T17:21:51.079Z] [53/79] watermelon: metadata saved → output\processed\watermelon.json
+[2026-04-11T17:21:51.685Z] [54/79] melon: prompt built
+[2026-04-11T17:21:51.686Z] [54/79] melon: calling gpt-image-1...
+[2026-04-11T17:22:39.935Z] [54/79] melon: image received (1537 KB)
+[2026-04-11T17:22:39.950Z] [54/79] melon: raw saved → output\raw\melon.png
+[2026-04-11T17:22:39.951Z] [54/79] melon: removing background...
+[2026-04-11T17:22:40.192Z] [54/79] melon: background removed (1332 KB)
+[2026-04-11T17:22:40.196Z] [54/79] melon: processed saved → output\processed\melon.png
+[2026-04-11T17:22:40.196Z] [54/79] melon: uploading to Supabase...
+[2026-04-11T17:22:42.183Z] [54/79] melon: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/melon.png
+[2026-04-11T17:22:42.196Z] [54/79] melon: metadata saved → output\processed\melon.json
+[2026-04-11T17:22:42.811Z] [55/79] kiwi: prompt built
+[2026-04-11T17:22:42.811Z] [55/79] kiwi: calling gpt-image-1...
+[2026-04-11T17:23:17.021Z] [55/79] kiwi: image received (1686 KB)
+[2026-04-11T17:23:17.024Z] [55/79] kiwi: raw saved → output\raw\kiwi.png
+[2026-04-11T17:23:17.024Z] [55/79] kiwi: removing background...
+[2026-04-11T17:23:17.261Z] [55/79] kiwi: background removed (1525 KB)
+[2026-04-11T17:23:17.302Z] [55/79] kiwi: processed saved → output\processed\kiwi.png
+[2026-04-11T17:23:17.303Z] [55/79] kiwi: uploading to Supabase...
+[2026-04-11T17:23:18.835Z] [55/79] kiwi: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/kiwi.png
+[2026-04-11T17:23:18.837Z] [55/79] kiwi: metadata saved → output\processed\kiwi.json
+[2026-04-11T17:23:19.438Z] [56/79] pear: prompt built
+[2026-04-11T17:23:19.441Z] [56/79] pear: calling gpt-image-1...
+[2026-04-11T17:23:52.984Z] [56/79] pear: image received (1467 KB)
+[2026-04-11T17:23:52.999Z] [56/79] pear: raw saved → output\raw\pear.png
+[2026-04-11T17:23:53.000Z] [56/79] pear: removing background...
+[2026-04-11T17:23:53.279Z] [56/79] pear: background removed (1429 KB)
+[2026-04-11T17:23:53.282Z] [56/79] pear: processed saved → output\processed\pear.png
+[2026-04-11T17:23:53.282Z] [56/79] pear: uploading to Supabase...
+[2026-04-11T17:23:55.332Z] [56/79] pear: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/pear.png
+[2026-04-11T17:23:55.335Z] [56/79] pear: metadata saved → output\processed\pear.json
+[2026-04-11T17:23:55.951Z] [57/79] chestnuts: prompt built
+[2026-04-11T17:23:55.951Z] [57/79] chestnuts: calling gpt-image-1...
+[2026-04-11T17:24:30.682Z] [57/79] chestnuts: image received (1489 KB)
+[2026-04-11T17:24:30.697Z] [57/79] chestnuts: raw saved → output\raw\chestnuts.png
+[2026-04-11T17:24:30.698Z] [57/79] chestnuts: removing background...
+[2026-04-11T17:24:30.946Z] [57/79] chestnuts: background removed (1077 KB)
+[2026-04-11T17:24:30.949Z] [57/79] chestnuts: processed saved → output\processed\chestnuts.png
+[2026-04-11T17:24:30.950Z] [57/79] chestnuts: uploading to Supabase...
+[2026-04-11T17:24:31.926Z] [57/79] chestnuts: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/chestnuts.png
+[2026-04-11T17:24:31.929Z] [57/79] chestnuts: metadata saved → output\processed\chestnuts.json
+[2026-04-11T17:24:32.532Z] [58/79] loquat: prompt built
+[2026-04-11T17:24:32.533Z] [58/79] loquat: calling gpt-image-1...
+[2026-04-11T17:25:09.367Z] [58/79] loquat: image received (1437 KB)
+[2026-04-11T17:25:09.371Z] [58/79] loquat: raw saved → output\raw\loquat.png
+[2026-04-11T17:25:09.371Z] [58/79] loquat: removing background...
+[2026-04-11T17:25:09.624Z] [58/79] loquat: background removed (1178 KB)
+[2026-04-11T17:25:09.628Z] [58/79] loquat: processed saved → output\processed\loquat.png
+[2026-04-11T17:25:09.628Z] [58/79] loquat: uploading to Supabase...
+[2026-04-11T17:25:11.598Z] [58/79] loquat: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/loquat.png
+[2026-04-11T17:25:11.605Z] [58/79] loquat: metadata saved → output\processed\loquat.json
+[2026-04-11T17:25:12.214Z] [59/79] israeli-pineapple: prompt built
+[2026-04-11T17:25:12.214Z] [59/79] israeli-pineapple: calling gpt-image-1...
+[2026-04-11T17:25:54.835Z] [59/79] israeli-pineapple: image received (1764 KB)
+[2026-04-11T17:25:54.838Z] [59/79] israeli-pineapple: raw saved → output\raw\israeli-pineapple.png
+[2026-04-11T17:25:54.838Z] [59/79] israeli-pineapple: removing background...
+[2026-04-11T17:25:55.116Z] [59/79] israeli-pineapple: background removed (1105 KB)
+[2026-04-11T17:25:55.119Z] [59/79] israeli-pineapple: processed saved → output\processed\israeli-pineapple.png
+[2026-04-11T17:25:55.119Z] [59/79] israeli-pineapple: uploading to Supabase...
+[2026-04-11T17:25:57.125Z] [59/79] israeli-pineapple: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/israeli-pineapple.png
+[2026-04-11T17:25:57.127Z] [59/79] israeli-pineapple: metadata saved → output\processed\israeli-pineapple.json
+[2026-04-11T17:25:57.734Z] [60/79] imported-large-pineapple: prompt built
+[2026-04-11T17:25:57.735Z] [60/79] imported-large-pineapple: calling gpt-image-1...
+[2026-04-11T17:26:44.973Z] [60/79] imported-large-pineapple: image received (1741 KB)
+[2026-04-11T17:26:44.976Z] [60/79] imported-large-pineapple: raw saved → output\raw\imported-large-pineapple.png
+[2026-04-11T17:26:44.976Z] [60/79] imported-large-pineapple: removing background...
+[2026-04-11T17:26:45.255Z] [60/79] imported-large-pineapple: background removed (995 KB)
+[2026-04-11T17:26:45.258Z] [60/79] imported-large-pineapple: processed saved → output\processed\imported-large-pineapple.png
+[2026-04-11T17:26:45.258Z] [60/79] imported-large-pineapple: uploading to Supabase...
+[2026-04-11T17:26:46.139Z] [60/79] imported-large-pineapple: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/imported-large-pineapple.png
+[2026-04-11T17:26:46.142Z] [60/79] imported-large-pineapple: metadata saved → output\processed\imported-large-pineapple.json
+[2026-04-11T17:26:46.750Z] [61/79] blueberries: prompt built
+[2026-04-11T17:26:46.752Z] [61/79] blueberries: calling gpt-image-1...
+[2026-04-11T17:27:25.609Z] [61/79] blueberries: image received (1687 KB)
+[2026-04-11T17:27:25.612Z] [61/79] blueberries: raw saved → output\raw\blueberries.png
+[2026-04-11T17:27:25.613Z] [61/79] blueberries: removing background...
+[2026-04-11T17:27:25.872Z] [61/79] blueberries: background removed (1491 KB)
+[2026-04-11T17:27:25.874Z] [61/79] blueberries: processed saved → output\processed\blueberries.png
+[2026-04-11T17:27:25.875Z] [61/79] blueberries: uploading to Supabase...
+[2026-04-11T17:27:27.008Z] [61/79] blueberries: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/blueberries.png
+[2026-04-11T17:27:27.010Z] [61/79] blueberries: metadata saved → output\processed\blueberries.json
+[2026-04-11T17:27:27.620Z] [62/79] banana: prompt built
+[2026-04-11T17:27:27.622Z] [62/79] banana: calling gpt-image-1...
+[2026-04-11T17:28:01.186Z] [62/79] banana: image received (1453 KB)
+[2026-04-11T17:28:01.189Z] [62/79] banana: raw saved → output\raw\banana.png
+[2026-04-11T17:28:01.190Z] [62/79] banana: removing background...
+[2026-04-11T17:28:01.447Z] [62/79] banana: background removed (1329 KB)
+[2026-04-11T17:28:01.450Z] [62/79] banana: processed saved → output\processed\banana.png
+[2026-04-11T17:28:01.450Z] [62/79] banana: uploading to Supabase...
+[2026-04-11T17:28:03.597Z] [62/79] banana: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/banana.png
+[2026-04-11T17:28:03.611Z] [62/79] banana: metadata saved → output\processed\banana.json
+[2026-04-11T17:28:04.215Z] [63/79] avocado: prompt built
+[2026-04-11T17:28:04.218Z] [63/79] avocado: calling gpt-image-1...
+[2026-04-11T17:28:49.252Z] [63/79] avocado: image received (1622 KB)
+[2026-04-11T17:28:49.255Z] [63/79] avocado: raw saved → output\raw\avocado.png
+[2026-04-11T17:28:49.256Z] [63/79] avocado: removing background...
+[2026-04-11T17:28:49.513Z] [63/79] avocado: background removed (1330 KB)
+[2026-04-11T17:28:49.516Z] [63/79] avocado: processed saved → output\processed\avocado.png
+[2026-04-11T17:28:49.516Z] [63/79] avocado: uploading to Supabase...
+[2026-04-11T17:28:51.206Z] [63/79] avocado: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/avocado.png
+[2026-04-11T17:28:51.208Z] [63/79] avocado: metadata saved → output\processed\avocado.json
+[2026-04-11T17:28:51.819Z] [64/79] premium-white-grapes: prompt built
+[2026-04-11T17:28:51.819Z] [64/79] premium-white-grapes: calling gpt-image-1...
+[2026-04-11T17:29:30.858Z] [64/79] premium-white-grapes: image received (1353 KB)
+[2026-04-11T17:29:30.872Z] [64/79] premium-white-grapes: raw saved → output\raw\premium-white-grapes.png
+[2026-04-11T17:29:30.872Z] [64/79] premium-white-grapes: removing background...
+[2026-04-11T17:29:31.133Z] [64/79] premium-white-grapes: background removed (989 KB)
+[2026-04-11T17:29:31.136Z] [64/79] premium-white-grapes: processed saved → output\processed\premium-white-grapes.png
+[2026-04-11T17:29:31.137Z] [64/79] premium-white-grapes: uploading to Supabase...
+[2026-04-11T17:29:32.638Z] [64/79] premium-white-grapes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/premium-white-grapes.png
+[2026-04-11T17:29:32.640Z] [64/79] premium-white-grapes: metadata saved → output\processed\premium-white-grapes.json
+[2026-04-11T17:29:33.248Z] [65/79] strawberry: prompt built
+[2026-04-11T17:29:33.248Z] [65/79] strawberry: calling gpt-image-1...
+[2026-04-11T17:30:16.886Z] [65/79] strawberry: image received (1708 KB)
+[2026-04-11T17:30:16.901Z] [65/79] strawberry: raw saved → output\raw\strawberry.png
+[2026-04-11T17:30:16.901Z] [65/79] strawberry: removing background...
+[2026-04-11T17:30:17.162Z] [65/79] strawberry: background removed (1457 KB)
+[2026-04-11T17:30:17.166Z] [65/79] strawberry: processed saved → output\processed\strawberry.png
+[2026-04-11T17:30:17.166Z] [65/79] strawberry: uploading to Supabase...
+[2026-04-11T17:30:19.712Z] [65/79] strawberry: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/strawberry.png
+[2026-04-11T17:30:19.715Z] [65/79] strawberry: metadata saved → output\processed\strawberry.json
+[2026-04-11T17:30:20.329Z] [66/79] white-potatoes: prompt built
+[2026-04-11T17:30:20.332Z] [66/79] white-potatoes: calling gpt-image-1...
+[2026-04-11T17:30:50.987Z] [66/79] white-potatoes: image received (1541 KB)
+[2026-04-11T17:30:50.990Z] [66/79] white-potatoes: raw saved → output\raw\white-potatoes.png
+[2026-04-11T17:30:50.991Z] [66/79] white-potatoes: removing background...
+[2026-04-11T17:30:51.260Z] [66/79] white-potatoes: background removed (1301 KB)
+[2026-04-11T17:30:51.262Z] [66/79] white-potatoes: processed saved → output\processed\white-potatoes.png
+[2026-04-11T17:30:51.263Z] [66/79] white-potatoes: uploading to Supabase...
+[2026-04-11T17:30:52.380Z] [66/79] white-potatoes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/white-potatoes.png
+[2026-04-11T17:30:52.383Z] [66/79] white-potatoes: metadata saved → output\processed\white-potatoes.json
+[2026-04-11T17:30:52.996Z] [67/79] red-potatoes: prompt built
+[2026-04-11T17:30:52.997Z] [67/79] red-potatoes: calling gpt-image-1...
+[2026-04-11T17:31:33.210Z] [67/79] red-potatoes: image received (1716 KB)
+[2026-04-11T17:31:33.225Z] [67/79] red-potatoes: raw saved → output\raw\red-potatoes.png
+[2026-04-11T17:31:33.225Z] [67/79] red-potatoes: removing background...
+[2026-04-11T17:31:33.477Z] [67/79] red-potatoes: background removed (1496 KB)
+[2026-04-11T17:31:33.480Z] [67/79] red-potatoes: processed saved → output\processed\red-potatoes.png
+[2026-04-11T17:31:33.481Z] [67/79] red-potatoes: uploading to Supabase...
+[2026-04-11T17:31:34.675Z] [67/79] red-potatoes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-potatoes.png
+[2026-04-11T17:31:34.677Z] [67/79] red-potatoes: metadata saved → output\processed\red-potatoes.json
+[2026-04-11T17:31:35.294Z] [68/79] red-pepper: prompt built
+[2026-04-11T17:31:35.295Z] [68/79] red-pepper: calling gpt-image-1...
+[2026-04-11T17:32:10.057Z] [68/79] red-pepper: image received (1470 KB)
+[2026-04-11T17:32:10.072Z] [68/79] red-pepper: raw saved → output\raw\red-pepper.png
+[2026-04-11T17:32:10.073Z] [68/79] red-pepper: removing background...
+[2026-04-11T17:32:10.333Z] [68/79] red-pepper: background removed (1292 KB)
+[2026-04-11T17:32:10.337Z] [68/79] red-pepper: processed saved → output\processed\red-pepper.png
+[2026-04-11T17:32:10.337Z] [68/79] red-pepper: uploading to Supabase...
+[2026-04-11T17:32:12.713Z] [68/79] red-pepper: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-pepper.png
+[2026-04-11T17:32:12.717Z] [68/79] red-pepper: metadata saved → output\processed\red-pepper.json
+[2026-04-11T17:32:13.328Z] [69/79] green-pepper: prompt built
+[2026-04-11T17:32:13.329Z] [69/79] green-pepper: calling gpt-image-1...
+[2026-04-11T17:32:48.499Z] [69/79] green-pepper: image received (1421 KB)
+[2026-04-11T17:32:48.503Z] [69/79] green-pepper: raw saved → output\raw\green-pepper.png
+[2026-04-11T17:32:48.503Z] [69/79] green-pepper: removing background...
+[2026-04-11T17:32:48.756Z] [69/79] green-pepper: background removed (1189 KB)
+[2026-04-11T17:32:48.758Z] [69/79] green-pepper: processed saved → output\processed\green-pepper.png
+[2026-04-11T17:32:48.759Z] [69/79] green-pepper: uploading to Supabase...
+[2026-04-11T17:32:49.674Z] [69/79] green-pepper: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/green-pepper.png
+[2026-04-11T17:32:49.677Z] [69/79] green-pepper: metadata saved → output\processed\green-pepper.json
+[2026-04-11T17:32:50.285Z] [70/79] yellow-pepper: prompt built
+[2026-04-11T17:32:50.288Z] [70/79] yellow-pepper: calling gpt-image-1...
+[2026-04-11T17:33:24.421Z] [70/79] yellow-pepper: image received (1332 KB)
+[2026-04-11T17:33:24.425Z] [70/79] yellow-pepper: raw saved → output\raw\yellow-pepper.png
+[2026-04-11T17:33:24.425Z] [70/79] yellow-pepper: removing background...
+[2026-04-11T17:33:24.694Z] [70/79] yellow-pepper: background removed (1103 KB)
+[2026-04-11T17:33:24.697Z] [70/79] yellow-pepper: processed saved → output\processed\yellow-pepper.png
+[2026-04-11T17:33:24.697Z] [70/79] yellow-pepper: uploading to Supabase...
+[2026-04-11T17:33:25.941Z] [70/79] yellow-pepper: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/yellow-pepper.png
+[2026-04-11T17:33:25.943Z] [70/79] yellow-pepper: metadata saved → output\processed\yellow-pepper.json
+[2026-04-11T17:33:26.558Z] [71/79] orange-pepper: prompt built
+[2026-04-11T17:33:26.559Z] [71/79] orange-pepper: calling gpt-image-1...
+[2026-04-11T17:34:02.618Z] [71/79] orange-pepper: image received (1382 KB)
+[2026-04-11T17:34:02.620Z] [71/79] orange-pepper: raw saved → output\raw\orange-pepper.png
+[2026-04-11T17:34:02.621Z] [71/79] orange-pepper: removing background...
+[2026-04-11T17:34:02.868Z] [71/79] orange-pepper: background removed (1236 KB)
+[2026-04-11T17:34:02.871Z] [71/79] orange-pepper: processed saved → output\processed\orange-pepper.png
+[2026-04-11T17:34:02.871Z] [71/79] orange-pepper: uploading to Supabase...
+[2026-04-11T17:34:04.871Z] [71/79] orange-pepper: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/orange-pepper.png
+[2026-04-11T17:34:04.884Z] [71/79] orange-pepper: metadata saved → output\processed\orange-pepper.json
+[2026-04-11T17:34:05.497Z] [72/79] rosemary: prompt built
+[2026-04-11T17:34:05.498Z] [72/79] rosemary: calling gpt-image-1...
+[2026-04-11T17:34:40.735Z] [72/79] rosemary: image received (1872 KB)
+[2026-04-11T17:34:40.749Z] [72/79] rosemary: raw saved → output\raw\rosemary.png
+[2026-04-11T17:34:40.749Z] [72/79] rosemary: removing background...
+[2026-04-11T17:34:41.050Z] [72/79] rosemary: background removed (1064 KB)
+[2026-04-11T17:34:41.053Z] [72/79] rosemary: processed saved → output\processed\rosemary.png
+[2026-04-11T17:34:41.053Z] [72/79] rosemary: uploading to Supabase...
+[2026-04-11T17:34:42.985Z] [72/79] rosemary: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/rosemary.png
+[2026-04-11T17:34:42.987Z] [72/79] rosemary: metadata saved → output\processed\rosemary.json
+[2026-04-11T17:34:43.604Z] [73/79] thyme: prompt built
+[2026-04-11T17:34:43.606Z] [73/79] thyme: calling gpt-image-1...
+[2026-04-11T17:35:23.676Z] [73/79] thyme: image received (1702 KB)
+[2026-04-11T17:35:23.679Z] [73/79] thyme: raw saved → output\raw\thyme.png
+[2026-04-11T17:35:23.679Z] [73/79] thyme: removing background...
+[2026-04-11T17:35:23.982Z] [73/79] thyme: background removed (1066 KB)
+[2026-04-11T17:35:23.985Z] [73/79] thyme: processed saved → output\processed\thyme.png
+[2026-04-11T17:35:23.985Z] [73/79] thyme: uploading to Supabase...
+[2026-04-11T17:35:25.383Z] [73/79] thyme: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/thyme.png
+[2026-04-11T17:35:25.386Z] [73/79] thyme: metadata saved → output\processed\thyme.json
+[2026-04-11T17:35:25.995Z] [74/79] oregano: prompt built
+[2026-04-11T17:35:25.995Z] [74/79] oregano: calling gpt-image-1...
+[2026-04-11T17:36:06.472Z] [74/79] oregano: image received (1637 KB)
+[2026-04-11T17:36:06.476Z] [74/79] oregano: raw saved → output\raw\oregano.png
+[2026-04-11T17:36:06.476Z] [74/79] oregano: removing background...
+[2026-04-11T17:36:06.860Z] [74/79] oregano: background removed (1227 KB)
+[2026-04-11T17:36:06.863Z] [74/79] oregano: processed saved → output\processed\oregano.png
+[2026-04-11T17:36:06.863Z] [74/79] oregano: uploading to Supabase...
+[2026-04-11T17:36:08.935Z] [74/79] oregano: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/oregano.png
+[2026-04-11T17:36:08.948Z] [74/79] oregano: metadata saved → output\processed\oregano.json
+[2026-04-11T17:36:09.554Z] [75/79] premium-black-grapes: prompt built
+[2026-04-11T17:36:09.555Z] [75/79] premium-black-grapes: calling gpt-image-1...
+[2026-04-11T17:36:42.757Z] [75/79] premium-black-grapes: image received (1436 KB)
+[2026-04-11T17:36:42.769Z] [75/79] premium-black-grapes: raw saved → output\raw\premium-black-grapes.png
+[2026-04-11T17:36:42.771Z] [75/79] premium-black-grapes: removing background...
+[2026-04-11T17:36:43.049Z] [75/79] premium-black-grapes: background removed (969 KB)
+[2026-04-11T17:36:43.051Z] [75/79] premium-black-grapes: processed saved → output\processed\premium-black-grapes.png
+[2026-04-11T17:36:43.052Z] [75/79] premium-black-grapes: uploading to Supabase...
+[2026-04-11T17:36:44.975Z] [75/79] premium-black-grapes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/premium-black-grapes.png
+[2026-04-11T17:36:44.978Z] [75/79] premium-black-grapes: metadata saved → output\processed\premium-black-grapes.json
+[2026-04-11T17:36:45.578Z] [76/79] premium-red-grapes: prompt built
+[2026-04-11T17:36:45.579Z] [76/79] premium-red-grapes: calling gpt-image-1...
+[2026-04-11T17:37:19.426Z] [76/79] premium-red-grapes: image received (1376 KB)
+[2026-04-11T17:37:19.440Z] [76/79] premium-red-grapes: raw saved → output\raw\premium-red-grapes.png
+[2026-04-11T17:37:19.440Z] [76/79] premium-red-grapes: removing background...
+[2026-04-11T17:37:19.685Z] [76/79] premium-red-grapes: background removed (970 KB)
+[2026-04-11T17:37:19.688Z] [76/79] premium-red-grapes: processed saved → output\processed\premium-red-grapes.png
+[2026-04-11T17:37:19.688Z] [76/79] premium-red-grapes: uploading to Supabase...
+[2026-04-11T17:37:21.100Z] [76/79] premium-red-grapes: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/premium-red-grapes.png
+[2026-04-11T17:37:21.104Z] [76/79] premium-red-grapes: metadata saved → output\processed\premium-red-grapes.json
+[2026-04-11T17:37:21.706Z] [77/79] red-apple: prompt built
+[2026-04-11T17:37:21.706Z] [77/79] red-apple: calling gpt-image-1...
+[2026-04-11T17:38:05.426Z] [77/79] red-apple: image received (1490 KB)
+[2026-04-11T17:38:05.429Z] [77/79] red-apple: raw saved → output\raw\red-apple.png
+[2026-04-11T17:38:05.430Z] [77/79] red-apple: removing background...
+[2026-04-11T17:38:05.703Z] [77/79] red-apple: background removed (1184 KB)
+[2026-04-11T17:38:05.706Z] [77/79] red-apple: processed saved → output\processed\red-apple.png
+[2026-04-11T17:38:05.706Z] [77/79] red-apple: uploading to Supabase...
+[2026-04-11T17:38:07.966Z] [77/79] red-apple: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/red-apple.png
+[2026-04-11T17:38:07.979Z] [77/79] red-apple: metadata saved → output\processed\red-apple.json
+[2026-04-11T17:38:08.594Z] [78/79] green-apple: prompt built
+[2026-04-11T17:38:08.594Z] [78/79] green-apple: calling gpt-image-1...
+[2026-04-11T17:38:45.585Z] [78/79] green-apple: image received (1502 KB)
+[2026-04-11T17:38:45.595Z] [78/79] green-apple: raw saved → output\raw\green-apple.png
+[2026-04-11T17:38:45.595Z] [78/79] green-apple: removing background...
+[2026-04-11T17:38:45.829Z] [78/79] green-apple: background removed (1355 KB)
+[2026-04-11T17:38:45.832Z] [78/79] green-apple: processed saved → output\processed\green-apple.png
+[2026-04-11T17:38:45.832Z] [78/79] green-apple: uploading to Supabase...
+[2026-04-11T17:38:47.958Z] [78/79] green-apple: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/green-apple.png
+[2026-04-11T17:38:47.973Z] [78/79] green-apple: metadata saved → output\processed\green-apple.json
+[2026-04-11T17:38:48.577Z] [79/79] golden-apple: prompt built
+[2026-04-11T17:38:48.579Z] [79/79] golden-apple: calling gpt-image-1...
+[2026-04-11T17:39:21.981Z] [79/79] golden-apple: image received (1354 KB)
+[2026-04-11T17:39:21.995Z] [79/79] golden-apple: raw saved → output\raw\golden-apple.png
+[2026-04-11T17:39:21.996Z] [79/79] golden-apple: removing background...
+[2026-04-11T17:39:22.248Z] [79/79] golden-apple: background removed (1460 KB)
+[2026-04-11T17:39:22.251Z] [79/79] golden-apple: processed saved → output\processed\golden-apple.png
+[2026-04-11T17:39:22.252Z] [79/79] golden-apple: uploading to Supabase...
+[2026-04-11T17:39:24.500Z] [79/79] golden-apple: uploaded → https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/golden-apple.png
+[2026-04-11T17:39:24.503Z] [79/79] golden-apple: metadata saved → output\processed\golden-apple.json
+[2026-04-11T17:39:24.518Z] ─────────────────────────────────────────────────────
+[2026-04-11T17:39:24.519Z] Done. 79 succeeded, 0 failed.
+[2026-04-11T17:39:24.519Z] Processed images ready at: output/processed/

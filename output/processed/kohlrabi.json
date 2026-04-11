@@ -1,0 +1,12 @@
+{
+  "slug": "kohlrabi",
+  "name": "קולורבי",
+  "model": "gpt-image-1",
+  "prompt": "E-commerce grocery catalog photo of fresh kohlrabi.\n\nARRANGEMENT: 2 fresh kohlrabi with trimmed stems, side by side. Items fill 70-80% of the frame and are touching or slightly overlapping — not floating apart.\n\nBACKGROUND: Plain white or very light neutral — completely clean and uniform. No props, no surface texture, no colored backdrop.\n\nPRODUCE SURFACE: Completely dry. No water droplets anywhere. No condensation. No dew. No wet shine. Natural matte or slightly waxy skin texture only.\n\nLIGHTING: Soft, diffused, even from above. No directional spotlight. No dramatic shadows. Very minimal soft shadow directly under the produce only.\n\nSTYLE: Real photograph of real fresh produce. Natural color variations and slight shape imperfections are correct. NOT a 3D render. NOT CGI. NOT an illustration. NOT an advertisement.\n\nSTRICTLY AVOID: water drops, condensation, dramatic shadows, reflective surfaces, decorative props, text, labels, watermarks, macro close-up, oversaturation, artificial perfection.",
+  "rawImagePath": "output\\raw\\kohlrabi.png",
+  "processedImagePath": "output\\processed\\kohlrabi.png",
+  "uploadedUrl": "https://czcldqhfshtoypkguist.supabase.co/storage/v1/object/public/product-images/kohlrabi.png",
+  "dbUpdated": false,
+  "status": "success",
+  "generatedAt": "2026-04-11T16:57:09.820Z"
+}

@@ -47,9 +47,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
+    let ignore = false;
+
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setIsLoading(false);
+      if (!ignore) {
+        setSession(data.session);
+        setIsLoading(false);
+      }
     });
 
     const {
@@ -59,7 +63,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      ignore = true;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   // Fetch role and last_login_at from profiles whenever session changes.

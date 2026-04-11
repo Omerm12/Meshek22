@@ -67,12 +67,14 @@ export function DeliveryGateModal() {
 
   // ── Fetch delivery data once on first open ─────────────────────────────────
   useEffect(() => {
-    if (!isOpen || deliveryData || dataLoading) return;
+    if (!isOpen || deliveryData) return;
+    let ignore = false;
     setDataLoading(true);
     fetchDeliveryGateData()
-      .then((data) => { setDeliveryData(data); setDataLoading(false); })
-      .catch(() => setDataLoading(false));
-  }, [isOpen, deliveryData, dataLoading]);
+      .then((data) => { if (!ignore) { setDeliveryData(data); setDataLoading(false); } })
+      .catch(() => { if (!ignore) setDataLoading(false); });
+    return () => { ignore = true; };
+  }, [isOpen, deliveryData]);
 
   // ── Focus input when modal opens ───────────────────────────────────────────
   useEffect(() => {

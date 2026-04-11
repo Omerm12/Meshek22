@@ -115,10 +115,9 @@ export function Header() {
               <Image
                 src="/images/heroes/logo.png"
                 alt="משק 22"
-                width={200}
+                width={153}
                 height={68}
-                className="h-[68px] object-contain"
-                style={{ width: "auto" }}
+                className="h-[68px] w-auto object-contain"
                 priority
               />
             </Link>

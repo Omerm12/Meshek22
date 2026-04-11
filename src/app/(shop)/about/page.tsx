@@ -60,7 +60,7 @@ export default function AboutPage() {
       {/* Hero */}
       <div className="relative bg-brand-800 text-white py-16 lg:py-24 overflow-hidden">
         <Image
-          src="/images/heroes/photo-meshek2.png"
+          src="/images/heroes/photo-meshek22.png"
           alt=""
           fill
           className="object-cover opacity-40"

@@ -1,0 +1,15 @@
+[2026-04-11T16:28:35.629Z] Pipeline start: 1 product(s) | model=gpt-image-1 | dry-run=false | upload=true | update-db=false
+[2026-04-11T16:28:35.629Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-11T16:28:35.631Z] [1/1] cucumber: prompt built
+[2026-04-11T16:28:35.631Z] [1/1] cucumber: calling gpt-image-1...
+[2026-04-11T16:29:10.466Z] [1/1] cucumber: image received (1618 KB)
+[2026-04-11T16:29:10.470Z] [1/1] cucumber: raw saved → output\raw\cucumber.png
+[2026-04-11T16:29:10.471Z] [1/1] cucumber: removing background...
+[2026-04-11T16:29:10.766Z] [1/1] cucumber: background removed (1380 KB)
+[2026-04-11T16:29:10.769Z] [1/1] cucumber: processed saved → output\processed\cucumber.png
+[2026-04-11T16:29:10.770Z] [1/1] cucumber: uploading to Supabase...
+[2026-04-11T16:29:12.028Z] ERROR: cucumber: Supabase upload failed 400: {"statusCode":"403","error":"Unauthorized","message":"Invalid Compact JWS"}
+[2026-04-11T16:29:12.031Z] ─────────────────────────────────────────────────────
+[2026-04-11T16:29:12.031Z] Done. 0 succeeded, 1 failed.
+[2026-04-11T16:29:12.031Z] Failed: cucumber
+[2026-04-11T16:29:12.032Z] Details: output/failed-products.json
