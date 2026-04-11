@@ -161,24 +161,30 @@ export function Header() {
                     {cat.label}
                   </Link>
 
-                  {/* Subcategory dropdown — centered under the parent button */}
+                  {/* Subcategory dropdown — centered under the parent button.
+                      The outer div uses pt-2 (transparent padding) instead of mt-2 so
+                      there is no gap between the trigger and panel: moving the mouse
+                      through the transparent bridge area keeps the parent onMouseLeave
+                      from firing, making the dropdown reliably hoverable. */}
                   {openDropdown === cat.slug && cat.children.length > 0 && (
-                    <div
-                      className="animate-dropdown-in absolute top-full mt-2 left-1/2 -translate-x-1/2 w-56 bg-white rounded-2xl border border-stone-100/80 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12),0_2px_8px_-2px_rgba(0,0,0,0.06)] py-2 z-50 overflow-hidden"
-                      role="menu"
-                      aria-label={`תת-קטגוריות ${cat.label}`}
-                    >
-                      {cat.children.map((child) => (
-                        <Link
-                          key={child.slug}
-                          href={child.href}
-                          onClick={() => setOpenDropdown(null)}
-                          className="block px-4 py-3 text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50/70 transition-colors duration-150"
-                          role="menuitem"
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-56 pt-2 z-50">
+                      <div
+                        className="animate-dropdown-in bg-white rounded-2xl border border-stone-100/80 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12),0_2px_8px_-2px_rgba(0,0,0,0.06)] py-2 overflow-hidden"
+                        role="menu"
+                        aria-label={`תת-קטגוריות ${cat.label}`}
+                      >
+                        {cat.children.map((child) => (
+                          <Link
+                            key={child.slug}
+                            href={child.href}
+                            onClick={() => setOpenDropdown(null)}
+                            className="block px-4 py-3 text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50/70 transition-colors duration-150"
+                            role="menuitem"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

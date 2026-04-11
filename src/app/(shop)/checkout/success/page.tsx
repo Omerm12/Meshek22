@@ -179,7 +179,7 @@ export default async function CheckoutSuccessPage({
               ההזמנות שלי
             </Link>
             <Link
-              href="/category/yerakot"
+              href="/vegetables"
               className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-full bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors"
             >
               המשיכו לקנות

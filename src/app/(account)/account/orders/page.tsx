@@ -59,7 +59,7 @@ export default async function OrdersPage() {
             ההזמנות שלכם יופיעו כאן לאחר שתבצעו את הרכישה הראשונה
           </p>
           <Link
-            href="/category/yerakot"
+            href="/vegetables"
             className="inline-flex items-center gap-2 h-9 px-5 rounded-full bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors"
           >
             התחילו לקנות

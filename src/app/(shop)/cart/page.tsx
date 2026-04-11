@@ -42,7 +42,7 @@ export default function CartPage() {
               תוך 24 שעות.
             </p>
             <Link
-              href="/category/yerakot"
+              href="/vegetables"
               className="inline-flex items-center gap-2.5 h-12 px-8 rounded-full bg-brand-600 text-white font-semibold hover:bg-brand-700 active:bg-brand-800 transition-colors shadow-sm"
             >
               <ArrowLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
@@ -123,14 +123,9 @@ export default function CartPage() {
                     className="flex gap-4 p-4 sm:p-5"
                   >
                     {/* Product image */}
-                    <Link
-                      href={`/product/${item.productId}`}
-                      className="shrink-0"
-                      tabIndex={-1}
-                      aria-hidden="true"
-                    >
+                    <div className="shrink-0">
                       <div
-                        className="h-20 w-20 rounded-xl relative overflow-hidden hover:opacity-90 transition-opacity"
+                        className="h-20 w-20 rounded-xl relative overflow-hidden"
                         style={{ backgroundColor: item.imageColor ?? "#f0fdf0" }}
                       >
                         {item.imageUrl ? (
@@ -148,17 +143,15 @@ export default function CartPage() {
                           </span>
                         )}
                       </div>
-                    </Link>
+                    </div>
 
                     {/* Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <Link href={`/product/${item.productId}`}>
-                            <p className="font-semibold text-gray-900 leading-snug hover:text-brand-700 transition-colors truncate">
-                              {item.productName}
-                            </p>
-                          </Link>
+                          <p className="font-semibold text-gray-900 leading-snug truncate">
+                            {item.productName}
+                          </p>
                           <p className="text-sm text-stone-400 mt-0.5">
                             {item.variantLabel}
                           </p>
@@ -219,7 +212,7 @@ export default function CartPage() {
             {/* Continue shopping */}
             <div>
               <Link
-                href="/category/yerakot"
+                href="/vegetables"
                 className="inline-flex items-center gap-1.5 text-sm text-brand-700 hover:text-brand-800 transition-colors"
               >
                 <ArrowLeft

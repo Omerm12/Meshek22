@@ -1,17 +1,13 @@
 import { cn } from "@/lib/utils/cn";
 import type { MockCategory } from "@/lib/data/mock";
 
-/**
- * Top-level parent categories get dedicated premium landing pages.
- * All other categories fall back to the generic /category/:slug route.
- */
 const PARENT_CATEGORY_HREFS: Record<string, string> = {
   vegetables: "/vegetables",
   fruits:     "/fruits",
 };
 
 function getCategoryHref(category: MockCategory): string {
-  return PARENT_CATEGORY_HREFS[category.slug] ?? `/category/${category.slug}`;
+  return PARENT_CATEGORY_HREFS[category.slug] ?? "/products";
 }
 
 interface CategoryCardProps {

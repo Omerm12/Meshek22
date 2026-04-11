@@ -264,7 +264,7 @@ export async function fetchProductsByCategory(
   const { data, error } = await supabase
     .from("products")
     .select(`
-      id, name, slug, description, is_featured, sort_order,
+      id, name, slug, description, image_url, is_featured, sort_order,
       categories!inner ( id, name, slug ),
       product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order )
     `)

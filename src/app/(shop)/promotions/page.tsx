@@ -180,7 +180,7 @@ export default function PromotionsPage() {
                   חיסכון {deal.savingPct}%
                 </span>
                 <a
-                  href="/category/yerakot"
+                  href="/vegetables"
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
                 >
                   לסל הקניות
@@ -222,7 +222,7 @@ export default function PromotionsPage() {
                 {!bundle.comingSoon && (
                   <div className="mt-4 pt-4 border-t border-stone-100">
                     <a
-                      href="/category/yerakot"
+                      href="/vegetables"
                       className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
                     >
                       הזמינו עכשיו
@@ -241,7 +241,7 @@ export default function PromotionsPage() {
             לא מצאתם את מה שחיפשתם? עיינו בכל המוצרים שלנו
           </p>
           <a
-            href="/category/yerakot"
+            href="/vegetables"
             className="inline-flex items-center gap-2 h-11 px-6 rounded-full bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors shadow-sm"
           >
             לכל הירקות והפירות

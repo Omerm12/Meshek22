@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -74,10 +73,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
       )}
     >
       {/* ── Image ─────────────────────────────────────────────────────────── */}
-      <Link
-        href={`/product/${product.slug}`}
-        tabIndex={-1}
-        aria-hidden="true"
+      <div
         style={imageBg}
         className={cn(
           // Mobile: square thumbnail on the right, stone-50 bg so object-contain image has a clean backdrop
@@ -135,7 +131,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             {qty}
           </span>
         )}
-      </Link>
+      </div>
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
       <div
@@ -153,16 +149,14 @@ export function ProductCard({ product, className, priority = false }: ProductCar
         </p>
 
         {/* Name */}
-        <Link href={`/product/${product.slug}`}>
-          <h3
-            className={cn(
-              "font-bold text-gray-900 leading-snug hover:text-brand-700 transition-colors duration-200",
-              "text-sm md:text-[15px]",
-            )}
-          >
-            {product.name}
-          </h3>
-        </Link>
+        <h3
+          className={cn(
+            "font-bold text-gray-900 leading-snug",
+            "text-sm md:text-[15px]",
+          )}
+        >
+          {product.name}
+        </h3>
 
         {/* Variant — mobile: selected label only; desktop: interactive selector */}
         <p className="text-xs text-stone-400 md:hidden truncate">
