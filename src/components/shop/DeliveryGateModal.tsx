@@ -141,18 +141,18 @@ export function DeliveryGateModal() {
         aria-label="בדיקת אזור משלוח"
         className={cn(
           "fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 mx-auto",
-          "w-full max-w-[520px] bg-white rounded-2xl shadow-2xl",
+          "w-full max-w-[600px] bg-white rounded-2xl shadow-2xl",
           "flex flex-col overflow-hidden"
         )}
       >
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b border-stone-100">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
-              <Truck className="h-5 w-5 text-brand-600" aria-hidden="true" />
+        <div className="flex items-start justify-between px-8 pt-8 pb-6 border-b border-stone-100">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-xl bg-brand-50 flex items-center justify-center shrink-0 mt-0.5">
+              <Truck className="h-6 w-6 text-brand-600" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-gray-900 leading-tight">
+              <h2 className="text-xl font-bold text-gray-900 leading-snug">
                 לפני שנתחיל, נבדוק אם המשלוחים מגיעים אליכם
               </h2>
             </div>
@@ -160,23 +160,23 @@ export function DeliveryGateModal() {
           <button
             onClick={closeGate}
             aria-label="סגור"
-            className="h-9 w-9 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0 ms-2"
+            className="h-9 w-9 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0 ms-3 mt-0.5"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* ── Body ── */}
-        <div className="px-7 py-6">
-          <p className="text-sm text-stone-500 leading-relaxed mb-5">
+        <div className="px-8 py-7">
+          <p className="text-base text-stone-500 leading-relaxed mb-6">
             אנחנו רוצים לוודא שאפשר לספק משלוח לאזור שלכם לפני תחילת הקנייה.
           </p>
 
           {/* Input row */}
-          <div className="flex gap-2.5">
+          <div className="flex gap-3">
             <div className="relative flex-1">
               <Search
-                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                className="absolute top-1/2 -translate-y-1/2 start-4 h-5 w-5 text-stone-400 pointer-events-none"
                 aria-hidden="true"
               />
               <input
@@ -193,8 +193,8 @@ export function DeliveryGateModal() {
                 dir="rtl"
                 aria-label="שם היישוב"
                 className={cn(
-                  "w-full h-12 bg-white border border-stone-200 rounded-xl ps-10 pe-4",
-                  "text-sm text-gray-900 placeholder:text-stone-400",
+                  "w-full h-14 bg-white border border-stone-200 rounded-xl ps-12 pe-4",
+                  "text-base text-gray-900 placeholder:text-stone-400",
                   "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
                   "disabled:opacity-50 transition-shadow"
                 )}
@@ -204,14 +204,14 @@ export function DeliveryGateModal() {
               onClick={handleCheck}
               disabled={dataLoading || !query.trim()}
               className={cn(
-                "h-12 px-5 rounded-xl bg-brand-600 text-white font-semibold text-sm",
+                "h-14 px-7 rounded-xl bg-brand-600 text-white font-semibold text-base",
                 "hover:bg-brand-700 active:bg-brand-800",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 "transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
               )}
             >
               {dataLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
               ) : (
                 "בדיקה"
               )}
@@ -220,7 +220,7 @@ export function DeliveryGateModal() {
 
           {/* Result area */}
           {result && (
-            <div className="mt-4">
+            <div className="mt-5">
               {result.status === "found" ? (
                 <FoundResult zone={result.zone} onConfirm={handleConfirm} />
               ) : (
@@ -294,7 +294,7 @@ function FoundResult({
       <button
         onClick={onConfirm}
         className={cn(
-          "w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm",
+          "w-full h-13 py-3.5 rounded-xl bg-brand-600 text-white font-semibold text-base",
           "hover:bg-brand-700 active:bg-brand-800 transition-colors cursor-pointer"
         )}
       >

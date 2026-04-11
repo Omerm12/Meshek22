@@ -3,24 +3,20 @@ import { Container } from "@/components/ui/Container";
 
 const FOOTER_LINKS = {
   shop: [
-    { label: "ירקות", href: "/vegetables" },
-    { label: "פירות", href: "/fruits" },
-    { label: "ירקות שורש", href: "/vegetables?sub=root-vegetables" },
-    { label: "עשבי תיבול", href: "/vegetables?sub=herbs" },
-    { label: "פירות הדר", href: "/fruits?sub=citrus-fruits" },
-    { label: "פירות אורגניים", href: "/fruits?sub=organic-fruits" },
+    { label: "כל המוצרים",    href: "/products" },
+    { label: "ירקות",         href: "/vegetables" },
+    { label: "פירות",         href: "/fruits" },
+    { label: "ירקות שורש",    href: "/vegetables?sub=root-vegetables" },
+    { label: "עשבי תיבול",    href: "/vegetables?sub=herbs" },
+    { label: "פירות הדר",     href: "/fruits?sub=citrus-fruits" },
   ],
   info: [
-    { label: "אודות משק 22", href: "/about" },
-    { label: "אזורי משלוח", href: "/delivery-areas" },
-    { label: "שאלות נפוצות", href: "/faq" },
-    { label: "מדיניות החזרות", href: "/returns" },
-    { label: "תנאי שימוש", href: "/terms" },
-    { label: "מדיניות פרטיות", href: "/privacy" },
+    { label: "אודות משק 22",    href: "/about" },
+    { label: "אזורי משלוח",     href: "/delivery-areas" },
+    { label: "תנאי שימוש",      href: "/terms" },
+    { label: "מדיניות פרטיות",  href: "/privacy" },
   ],
   account: [
-    { label: "כניסה לחשבון", href: "/login" },
-    { label: "הרשמה", href: "/register" },
     { label: "ההזמנות שלי", href: "/account/orders" },
     { label: "הפרופיל שלי", href: "/account" },
   ],
@@ -51,79 +47,34 @@ export function Footer() {
               {/* Contact */}
               <div className="flex flex-col gap-2 text-sm">
                 <a
-                  href="tel:*3722"
+                  href="tel:0508863030"
                   className="flex items-center gap-2 hover:text-brand-400 transition-colors"
                 >
                   <Phone className="h-4 w-4 text-brand-500 shrink-0" />
-                  *3722 (א׳–ו׳, 07:00–18:00)
+                  050-8863030
                 </a>
                 <a
-                  href="mailto:hello@meshek22.co.il"
+                  href="mailto:ysmeshek22@gmail.com"
                   className="flex items-center gap-2 hover:text-brand-400 transition-colors"
                 >
                   <Mail className="h-4 w-4 text-brand-500 shrink-0" />
-                  hello@meshek22.co.il
+                  ysmeshek22@gmail.com
                 </a>
                 <span className="flex items-center gap-2 text-stone-500">
                   <MapPin className="h-4 w-4 text-brand-500 shrink-0" />
-                  משלוחים לכל הארץ
+                  מושב ינון
                 </span>
               </div>
 
-              {/* Social */}
+              {/* WhatsApp contact */}
               <div className="flex items-center gap-3 mt-5">
                 <a
-                  href="https://instagram.com"
+                  href="https://wa.me/9720508863030"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="עמוד האינסטגרם שלנו"
+                  aria-label="שלחו הודעת וואטסאפ"
                   className="h-9 w-9 flex items-center justify-center rounded-full bg-stone-800 hover:bg-brand-600 transition-colors"
                 >
-                  {/* Instagram SVG */}
-                  <svg
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-                  </svg>
-                </a>
-                <a
-                  href="https://facebook.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="עמוד הפייסבוק שלנו"
-                  className="h-9 w-9 flex items-center justify-center rounded-full bg-stone-800 hover:bg-brand-600 transition-colors"
-                >
-                  {/* Facebook SVG */}
-                  <svg
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-                  </svg>
-                </a>
-                <a
-                  href="https://wa.me/972500000000"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="וואטסאפ שלנו"
-                  className="h-9 w-9 flex items-center justify-center rounded-full bg-stone-800 hover:bg-brand-600 transition-colors"
-                >
-                  {/* WhatsApp SVG */}
                   <svg
                     className="h-4 w-4"
                     viewBox="0 0 24 24"

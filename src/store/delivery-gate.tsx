@@ -25,6 +25,8 @@ import {
 } from "react";
 import type { CartLineItem } from "@/store/cart";
 
+// sessionStorage: resets when the browser tab/session ends, so the modal
+// reappears on every new visit while not repeating during the same session.
 const STORAGE_KEY = "meshek22_delivery_confirmed";
 
 export type PendingCartItem = Omit<CartLineItem, "quantity"> & { quantity?: number };
@@ -64,14 +66,16 @@ export function DeliveryGateProvider({ children }: { children: ReactNode }) {
   // Ref mirrors pendingItem for stable closure access inside callbacks
   const pendingRef = useRef<PendingCartItem | null>(null);
 
-  // Restore confirmed flag from localStorage on mount (client only)
+  // Restore confirmed flag from sessionStorage on mount (client only).
+  // sessionStorage resets when the browser session ends, so the gate reappears
+  // on every new visit while staying suppressed during the same session.
   useEffect(() => {
     try {
-      if (localStorage.getItem(STORAGE_KEY) === "true") {
+      if (sessionStorage.getItem(STORAGE_KEY) === "true") {
         setIsConfirmed(true);
       }
     } catch {
-      // localStorage unavailable (SSR guard, private browsing policy, etc.)
+      // sessionStorage unavailable (SSR guard, private browsing policy, etc.)
     }
   }, []);
 
@@ -80,7 +84,7 @@ export function DeliveryGateProvider({ children }: { children: ReactNode }) {
     // hasn't synced yet on first render after localStorage was set).
     let confirmed = isConfirmed;
     try {
-      confirmed = confirmed || localStorage.getItem(STORAGE_KEY) === "true";
+      confirmed = confirmed || sessionStorage.getItem(STORAGE_KEY) === "true";
     } catch {}
 
     if (confirmed) return false; // Gate not needed — proceed with direct add
@@ -100,9 +104,9 @@ export function DeliveryGateProvider({ children }: { children: ReactNode }) {
 
   const confirmAndAdd = useCallback(
     (addItemFn: (item: PendingCartItem) => void) => {
-      // Mark confirmed and persist
+      // Mark confirmed and persist to sessionStorage
       setIsConfirmed(true);
-      try { localStorage.setItem(STORAGE_KEY, "true"); } catch {}
+      try { sessionStorage.setItem(STORAGE_KEY, "true"); } catch {}
 
       // Add the waiting item
       const item = pendingRef.current;
