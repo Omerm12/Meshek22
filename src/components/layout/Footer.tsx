@@ -15,6 +15,7 @@ const FOOTER_LINKS = {
     { label: "אזורי משלוח",     href: "/delivery-areas" },
     { label: "תנאי שימוש",      href: "/terms" },
     { label: "מדיניות פרטיות",  href: "/privacy" },
+    { label: "הצהרת נגישות",   href: "/accessibility" },
   ],
   account: [
     { label: "ההזמנות שלי", href: "/account/orders" },
