@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, Phone, Mail, Loader2 } from "lucide-react";
+import { User, Phone, Mail, Loader2, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { recordLogin } from "@/app/actions/auth";
+import { recordLogin, finalizeNewUserProfile } from "@/app/actions/auth";
 import { registerInfoSchema, otpVerifySchema } from "@/lib/validations/auth";
 import type { RegisterInfoFormData, OtpVerifyFormData } from "@/lib/validations/auth";
 
@@ -30,11 +30,14 @@ interface RegisterFormProps {
  * "info"  → User enters phone + full name + email (all collected BEFORE OTP is sent).
  *            No Supabase session exists at this point — closing the modal is fully safe.
  *
- * "otp"   → User enters the 6-digit SMS code. On success the profile is saved
- *            immediately in the same handler. If the profile save fails we sign out
- *            to prevent ghost-auth state. No separate "profile" phase exists.
+ * "otp"     → User enters the 6-digit SMS code. On success the profile is saved
+ *              immediately in the same handler. If the profile save fails we sign out
+ *              to prevent ghost-auth state. No separate "profile" phase exists.
+ *
+ * "blocked" → SMS rate limit hit on the initial send. Shows retry time and prompts
+ *              the user to come back later. No email fallback in registration.
  */
-type Phase = "info" | "otp";
+type Phase = "info" | "otp" | "blocked";
 
 /** Convert Israeli local format to E.164: 0501234567 → +972501234567 */
 function toE164(phone: string): string {
@@ -55,6 +58,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   const [pendingProfile, setPendingProfile] = useState<{ full_name: string; email: string } | null>(null);
   const [serverError, setServerError] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [blockedRetryAt, setBlockedRetryAt] = useState<string | null>(null);
 
   const infoForm = useForm<RegisterInfoFormData>({
     resolver: zodResolver(registerInfoSchema),
@@ -92,16 +96,26 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       return;
     }
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
+    const otpRes = await fetch("/api/auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: normalized, isRegistration: true }),
+    });
 
-    if (error) {
-      if (error.message.includes("rate") || error.message.includes("too many")) {
-        setServerError("יותר מדי ניסיונות. אנא המתינו מספר דקות.");
-      } else if (error.message.includes("invalid") && error.message.includes("phone")) {
-        setServerError("מספר הטלפון אינו תקין.");
+    if (!otpRes.ok) {
+      if (otpRes.status === 429) {
+        const body = await otpRes.json().catch(() => ({}));
+        if (body.blocked) {
+          setBlockedRetryAt(body.retryAt ?? null);
+          setE164Phone(normalized);
+          setDisplayPhone(data.phone);
+          setPhase("blocked");
+          return;
+        }
+        setServerError("אנא המתינו מספר שניות לפני שליחה חוזרת.");
       } else {
-        setServerError("שגיאה בשליחת הקוד. נסו שוב.");
+        const body = await otpRes.json().catch(() => ({}));
+        setServerError(body.error ?? "שגיאה בשליחת הקוד. נסו שוב.");
       }
       return;
     }
@@ -156,16 +170,6 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     // Save profile immediately. If anything fails from here we sign out to prevent
     // the user from being left in an authenticated-but-incomplete state.
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      await supabase.auth.signOut();
-      setServerError("שגיאה בכניסה. נסו שוב.");
-      return;
-    }
-
     const profile = pendingProfile;
     if (!profile) {
       // Should never happen (pendingProfile is always set before reaching OTP phase),
@@ -176,24 +180,18 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       return;
     }
 
-    // Write name to auth user metadata (for display in JWT / session).
-    await supabase.auth.updateUser({ data: { full_name: profile.full_name } });
-
-    // Write to profiles table (DB-backed, authoritative source for name + email).
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        full_name: profile.full_name,
-        email: profile.email,
-        phone: displayPhone,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    // Finalize the profile via server action (uses admin client — bypasses RLS,
+    // syncs email to auth.users, writes name to JWT metadata).
+    const { error: profileError } = await finalizeNewUserProfile({
+      fullName: profile.full_name,
+      email: profile.email,
+      displayPhone,
+    });
 
     if (profileError) {
       // Sign out to prevent ghost-auth: user has a session but no completed profile.
       await supabase.auth.signOut();
-      setServerError("שגיאה בשמירת הפרטים. נסו שוב.");
+      setServerError(profileError);
       return;
     }
 
@@ -203,12 +201,29 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   const handleResend = async () => {
     if (cooldown > 0) return;
     setServerError("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({ phone: e164Phone });
-    if (error) {
-      setServerError("שגיאה בשליחת הקוד. נסו שוב.");
+
+    const res = await fetch("/api/auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: e164Phone, isRegistration: true }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        const body = await res.json().catch(() => ({}));
+        if (body.blocked) {
+          setBlockedRetryAt(body.retryAt ?? null);
+          setPhase("blocked");
+          return;
+        }
+        setServerError("אנא המתינו מספר שניות לפני שליחה חוזרת.");
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setServerError(body.error ?? "שגיאה בשליחת הקוד. נסו שוב.");
+      }
       return;
     }
+
     setCooldown(60);
     otpForm.reset();
   };
@@ -224,6 +239,50 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       router.refresh();
     }
   };
+
+  // ── Blocked phase (SMS rate limit hit) ───────────────────────────────────────
+  if (phase === "blocked") {
+    const retryTime = blockedRetryAt
+      ? new Date(blockedRetryAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })
+      : null;
+
+    return (
+      <div>
+        {!onSuccess && (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">הרשמה</h1>
+          </>
+        )}
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 flex gap-3">
+          <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="text-sm text-amber-800">
+            <p className="font-semibold mb-1">שליחת קודי SMS הוגבלה זמנית</p>
+            <p>
+              שלחתם מספר קודי אימות בזמן קצר. אנא המתינו ונסו שוב
+              {retryTime ? (
+                <> לאחר השעה <span dir="ltr" className="font-semibold">{retryTime}</span>.</>
+              ) : (
+                " מאוחר יותר."
+              )}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setPhase("info");
+            setServerError("");
+            setBlockedRetryAt(null);
+          }}
+          className="mt-5 w-full h-11 rounded-xl border border-stone-200 bg-white text-gray-700 font-semibold text-sm hover:bg-stone-50 transition-colors"
+        >
+          חזרה לטופס ההרשמה
+        </button>
+      </div>
+    );
+  }
 
   // ── Info step (phone + name + email) ─────────────────────────────────────────
   if (phase === "info") {

@@ -25,12 +25,24 @@ export const registerInfoSchema = z.object({
   email: z.string().email("כתובת אימייל לא תקינה"),
 });
 
-/** Step 2 — OTP code verification */
+/** Step 2 — SMS OTP code verification (6 digits) */
 export const otpVerifySchema = z.object({
   token: z
     .string()
     .length(6, "קוד האימות חייב להכיל 6 ספרות")
     .regex(/^\d{6}$/, "קוד האימות חייב להכיל ספרות בלבד"),
+});
+
+/**
+ * Email OTP code verification (8 digits).
+ * Supabase Auth is currently configured to issue 8-digit email OTP codes.
+ * SMS OTP remains 6 digits and uses otpVerifySchema above.
+ */
+export const emailOtpVerifySchema = z.object({
+  token: z
+    .string()
+    .length(8, "קוד האימות חייב להכיל 8 ספרות")
+    .regex(/^\d{8}$/, "קוד האימות חייב להכיל ספרות בלבד"),
 });
 
 /**
@@ -82,6 +94,7 @@ export const emailOtpSchema = z.object({
 export type PhoneOtpFormData = z.infer<typeof phoneOtpSchema>;
 export type RegisterInfoFormData = z.infer<typeof registerInfoSchema>;
 export type OtpVerifyFormData = z.infer<typeof otpVerifySchema>;
+export type EmailOtpVerifyFormData = z.infer<typeof emailOtpVerifySchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type EmailOtpFormData = z.infer<typeof emailOtpSchema>;

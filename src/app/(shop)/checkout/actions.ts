@@ -2,6 +2,11 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database";
+import {
+  sendCustomerOrderConfirmation,
+  sendAdminNewOrderNotification,
+} from "@/lib/email/service";
+import type { OrderEmailData } from "@/lib/email/types";
 
 interface CartItemInput {
   variantId: string;
@@ -293,6 +298,60 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       error: paymentUpdateError.message,
     });
   }
+
+  // ── Transactional emails ───────────────────────────────────────────────────
+  // Build the shared payload from data already in scope — no extra DB query needed.
+  const emailData: OrderEmailData = {
+    orderId,
+    orderNumber,
+    createdAt: new Date().toISOString(),
+    customerName: customerName,
+    customerEmail: customerEmail,
+    customerPhone: customerPhone,
+    addressStreet: addressStreet,
+    addressHouseNumber: addressHouseNumber,
+    addressApartment: addressApartment,
+    addressCity: addressCity,
+    deliveryNotes: deliveryNotes,
+    items: lineItems.map((item) => {
+      const snap = item.snapshot as {
+        product_name: string;
+        variant_label: string;
+        price_agorot: number;
+      };
+      return {
+        productName: snap.product_name,
+        variantLabel: snap.variant_label,
+        quantity: item.quantity,
+        unitPriceAgorot: item.unitPriceAgorot,
+        totalPriceAgorot: item.totalPriceAgorot,
+      };
+    }),
+    subtotalAgorot: subtotalAgorot,
+    deliveryFeeAgorot: deliveryFeeAgorot,
+    totalAgorot: totalAgorot,
+    paymentMethod: "card_mock",
+    orderStatus: "confirmed",
+  };
+
+  // Fire both emails concurrently. Email failure never blocks the order response.
+  void Promise.all([
+    sendCustomerOrderConfirmation(emailData),
+    sendAdminNewOrderNotification(emailData),
+  ]).then(([customerResult, adminResult]) => {
+    if (!customerResult.ok) {
+      console.error("[createOrder] customer confirmation email failed", {
+        orderId,
+        error: customerResult.error,
+      });
+    }
+    if (!adminResult.ok) {
+      console.error("[createOrder] admin notification email failed", {
+        orderId,
+        error: adminResult.error,
+      });
+    }
+  });
 
   // Clear the user's DB cart server-side as part of the order completion response.
   // Belt-and-suspenders: client-side clearCart() also fires after this returns.
