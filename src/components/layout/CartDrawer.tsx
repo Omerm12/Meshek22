@@ -31,11 +31,6 @@ export function CartDrawer() {
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
-  // Delivery fee hint (simplified: show cheapest zone)
-  const MIN_FREE_DELIVERY = 15000; // 150 ₪ (center-local zone)
-  const remainingForFree = Math.max(0, MIN_FREE_DELIVERY - subtotalAgorot);
-  const progress = Math.min(100, (subtotalAgorot / MIN_FREE_DELIVERY) * 100);
-
   return (
     <>
       {/* Backdrop */}
@@ -79,33 +74,6 @@ export function CartDrawer() {
             <X className="h-4 w-4" />
           </button>
         </div>
-
-        {/* ── Free delivery progress ── */}
-        {subtotalAgorot > 0 && (
-          <div className="px-5 py-3 bg-brand-50 border-b border-brand-100">
-            {remainingForFree > 0 ? (
-              <p className="text-xs text-brand-700 mb-1.5">
-                עוד{" "}
-                <strong>{formatPrice(remainingForFree)}</strong>{" "}
-                ותגיעו למשלוח חינם באזורי המרכז!
-              </p>
-            ) : (
-              <p className="text-xs text-brand-700 font-semibold mb-1.5">
-                🎉 כל הכבוד! המשלוח שלכם חינם
-              </p>
-            )}
-            <div className="h-1.5 rounded-full bg-brand-200 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-brand-500 transition-all duration-500"
-                style={{ width: `${progress}%` }}
-                role="progressbar"
-                aria-valuenow={progress}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </div>
-          </div>
-        )}
 
         {/* ── Items list ── */}
         <div className="flex-1 overflow-y-auto">
@@ -220,8 +188,8 @@ export function CartDrawer() {
                 "transition-all duration-200 shadow-sm hover:shadow"
               )}
             >
-              <ArrowLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
               המשיכו לתשלום
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </a>
 
             <button
@@ -250,8 +218,8 @@ function EmptyCart({ onClose }: { onClose: () => void }) {
         הוסיפו ירקות ופירות טריים ונתחיל לארוז
       </p>
       <Button variant="primary" size="md" onClick={onClose}>
-        <ShoppingCart className="h-4 w-4" />
         התחילו לקנות
+        <ShoppingCart className="h-4 w-4" />
       </Button>
     </div>
   );

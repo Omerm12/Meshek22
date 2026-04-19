@@ -39,7 +39,9 @@ export const deliveryZoneSchema = z.object({
   min_order_shekel: z
     .number({ message: "נא להזין מספר" })
     .min(0, "מינימום הזמנה לא יכול להיות שלילי")
-    .max(99999.99, "מינימום הזמנה גבוה מדי"),
+    .max(99999.99, "מינימום הזמנה גבוה מדי")
+    .nullable()
+    .optional(),
   free_delivery_threshold_shekel: z
     .number({ message: "נא להזין מספר" })
     .min(0.01, "סף משלוח חינם חייב להיות גדול מ-₪0")

@@ -79,7 +79,7 @@ export function DeliveryZoneForm({
       slug:                             defaultValues?.slug ?? "",
       description:                      defaultValues?.description ?? "",
       delivery_fee_shekel:              defaultValues?.delivery_fee_shekel ?? 0,
-      min_order_shekel:                 defaultValues?.min_order_shekel ?? 0,
+      min_order_shekel:                 defaultValues?.min_order_shekel ?? null,
       free_delivery_threshold_shekel:   defaultValues?.free_delivery_threshold_shekel ?? null,
       delivery_days:                    defaultValues?.delivery_days ?? [
         "ראשון", "שני", "שלישי", "רביעי", "חמישי",
@@ -105,7 +105,7 @@ export function DeliveryZoneForm({
     fd.set("slug",                 data.slug);
     fd.set("description",          data.description ?? "");
     fd.set("delivery_fee_shekel",  String(data.delivery_fee_shekel));
-    fd.set("min_order_shekel",     String(data.min_order_shekel));
+    fd.set("min_order_shekel",     data.min_order_shekel != null ? String(data.min_order_shekel) : "");
     fd.set(
       "free_delivery_threshold_shekel",
       data.free_delivery_threshold_shekel != null
@@ -207,24 +207,34 @@ export function DeliveryZoneForm({
         <Field
           label="מינימום הזמנה (₪)"
           id="min_order_shekel"
-          required
+          hint="השאירו ריק אם אין מינימום הזמנה"
           error={errors.min_order_shekel?.message}
         >
           <div className="relative">
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">
               ₪
             </span>
-            <input
-              id="min_order_shekel"
-              type="number"
-              step="0.01"
-              min="0"
-              dir="ltr"
-              {...register("min_order_shekel", { valueAsNumber: true })}
-              className={[
-                errors.min_order_shekel ? errorInputClass : inputClass,
-                "pr-8",
-              ].join(" ")}
+            <Controller
+              name="min_order_shekel"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="min_order_shekel"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  dir="ltr"
+                  placeholder="ריק = ללא מינימום"
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))
+                  }
+                  className={[
+                    errors.min_order_shekel ? errorInputClass : inputClass,
+                    "pr-8",
+                  ].join(" ")}
+                />
+              )}
             />
           </div>
         </Field>

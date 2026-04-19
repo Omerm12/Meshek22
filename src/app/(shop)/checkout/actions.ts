@@ -186,12 +186,12 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     subtotalAgorot >= zoneRow.free_delivery_threshold_agorot;
   const deliveryFeeAgorot = isFreeDelivery ? 0 : zoneRow.delivery_fee_agorot;
 
-  if (subtotalAgorot < zoneRow.min_order_agorot) {
+  if (zoneRow.min_order_agorot !== null && subtotalAgorot < zoneRow.min_order_agorot) {
     const minFmt    = (zoneRow.min_order_agorot / 100).toLocaleString("he-IL");
     const shortfall = zoneRow.min_order_agorot - subtotalAgorot;
     const shortFmt  = (shortfall / 100).toLocaleString("he-IL");
     return {
-      error: `ההזמנה המינימלית לאזור ${zoneRow.name} היא ₪${minFmt}. חסרים עוד ₪${shortFmt}.`,
+      error: `ההזמנה המינימלית ל${addressCity} היא ₪${minFmt}. חסרים עוד ₪${shortFmt}.`,
     };
   }
 

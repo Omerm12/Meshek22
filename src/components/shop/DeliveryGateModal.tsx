@@ -173,7 +173,7 @@ export function DeliveryGateModal() {
           <p className="text-base text-stone-500 leading-relaxed mb-1.5">
             אנחנו רוצים לוודא שאפשר לספק משלוח לאזורכם לפני תחילת הקנייה.
           </p>
-          <p className="text-sm text-stone-400 leading-relaxed mb-6">
+          <p className="text-sm font-semibold text-gray-700 leading-relaxed mb-6">
             יש להזין את שם היישוב בלבד — לא כתובת מלאה.
           </p>
 
@@ -257,7 +257,7 @@ function FoundResult({
         <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" aria-hidden="true" />
         <div>
           <p className="font-bold text-emerald-800 text-sm leading-snug">
-            מגיעים אליכם! אזור: {zone.name}
+            מגיעים אליכם!
           </p>
           <p className="text-xs text-emerald-700 mt-0.5">
             משלוח זמין לאזורכם עם התנאים הבאים:
@@ -275,14 +275,16 @@ function FoundResult({
             {isFree ? "חינם" : formatPrice(zone.delivery_fee_agorot)}
           </p>
         </div>
-        <div className="bg-white rounded-lg px-3 py-2 border border-emerald-100 text-center min-w-[90px]">
-          <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
-            מינימום הזמנה
-          </p>
-          <p className="text-base font-bold text-gray-900">
-            {formatPrice(zone.min_order_agorot)}
-          </p>
-        </div>
+        {zone.min_order_agorot !== null && (
+          <div className="bg-white rounded-lg px-3 py-2 border border-emerald-100 text-center min-w-[90px]">
+            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+              מינימום הזמנה
+            </p>
+            <p className="text-base font-bold text-gray-900">
+              {formatPrice(zone.min_order_agorot)}
+            </p>
+          </div>
+        )}
         {zone.free_delivery_threshold_agorot && (
           <div className="bg-white rounded-lg px-3 py-2 border border-emerald-100 text-center min-w-[90px]">
             <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
@@ -325,11 +327,11 @@ function NotFoundResult({ onRetry }: { onRetry: () => void }) {
           </p>
           <div className="flex items-center gap-3 flex-wrap">
             <a
-              href="tel:*3722"
+              href="tel:0508863030"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
             >
               <Truck className="h-3.5 w-3.5" aria-hidden="true" />
-              דברו איתנו: *3722
+              דברו איתנו: 050-8863030
             </a>
             <button
               onClick={onRetry}

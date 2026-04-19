@@ -12,7 +12,7 @@ export interface DeliveryZone {
   name: string;
   delivery_fee_agorot: number;
   free_delivery_threshold_agorot: number | null;
-  min_order_agorot: number;
+  min_order_agorot: number | null;
   estimated_delivery_hours: number | null;
 }
 
@@ -57,8 +57,8 @@ export function getDeliveryQuote(
       ? Math.max(0, zone.free_delivery_threshold_agorot - subtotalAgorot)
       : 0;
 
-  const meetsMinimum = subtotalAgorot >= zone.min_order_agorot;
-  const shortfallAgorot = meetsMinimum ? 0 : zone.min_order_agorot - subtotalAgorot;
+  const meetsMinimum = zone.min_order_agorot === null || subtotalAgorot >= zone.min_order_agorot;
+  const shortfallAgorot = meetsMinimum ? 0 : zone.min_order_agorot! - subtotalAgorot;
 
   return {
     zone,

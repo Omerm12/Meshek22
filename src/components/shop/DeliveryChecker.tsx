@@ -135,28 +135,20 @@ function FoundResult({
   const isFree = zone.delivery_fee_agorot === 0;
 
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 sm:p-8 mt-6">
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 mt-6 overflow-hidden">
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6">
-        <CheckCircle2
-          className="h-7 w-7 text-emerald-600 shrink-0 mt-0.5"
-          aria-hidden="true"
-        />
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-emerald-100">
+        <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" aria-hidden="true" />
         <div>
-          <p className="text-lg font-bold text-emerald-800 leading-snug">
-            מגיעים אליכם! אזור: {zone.name}
-          </p>
-          <p className="text-base text-emerald-700 mt-1">
-            משלוח זמין לאזורכם עם התנאים הבאים:
-          </p>
+          <p className="text-base font-bold text-emerald-800 leading-snug">מגיעים אליכם!</p>
+          <p className="text-sm text-emerald-600 mt-0.5">משלוח זמין לאזורכם עם התנאים הבאים</p>
         </div>
       </div>
 
-      {/* Metric boxes — label on top, value below */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {/* Delivery fee */}
-        <div className="bg-white rounded-xl p-4 border border-emerald-100 text-center">
-          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1.5">
+      {/* Metric boxes */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-x-reverse divide-emerald-100">
+        <div className="px-6 py-5 text-center">
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
             דמי משלוח
           </p>
           <p className="text-xl font-bold text-gray-900">
@@ -164,20 +156,20 @@ function FoundResult({
           </p>
         </div>
 
-        {/* Min order */}
-        <div className="bg-white rounded-xl p-4 border border-emerald-100 text-center">
-          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1.5">
-            הזמנה מינימלית
-          </p>
-          <p className="text-xl font-bold text-gray-900">
-            {formatPrice(zone.min_order_agorot)}
-          </p>
-        </div>
+        {zone.min_order_agorot !== null && (
+          <div className="px-6 py-5 text-center">
+            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
+              הזמנה מינימלית
+            </p>
+            <p className="text-xl font-bold text-gray-900">
+              {formatPrice(zone.min_order_agorot)}
+            </p>
+          </div>
+        )}
 
-        {/* Free delivery threshold — only shown if it exists in DB */}
         {zone.free_delivery_threshold_agorot && (
-          <div className="bg-white rounded-xl p-4 border border-emerald-100 text-center">
-            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1.5">
+          <div className="px-6 py-5 text-center">
+            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
               משלוח חינם מ-
             </p>
             <p className="text-xl font-bold text-emerald-600">
@@ -187,12 +179,15 @@ function FoundResult({
         )}
       </div>
 
-      <button
-        onClick={onReset}
-        className="mt-5 text-sm text-emerald-700 hover:text-emerald-900 underline underline-offset-2 transition-colors"
-      >
-        בדיקה ליישוב אחר
-      </button>
+      {/* Footer action */}
+      <div className="px-6 py-4 border-t border-emerald-100 flex justify-end">
+        <button
+          onClick={onReset}
+          className="text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors"
+        >
+          בדיקה ליישוב אחר ←
+        </button>
+      </div>
     </div>
   );
 }
@@ -214,11 +209,11 @@ function NotFoundResult({ onReset }: { onReset: () => void }) {
           </p>
           <div className="flex items-center gap-3 flex-wrap">
             <a
-              href="tel:*3722"
+              href="tel:0508863030"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
             >
               <Truck className="h-3.5 w-3.5" aria-hidden="true" />
-              דברו איתנו: *3722
+              דברו איתנו: 050-8863030
             </a>
             <button
               onClick={onReset}

@@ -234,8 +234,10 @@ export function CheckoutForm({
   const validateDeliveryDetails = (): string | null => {
     if (!deliveryZoneId)
       return "לא ניתן לזהות את אזור המשלוח. נא לבחור עיר מהרשימה.";
-    if (quote && !quote.meetsMinimum)
-      return `ההזמנה המינימלית לאזור ${selectedZone?.name} לא הושגה.`;
+    if (quote && !quote.meetsMinimum) {
+      const city = getAddressFields().city;
+      return `ההזמנה המינימלית ל${city} לא הושגה.`;
+    }
     if (useNewAddress || addresses.length === 0) {
       if (!manualCity.trim()) return "נא להזין עיר / יישוב";
       if (!manualStreet.trim()) return "נא להזין שם רחוב";
@@ -355,6 +357,8 @@ export function CheckoutForm({
     !useNewAddress && selectedAddressId
       ? addresses.find((a) => a.id === selectedAddressId)
       : null;
+
+  const activeCity = selectedAddress ? selectedAddress.city : manualCity;
 
   return (
     <form onSubmit={handleSubmit} noValidate>
@@ -533,7 +537,7 @@ export function CheckoutForm({
                   <div className="mt-4 p-3.5 rounded-xl bg-brand-50 border border-brand-100 flex items-center gap-3">
                     <Truck className="h-4 w-4 text-brand-600 shrink-0" />
                     <div className="text-sm">
-                      <span className="font-semibold text-brand-800">{selectedZone!.name}</span>
+                      <span className="font-semibold text-brand-800">{activeCity}</span>
                       <span className="text-brand-600">
                         {" · "}
                         {quote.isFree ? (
@@ -541,8 +545,6 @@ export function CheckoutForm({
                         ) : (
                           <>דמי משלוח {formatPrice(quote.feeAgorot)}</>
                         )}
-                        {" · "}
-                        {quote.estimatedLabel}
                       </span>
                       {!quote.isFree && quote.remainingForFree > 0 && (
                         <span className="block text-xs text-brand-500 mt-0.5">
@@ -668,9 +670,9 @@ export function CheckoutForm({
                   <p>{manualStreet} {manualHouseNumber}, {manualCity}</p>
                 )}
                 <p>{name} · {phone}</p>
-                {quote && selectedZone && (
+                {quote && (
                   <p>
-                    {selectedZone.name} ·{" "}
+                    {activeCity} ·{" "}
                     {quote.isFree ? (
                       <span className="text-emerald-600 font-semibold">משלוח חינם</span>
                     ) : (
@@ -852,7 +854,7 @@ export function CheckoutForm({
               <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
                 <span className="font-semibold">הזמנה מינימלית לא הושגה.</span>
                 {" "}חסרים עוד {formatPrice(quote.shortfallAgorot)} להגיע למינימום של{" "}
-                {formatPrice(selectedZone!.min_order_agorot)} באזור {selectedZone!.name}.
+                {formatPrice(selectedZone!.min_order_agorot!)} ל{activeCity}.
               </div>
             )}
 

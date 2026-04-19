@@ -56,9 +56,9 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
 
         {config.subtitle && (
           <p
-            className="text-white/90 leading-relaxed mt-4 max-w-sm"
+            className="text-white/90 leading-relaxed mt-4 sm:whitespace-nowrap"
             style={{
-              fontSize: "clamp(1.1rem, 2vw, 1.3rem)",
+              fontSize: "clamp(0.9rem, 2.2vw, 1.25rem)",
               textShadow: "0 1px 10px rgba(0,0,0,0.55)",
               letterSpacing: "0.01em",
             }}

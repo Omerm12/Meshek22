@@ -35,17 +35,16 @@ export async function DeliveryAreas() {
               </div>
 
               <h2 id="delivery-title" className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                מגיעים לכל הארץ
+                אזורי משלוח
               </h2>
               <p className="text-stone-500 leading-relaxed mb-8 text-lg">
-                משלוחים לעשרות יישובים ברחבי ישראל.
-                ממינימום מסוים המשלוח בחינם.
+                ממינימום הזמנה מסוים המשלוח בחינם.
               </p>
 
               <div className="flex flex-col gap-3 mb-8">
                 {[
-                  { icon: Clock,        text: "משלוח עד 24–72 שעות, תלוי באזור" },
-                  { icon: MapPin,       text: "מגיעים ליישובים בכל רחבי הארץ" },
+                  { icon: Clock,        text: "זמן אספקה לפי אזור" },
+                  { icon: MapPin,       text: "משלוח עד הבית" },
                   { icon: CheckCircle2, text: "משלוח חינם מהזמנה מינימלית" },
                 ].map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-center gap-3 text-base text-stone-600">

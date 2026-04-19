@@ -26,6 +26,9 @@ function parseForm(formData: FormData) {
   // delivery_days comes as repeated form entries
   const deliveryDays = formData.getAll("delivery_days").map(String);
 
+  const rawMinOrder = formData.get("min_order_shekel") as string | null;
+  const minOrderStr = rawMinOrder?.trim();
+
   const rawFreeThreshold = formData.get("free_delivery_threshold_shekel") as string | null;
   const freeThresholdStr = rawFreeThreshold?.trim();
 
@@ -34,7 +37,7 @@ function parseForm(formData: FormData) {
     slug:                             formData.get("slug"),
     description:                      formData.get("description") ?? "",
     delivery_fee_shekel:              parseFloat(formData.get("delivery_fee_shekel") as string),
-    min_order_shekel:                 parseFloat(formData.get("min_order_shekel") as string),
+    min_order_shekel:                 minOrderStr ? parseFloat(minOrderStr) : null,
     free_delivery_threshold_shekel:   freeThresholdStr ? parseFloat(freeThresholdStr) : null,
     delivery_days:                    deliveryDays,
     estimated_delivery_hours:         formData.get("estimated_delivery_hours")
@@ -72,7 +75,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
     slug:                             d.slug,
     description:                      d.description || null,
     delivery_fee_agorot:              Math.round(d.delivery_fee_shekel * 100),
-    min_order_agorot:                 Math.round(d.min_order_shekel * 100),
+    min_order_agorot:                 d.min_order_shekel != null ? Math.round(d.min_order_shekel * 100) : null,
     free_delivery_threshold_agorot:   d.free_delivery_threshold_shekel != null
                                         ? Math.round(d.free_delivery_threshold_shekel * 100)
                                         : null,
@@ -122,7 +125,7 @@ export async function updateDeliveryZone(
       slug:                             d.slug,
       description:                      d.description || null,
       delivery_fee_agorot:              Math.round(d.delivery_fee_shekel * 100),
-      min_order_agorot:                 Math.round(d.min_order_shekel * 100),
+      min_order_agorot:                 d.min_order_shekel != null ? Math.round(d.min_order_shekel * 100) : null,
       free_delivery_threshold_agorot:   d.free_delivery_threshold_shekel != null
                                           ? Math.round(d.free_delivery_threshold_shekel * 100)
                                           : null,

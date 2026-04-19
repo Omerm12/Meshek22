@@ -58,7 +58,7 @@ export default async function EditDeliveryZonePage({
             slug:                             zone.slug,
             description:                      zone.description ?? "",
             delivery_fee_shekel:              zone.delivery_fee_agorot / 100,
-            min_order_shekel:                 zone.min_order_agorot / 100,
+            min_order_shekel:                 zone.min_order_agorot != null ? zone.min_order_agorot / 100 : null,
             free_delivery_threshold_shekel:   zone.free_delivery_threshold_agorot != null
                                                 ? zone.free_delivery_threshold_agorot / 100
                                                 : null,

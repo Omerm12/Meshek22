@@ -282,7 +282,7 @@ export interface Database {
           slug: string;
           description: string | null;
           delivery_fee_agorot: number;
-          min_order_agorot: number;
+          min_order_agorot: number | null;
           free_delivery_threshold_agorot: number | null;
           delivery_days: string[];
           estimated_delivery_hours: number | null;
@@ -297,7 +297,7 @@ export interface Database {
           slug: string;
           description?: string | null;
           delivery_fee_agorot: number;
-          min_order_agorot: number;
+          min_order_agorot?: number | null;
           free_delivery_threshold_agorot?: number | null;
           delivery_days?: string[];
           estimated_delivery_hours?: number | null;
@@ -309,7 +309,7 @@ export interface Database {
           slug?: string;
           description?: string | null;
           delivery_fee_agorot?: number;
-          min_order_agorot?: number;
+          min_order_agorot?: number | null;
           free_delivery_threshold_agorot?: number | null;
           delivery_days?: string[];
           estimated_delivery_hours?: number | null;
