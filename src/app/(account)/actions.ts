@@ -13,11 +13,8 @@ type AddressUpdate = Database["public"]["Tables"]["addresses"]["Update"];
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "נא להזין שם מלא").max(100),
-  phone: z
-    .string()
-    .regex(/^0\d{8,9}$/, "מספר טלפון לא תקין")
-    .optional()
-    .or(z.literal("")),
+  phone: z.string().regex(/^0\d{8,9}$/, "מספר טלפון לא תקין"),
+  email: z.string().email("כתובת אימייל לא תקינה").min(1, "נא להזין כתובת אימייל"),
 });
 
 // ── Profile ──────────────────────────────────────────────────────────────────
@@ -32,6 +29,7 @@ export async function updateProfile(formData: FormData) {
   const parsed = profileSchema.safeParse({
     full_name: formData.get("full_name"),
     phone: formData.get("phone") ?? "",
+    email: formData.get("email") ?? "",
   });
 
   if (!parsed.success) {
@@ -40,12 +38,12 @@ export async function updateProfile(formData: FormData) {
 
   const update: ProfileUpdate = {
     full_name: parsed.data.full_name,
-    phone: parsed.data.phone || null,
+    phone: parsed.data.phone,
+    email: parsed.data.email,
     updated_at: new Date().toISOString(),
   };
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
-
   if (error) return { error: "שגיאה בעדכון הפרופיל" };
 
   revalidatePath("/account");

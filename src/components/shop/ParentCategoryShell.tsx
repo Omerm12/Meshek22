@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Search, X, ChevronDown, PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -15,17 +15,15 @@ import type { CategoryHeroConfig } from "@/lib/config/category-heroes";
 type SortOption = "default" | "price-asc" | "price-desc" | "name";
 
 interface ParentCategoryShellProps {
-  /** Config for the hero section (title, image, colors). */
   heroConfig:     CategoryHeroConfig;
-  /** The parent category's slug (e.g. "vegetables"). */
   parentSlug:     string;
-  /** All direct child categories. */
   subcategories:  MockCategory[];
-  /** Products — already filtered server-side for the active subcategory or all. */
   products:       MockProduct[];
-  /** The currently active subcategory slug, or null for "all". */
   activeSubSlug:  string | null;
 }
+
+// 5 columns × 3 rows = 15 initial items; load in full-row chunks (3 rows = 15)
+const ITEMS_PER_STEP = 15;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -46,10 +44,8 @@ function SubcategoryTabs({
   activeSlug:    string | null;
   accentClass:   string;
 }) {
-  const allHref = `/${parentSlug}`;
-
   return (
-    <div className="lg:hidden bg-white border-b border-stone-100 overflow-x-auto">
+    <div className="bg-white border-b border-stone-100 overflow-x-auto">
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div
           className="flex gap-2 py-3"
@@ -57,9 +53,8 @@ function SubcategoryTabs({
           role="navigation"
           aria-label="תתי-קטגוריות"
         >
-          {/* "All" tab */}
           <Link
-            href={allHref}
+            href={`/${parentSlug}`}
             className={cn(
               "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap",
               !activeSlug
@@ -92,22 +87,14 @@ function SubcategoryTabs({
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState({
-  search,
-  onClear,
-}: {
-  search: string;
-  onClear: () => void;
-}) {
+function EmptyState({ search, onClear }: { search: string; onClear: () => void }) {
   return (
     <div className="flex flex-col items-center text-center py-20 px-4">
       <div className="h-20 w-20 rounded-full bg-stone-100 flex items-center justify-center mb-5">
         <PackageOpen className="h-9 w-9 text-stone-400" aria-hidden="true" />
       </div>
       <h3 className="font-bold text-gray-900 text-lg mb-2">
-        {search
-          ? `לא נמצאו תוצאות עבור "${search}"`
-          : "אין עדיין מוצרים בקטגוריה זו"}
+        {search ? `לא נמצאו תוצאות עבור "${search}"` : "אין עדיין מוצרים בקטגוריה זו"}
       </h3>
       <p className="text-sm text-stone-400 leading-relaxed mb-6 max-w-xs">
         {search
@@ -127,58 +114,6 @@ function EmptyState({
   );
 }
 
-// ─── Sidebar filter (desktop) ─────────────────────────────────────────────────
-
-function FilterSidebar({
-  parentSlug,
-  subcategories,
-  activeSlug,
-  accentClass,
-}: {
-  parentSlug:    string;
-  subcategories: MockCategory[];
-  activeSlug:    string | null;
-  accentClass:   string;
-}) {
-  return (
-    <aside className="hidden lg:block w-56 shrink-0 self-start sticky top-[100px]">
-      <div className="bg-white rounded-2xl border border-stone-100 p-4">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">סנן לפי קטגוריה</h2>
-        <ul className="flex flex-col gap-1">
-          <li>
-            <Link
-              href={`/${parentSlug}`}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors",
-                !activeSlug
-                  ? cn(accentClass, "text-white font-medium")
-                  : "text-stone-600 hover:bg-stone-50 hover:text-brand-700"
-              )}
-            >
-              הכל
-            </Link>
-          </li>
-          {subcategories.map((cat) => (
-            <li key={cat.id}>
-              <Link
-                href={`/${parentSlug}?sub=${cat.slug}`}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors",
-                  activeSlug === cat.slug
-                    ? cn(accentClass, "text-white font-medium")
-                    : "text-stone-600 hover:bg-stone-50 hover:text-brand-700"
-                )}
-              >
-                <span className="leading-tight">{cat.name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </aside>
-  );
-}
-
 // ─── Main shell ───────────────────────────────────────────────────────────────
 
 export function ParentCategoryShell({
@@ -188,35 +123,54 @@ export function ParentCategoryShell({
   products,
   activeSubSlug,
 }: ParentCategoryShellProps) {
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("default");
-  const [visible, setVisible] = useState(16); // 4 rows × 4 cols
+  const [search, setSearch]   = useState("");
+  const [sortBy, setSortBy]   = useState<SortOption>("default");
+  const [visible, setVisible] = useState(ITEMS_PER_STEP);
+  const sentinelRef           = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
-    setVisible(16);
+    setVisible(ITEMS_PER_STEP); // reset on filter change (anti-pattern but intentional)
     if (!search.trim()) return products;
     const q = search.toLowerCase();
     return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
+      (p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
     );
   }, [products, search]);
 
   const sorted = useMemo(() => {
-    setVisible(16);
+    setVisible(ITEMS_PER_STEP);
     const arr = [...filtered];
     switch (sortBy) {
-      case "price-asc":
-        return arr.sort((a, b) => getDefaultPrice(a) - getDefaultPrice(b));
-      case "price-desc":
-        return arr.sort((a, b) => getDefaultPrice(b) - getDefaultPrice(a));
-      case "name":
-        return arr.sort((a, b) => a.name.localeCompare(b.name, "he"));
-      default:
-        return arr;
+      case "price-asc":  return arr.sort((a, b) => getDefaultPrice(a) - getDefaultPrice(b));
+      case "price-desc": return arr.sort((a, b) => getDefaultPrice(b) - getDefaultPrice(a));
+      case "name":       return arr.sort((a, b) => a.name.localeCompare(b.name, "he"));
+      default:           return arr;
     }
   }, [filtered, sortBy]);
+
+  const hasMore = visible < sorted.length;
+
+  // Infinite scroll — sentinel below the grid triggers the next batch.
+  // Deps: hasMore + sorted.length (re-register on filter/sort change).
+  // 'visible' is intentionally NOT a dep — adding it would re-attach the observer
+  // on every load, potentially double-firing while the sentinel is still in view.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          observer.disconnect();
+          setTimeout(() => setVisible((v) => v + ITEMS_PER_STEP), 200);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, visible, sorted.length]);
 
   const activeSubCategory = activeSubSlug
     ? subcategories.find((c) => c.slug === activeSubSlug)
@@ -224,10 +178,10 @@ export function ParentCategoryShell({
 
   return (
     <div className="flex-1" style={{ backgroundColor: "var(--color-surface)" }}>
-      {/* ── Hero ── */}
+      {/* Hero */}
       <CategoryHero config={heroConfig} />
 
-      {/* ── Mobile subcategory tabs ── */}
+      {/* Subcategory tabs */}
       <SubcategoryTabs
         parentSlug={parentSlug}
         subcategories={subcategories}
@@ -235,16 +189,11 @@ export function ParentCategoryShell({
         accentClass={heroConfig.accentClass}
       />
 
-      {/* ── Main content ── */}
+      {/* Main content */}
       <Container className="py-6 lg:py-8 !max-w-[1400px]">
         {/* Breadcrumb */}
-        <nav
-          className="flex items-center gap-1.5 text-sm text-stone-400 mb-5"
-          aria-label="breadcrumb"
-        >
-          <Link href="/" className="hover:text-brand-700 transition-colors">
-            דף הבית
-          </Link>
+        <nav className="flex items-center gap-1.5 text-sm text-stone-400 mb-5" aria-label="breadcrumb">
+          <Link href="/" className="hover:text-brand-700 transition-colors">דף הבית</Link>
           <span aria-hidden="true">/</span>
           <Link
             href={`/${parentSlug}`}
@@ -264,108 +213,91 @@ export function ParentCategoryShell({
           )}
         </nav>
 
-        {/* Content + Sidebar layout (RTL: sidebar on right) */}
-        <div className="flex gap-6 items-start">
-          {/* Sidebar (desktop right side, start in RTL) */}
-          <FilterSidebar
-            parentSlug={parentSlug}
-            subcategories={subcategories}
-            activeSlug={activeSubSlug}
-            accentClass={heroConfig.accentClass}
-          />
-
-          {/* Product area */}
-          <div className="flex-1 min-w-0">
-            {/* Section heading */}
-            <div className="flex items-baseline justify-between mb-4 gap-2">
-              <h2 className="text-xl font-bold text-gray-900">
-                {activeSubCategory ? activeSubCategory.name : `כל ה${heroConfig.title}`}
-                <span className="text-base font-normal text-stone-400 me-2">
-                  {" "}({products.length} מוצרים)
-                </span>
-              </h2>
-            </div>
-
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search
-                  className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
-                  aria-hidden="true"
-                />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={`חפשו ב${heroConfig.title}...`}
-                  aria-label={`חיפוש ב${heroConfig.title}`}
-                  className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    aria-label="נקה חיפוש"
-                    className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-400 hover:text-stone-700 cursor-pointer transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Sort */}
-              <div className="relative shrink-0">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  aria-label="מיון מוצרים"
-                  className="h-11 w-full sm:w-auto bg-white border border-stone-200 rounded-xl ps-4 pe-9 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer appearance-none min-w-[172px]"
-                >
-                  <option value="default">מיון: ברירת מחדל</option>
-                  <option value="price-asc">מחיר: נמוך לגבוה</option>
-                  <option value="price-desc">מחיר: גבוה לנמוך</option>
-                  <option value="name">שם: א–ת</option>
-                </select>
-                <ChevronDown
-                  className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-stone-400 pointer-events-none"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-
-            {/* Results info when searching */}
-            {search && sorted.length > 0 && (
-              <p className="text-sm text-stone-500 mb-5">
-                נמצאו{" "}
-                <strong className="text-gray-800">{sorted.length}</strong>{" "}
-                תוצאות עבור &quot;{search}&quot;
-              </p>
-            )}
-
-            {/* Product grid */}
-            {sorted.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
-                  {sorted.slice(0, visible).map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-                {visible < sorted.length && (
-                  <div className="flex justify-center mt-8">
-                    <button
-                      onClick={() => setVisible((v) => v + 16)}
-                      className="inline-flex items-center gap-2 h-11 px-8 rounded-full bg-white border border-stone-200 text-stone-700 font-medium text-sm hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50 transition-all duration-200 cursor-pointer"
-                    >
-                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                      הצג עוד ({sorted.length - visible} מוצרים נוספים)
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptyState search={search} onClear={() => setSearch("")} />
-            )}
+        {/* Product area */}
+        <div>
+          {/* Section heading */}
+          <div className="flex items-baseline justify-between mb-4 gap-2">
+            <h2 className="text-xl font-bold text-gray-900">
+              {activeSubCategory ? activeSubCategory.name : `כל ה${heroConfig.title}`}
+              <span className="text-base font-normal text-stone-400 me-2">
+                {" "}({products.length} מוצרים)
+              </span>
+            </h2>
           </div>
+
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search
+                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`חפשו ב${heroConfig.title}...`}
+                aria-label={`חיפוש ב${heroConfig.title}`}
+                className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  aria-label="נקה חיפוש"
+                  className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-400 hover:text-stone-700 cursor-pointer transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Sort */}
+            <div className="relative shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                aria-label="מיון מוצרים"
+                className="h-11 w-full sm:w-auto bg-white border border-stone-200 rounded-xl ps-4 pe-9 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer appearance-none min-w-[172px]"
+              >
+                <option value="default">מיון: ברירת מחדל</option>
+                <option value="price-asc">מחיר: נמוך לגבוה</option>
+                <option value="price-desc">מחיר: גבוה לנמוך</option>
+                <option value="name">שם: א–ת</option>
+              </select>
+              <ChevronDown
+                className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-stone-400 pointer-events-none"
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+
+          {/* Results count when searching */}
+          {search && sorted.length > 0 && (
+            <p className="text-sm text-stone-500 mb-5">
+              נמצאו{" "}
+              <strong className="text-gray-800">{sorted.length}</strong>{" "}
+              תוצאות עבור &quot;{search}&quot;
+            </p>
+          )}
+
+          {/* Product grid */}
+          {sorted.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
+                {sorted.slice(0, visible).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              {/* Infinite scroll sentinel — observed by IntersectionObserver above */}
+              {hasMore && (
+                <div ref={sentinelRef} className="h-1 mt-4" aria-hidden="true" />
+              )}
+            </>
+          ) : (
+            <EmptyState search={search} onClear={() => setSearch("")} />
+          )}
         </div>
       </Container>
     </div>

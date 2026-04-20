@@ -319,7 +319,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
                 placeholder="0501234567"
                 {...infoForm.register("phone")}
                 className={[
-                  "w-full h-11 bg-white border rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400",
+                  "w-full h-11 bg-white border rounded-xl ps-4 pe-10 text-sm text-gray-900 placeholder:text-stone-400",
                   "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow",
                   infoForm.formState.errors.phone ? "border-red-400" : "border-stone-200",
                 ].join(" ")}

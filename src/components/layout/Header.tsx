@@ -294,6 +294,7 @@ export function Header() {
 
               {/* Cart */}
               <button
+                id="header-cart-btn"
                 onClick={openCart}
                 aria-label={`סל קניות – ${totalItems} פריטים`}
                 className={cn(

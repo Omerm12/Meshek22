@@ -600,7 +600,7 @@ export function CheckoutForm({
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="0501234567"
                         dir="ltr"
-                        className={`${inputClass} ps-10`}
+                        className={`${inputClass} pe-10`}
                         required
                       />
                     </div>

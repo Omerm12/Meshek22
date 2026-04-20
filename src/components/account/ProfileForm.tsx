@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Phone, Loader2, CheckCircle2 } from "lucide-react";
+import { User, Phone, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { updateProfile } from "@/app/(account)/actions";
 import type { Database } from "@/types/database";
 
@@ -34,7 +34,7 @@ export function ProfileForm({ profile }: { profile: ProfileRow }) {
       {/* Full name */}
       <div>
         <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1.5">
-          שם מלא
+          שם מלא <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <User
@@ -56,8 +56,7 @@ export function ProfileForm({ profile }: { profile: ProfileRow }) {
       {/* Phone */}
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
-          טלפון{" "}
-          <span className="text-stone-400 font-normal">(לא חובה)</span>
+          טלפון <span className="text-red-500">*</span>
         </label>
         <div className="relative">
           <Phone
@@ -69,26 +68,37 @@ export function ProfileForm({ profile }: { profile: ProfileRow }) {
             name="phone"
             type="tel"
             dir="ltr"
+            required
             autoComplete="tel"
             defaultValue={profile.phone ?? ""}
             placeholder="0501234567"
-            className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-4 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+            className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-4 pe-10 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
           />
         </div>
       </div>
 
-      {/* Email (read-only) */}
+      {/* Email */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          אימייל
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+          אימייל <span className="text-red-500">*</span>
         </label>
-        <p
-          className="h-11 flex items-center px-4 bg-stone-50 border border-stone-100 rounded-xl text-sm text-stone-500"
-          dir="ltr"
-        >
-          {profile.email ?? <span className="text-stone-300">לא הוזן</span>}
-        </p>
-        <p className="mt-1 text-xs text-stone-400">לשינוי האימייל פנו לתמיכה</p>
+        <div className="relative">
+          <Mail
+            className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+            aria-hidden="true"
+          />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            dir="ltr"
+            required
+            autoComplete="email"
+            defaultValue={profile.email ?? ""}
+            placeholder="email@example.com"
+            className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-4 pe-10 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+          />
+        </div>
       </div>
 
       {error && (

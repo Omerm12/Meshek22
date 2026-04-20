@@ -1,39 +1,59 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, X, ChevronDown } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Search, X } from "lucide-react";
 import { ProductCard } from "@/components/shop/ProductCard";
 import type { MockProduct } from "@/lib/data/mock";
 
-const ITEMS_PER_STEP = 16; // 4 rows × 4 cols (lg breakpoint)
+// 5 columns × 3 rows = 15 initial items; load in full-row chunks (3 rows = 15)
+const ITEMS_PER_STEP = 15;
 
 interface ProductsClientShellProps {
-  products: MockProduct[];
+  products:   MockProduct[];
   totalCount: number;
 }
 
-export function ProductsClientShell({ products, totalCount }: ProductsClientShellProps) {
-  const [search, setSearch] = useState("");
+export function ProductsClientShell({ products }: ProductsClientShellProps) {
+  const [search, setSearch]   = useState("");
   const [visible, setVisible] = useState(ITEMS_PER_STEP);
+  const sentinelRef           = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
     return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q),
+      (p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
     );
   }, [products, search]);
 
-  const displayed = filtered.slice(0, visible);
   const hasMore = visible < filtered.length;
-  const remaining = filtered.length - visible;
 
   function handleSearchChange(value: string) {
     setSearch(value);
     setVisible(ITEMS_PER_STEP);
   }
+
+  // Infinite scroll — 'visible' intentionally excluded from deps to prevent
+  // the observer from re-attaching (and potentially double-firing) on every load.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          observer.disconnect();
+          setTimeout(() => setVisible((v) => v + ITEMS_PER_STEP), 200);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, visible, filtered.length]);
+
+  const displayed = filtered.slice(0, visible);
 
   return (
     <>
@@ -71,26 +91,18 @@ export function ProductsClientShell({ products, totalCount }: ProductsClientShel
         </p>
       )}
 
-      {/* Product grid */}
+      {/* Product grid — 5 columns on large screens */}
       {displayed.length > 0 ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {displayed.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
 
-          {/* Load more */}
+          {/* Infinite scroll sentinel */}
           {hasMore && (
-            <div className="flex justify-center mt-8">
-              <button
-                onClick={() => setVisible((v) => v + ITEMS_PER_STEP)}
-                className="inline-flex items-center gap-2 h-11 px-8 rounded-full bg-white border border-stone-200 text-stone-700 font-medium text-sm hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50 transition-all duration-200 cursor-pointer"
-              >
-                <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                הצג עוד ({remaining} מוצרים נוספים)
-              </button>
-            </div>
+            <div ref={sentinelRef} className="h-1 mt-4" aria-hidden="true" />
           )}
         </>
       ) : (

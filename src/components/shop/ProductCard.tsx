@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -8,13 +8,14 @@ import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
 import { useUser } from "@/store/user";
 import { useDeliveryGate } from "@/store/delivery-gate";
+import { flyToCart } from "@/lib/utils/fly-to-cart";
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import type { MockProduct, MockVariant } from "@/lib/data/mock";
 
 interface ProductCardProps {
   product: MockProduct;
   className?: string;
-  /** Pass true for cards that are visible above the fold — triggers browser preload. */
+  /** Pass true for cards visible above the fold — triggers browser preload. */
   priority?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
   const { addItem, items, updateQty } = useCart();
   const { user } = useUser();
   const { requestAdd } = useDeliveryGate();
+  const imageRef = useRef<HTMLDivElement>(null);
 
   const defaultVariant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
   const [selectedVariant, setSelectedVariant] = useState<MockVariant>(defaultVariant);
@@ -51,15 +53,12 @@ export function ProductCard({ product, className, priority = false }: ProductCar
       productIcon:  product.icon,
     };
 
-    // For logged-out visitors, route through the delivery gate on the first
-    // add-to-cart. requestAdd returns true if the gate opened (item is held
-    // pending delivery confirmation) or false if already confirmed (add directly).
     if (!user && requestAdd(item)) return;
 
     addItem(item);
+    if (imageRef.current) flyToCart(imageRef.current);
   }, [addItem, requestAdd, user, selectedVariant, product]);
 
-  // Show max 3 variants to keep card compact
   const visibleVariants = product.variants.slice(0, 3);
   const hasImage = !!product.imageUrl;
 
@@ -73,9 +72,9 @@ export function ProductCard({ product, className, priority = false }: ProductCar
     <article
       className={cn(
         "group relative bg-white border transition-all duration-300",
-        // ── Mobile: horizontal card ──────────────────────────────────────────
-        "flex flex-row-reverse items-center gap-3 p-3 rounded-2xl",
-        // ── Desktop: vertical card (keep as-is) ─────────────────────────────
+        // Mobile: horizontal card — RTL flex-row puts image at START (right) and content at END (left)
+        "flex items-center gap-3 p-3 rounded-2xl",
+        // Desktop: vertical card
         "md:flex-col md:gap-0 md:p-0 md:overflow-hidden md:rounded-2xl",
         isInCart
           ? "border-brand-300 shadow-[0_4px_24px_-4px_rgba(46,125,46,0.18)]"
@@ -83,14 +82,16 @@ export function ProductCard({ product, className, priority = false }: ProductCar
         className,
       )}
     >
-      {/* ── Image ─────────────────────────────────────────────────────────── */}
+      {/* ── Image ──────────────────────────────────────────────────────────── */}
+      {/* data-fly-* read by flyToCart to produce a non-white fallback circle */}
       <div
+        ref={imageRef}
         style={imageBg}
+        data-fly-color={product.imageColor}
+        data-fly-icon={product.icon}
         className={cn(
-          // Mobile: square thumbnail on the right, stone-50 bg so object-contain image has a clean backdrop
           "relative w-28 h-28 shrink-0 overflow-hidden rounded-xl block bg-stone-50",
-          // Desktop: full-width banner on top (bg handled by the blurred layer)
-          "md:w-full md:h-auto md:aspect-[16/9] md:rounded-t-2xl md:rounded-b-none md:shrink md:bg-transparent",
+          "md:w-full md:h-auto md:aspect-[4/3] md:rounded-t-2xl md:rounded-b-none md:shrink md:bg-transparent",
         )}
       >
         {hasImage ? (
@@ -114,14 +115,12 @@ export function ProductCard({ product, className, priority = false }: ProductCar
           </div>
         )}
 
-        {/* Sale badge */}
         {hasSale && (
           <span className="absolute top-1.5 end-1.5 md:top-3 md:end-3 bg-red-500 text-white text-[10px] md:text-[11px] font-bold rounded-full px-1.5 py-0.5 leading-none z-10">
             -{discountPct}%
           </span>
         )}
 
-        {/* In-cart indicator */}
         {isInCart && (
           <span
             className="absolute top-1.5 start-1.5 md:top-3 md:start-3 h-5 md:h-6 min-w-5 md:min-w-6 px-1 md:px-1.5 bg-brand-600 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-pop z-10"
@@ -132,43 +131,26 @@ export function ProductCard({ product, className, priority = false }: ProductCar
         )}
       </div>
 
-      {/* ── Content ───────────────────────────────────────────────────────── */}
-      <div
-        className={cn(
-          "flex flex-col flex-1 min-w-0",
-          // Mobile: tight vertical stack, no extra padding
-          "gap-1 py-0.5",
-          // Desktop: restore original spacing
-          "md:gap-2 md:py-0 md:px-4 md:pt-3 md:pb-4",
-        )}
-      >
-        {/* Category — desktop only (too noisy on compact mobile card) */}
-        <p className="hidden md:block text-[11px] font-medium text-warm-muted uppercase tracking-wider">
-          {product.categoryName}
-        </p>
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col flex-1 min-w-0 py-0.5 md:py-0 md:px-4 md:pt-3 md:pb-4">
 
-        {/* Name */}
-        <h3
-          className={cn(
-            "font-bold text-gray-900 leading-snug",
-            "text-sm md:text-[15px]",
-          )}
-        >
-          {product.name}
-        </h3>
+        {/* ── Body ────────────────────────────────────────────────────────── */}
+        {/* md:flex-1 makes the body grow to fill available vertical space,
+            which pins the footer to the card bottom regardless of chip count. */}
+        <div className="flex flex-col gap-1 md:gap-2 md:flex-1">
+          <h3 className="font-bold text-gray-900 leading-snug text-sm md:text-[15px]">
+            {product.name}
+          </h3>
 
-        {/* Variant — mobile: selected label only; desktop: interactive selector */}
-        <p className="text-xs text-stone-400 md:hidden truncate">
-          {selectedVariant.label}
-        </p>
+          {/* Variant label — mobile only */}
+          <p className="text-xs text-stone-400 md:hidden truncate">
+            {selectedVariant.label}
+          </p>
 
-        <div className="hidden md:flex flex-wrap gap-1">
-          {product.variants.length === 1 ? (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-brand-600 text-white border-brand-600">
-              {selectedVariant.label}
-            </span>
-          ) : (
-            visibleVariants.map((v) => (
+          {/* Variant chips — desktop only.
+              min-h-[26px] reserves space so single-chip cards don't collapse. */}
+          <div className="hidden md:flex flex-wrap gap-1 items-start min-h-[26px]">
+            {visibleVariants.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelectedVariant(v)}
@@ -181,17 +163,19 @@ export function ProductCard({ product, className, priority = false }: ProductCar
               >
                 {v.label}
               </button>
-            ))
-          )}
+            ))}
+          </div>
         </div>
 
-        {/* Spacer (desktop only — pushes price to bottom of card) */}
-        <div className="hidden md:block flex-1" />
+        {/* ── Footer ──────────────────────────────────────────────────────── */}
+        {/* Completely independent of chip count.
+            Price zone (flex-1) fills the right — RTL text-align pins text to the right edge.
+            Cart zone (shrink-0) is pinned to the left.
+            Both anchors are stable across every product, 1 tag or 5. */}
+        <div className="flex items-center gap-2 mt-2 md:mt-0 md:pt-3">
 
-        {/* ── Price + cart ─────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-2 md:items-end md:pt-1">
-          {/* Price */}
-          <div className="flex flex-col leading-none">
+          {/* Price zone — fills remaining width; RTL default right-aligns text */}
+          <div className="flex flex-col leading-none flex-1 min-w-0">
             <span className="text-[17px] font-bold text-gray-900 tracking-tight md:text-[22px]">
               {formatPrice(selectedVariant.priceAgorot)}
             </span>
@@ -202,45 +186,49 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             )}
           </div>
 
-          {/* Cart button */}
-          {qty === 0 ? (
-            <button
-              onClick={handleAdd}
-              aria-label={`הוסף ${product.name} לסל`}
-              className={cn(
-                // Mobile: slightly smaller
-                "h-8 w-8 md:h-10 md:w-10",
-                "shrink-0 rounded-full flex items-center justify-center",
-                "bg-brand-600 text-white",
-                "hover:bg-brand-700 active:scale-90",
-                "transition-all duration-150 shadow-sm cursor-pointer",
-                "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
-              )}
-            >
-              <Plus className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-0.5 bg-brand-600 rounded-full p-0.5 shadow-sm">
+          {/* Cart zone — LEFT anchor.
+              Desktop: fixed 100px so circle↔pill never shifts the price.
+              Mobile: natural width. */}
+          <div className="shrink-0 flex items-center justify-end md:w-[100px]">
+            {qty === 0 ? (
               <button
-                onClick={() => updateQty(selectedVariant.id, qty - 1)}
-                aria-label="הפחת כמות"
-                className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-full text-white hover:bg-brand-500 active:bg-brand-700 transition-colors cursor-pointer"
+                onClick={handleAdd}
+                aria-label={`הוסף ${product.name} לסל`}
+                className={cn(
+                  "h-8 w-8 md:h-9 md:w-9",
+                  "flex items-center justify-center rounded-full",
+                  "bg-brand-600 text-white shadow-sm",
+                  "hover:bg-brand-700 active:scale-90",
+                  "transition-all duration-150 cursor-pointer",
+                  "focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
+                )}
               >
-                <Minus className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                <Plus className="h-4 w-4 md:h-[18px] md:w-[18px]" aria-hidden="true" />
               </button>
-              <span className="w-6 md:w-7 text-center text-sm font-bold text-white tabular-nums">
-                {qty}
-              </span>
-              <button
-                onClick={() => updateQty(selectedVariant.id, qty + 1)}
-                aria-label="הוסף כמות"
-                className="h-7 w-7 md:h-8 md:w-8 flex items-center justify-center rounded-full text-white hover:bg-brand-500 active:bg-brand-700 transition-colors cursor-pointer"
-              >
-                <Plus className="h-3 w-3 md:h-3.5 md:w-3.5" />
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center gap-0.5 bg-brand-600 rounded-full p-0.5 shadow-sm md:w-full">
+                <button
+                  onClick={() => updateQty(selectedVariant.id, qty - 1)}
+                  aria-label="הפחת כמות"
+                  className="h-7 w-7 md:h-8 md:w-8 shrink-0 flex items-center justify-center rounded-full text-white hover:bg-brand-500 active:bg-brand-700 transition-colors cursor-pointer"
+                >
+                  <Minus className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                </button>
+                <span className="w-6 flex-shrink-0 md:flex-1 text-center text-sm font-bold text-white tabular-nums select-none">
+                  {qty}
+                </span>
+                <button
+                  onClick={() => updateQty(selectedVariant.id, qty + 1)}
+                  aria-label="הוסף כמות"
+                  className="h-7 w-7 md:h-8 md:w-8 shrink-0 flex items-center justify-center rounded-full text-white hover:bg-brand-500 active:bg-brand-700 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-brand-600"
+                >
+                  <Plus className="h-3 w-3 md:h-3.5 md:w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
     </article>
   );
