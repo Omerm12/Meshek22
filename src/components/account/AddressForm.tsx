@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { saveAddress } from "@/app/(account)/actions";
 import { SETTLEMENTS } from "@/lib/data/settlements";
@@ -14,7 +14,6 @@ interface AddressFormProps {
 
 export function AddressForm({ address }: AddressFormProps) {
   const [city, setCity] = useState(address?.city ?? "");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -27,14 +26,12 @@ export function AddressForm({ address }: AddressFormProps) {
   const defaultApartment = apartmentMatch?.[1] ?? "";
   const defaultFloor = floorMatch?.[1] ?? "";
 
-  useEffect(() => {
-    if (city.trim().length < 2) { setSuggestions([]); return; }
+  const suggestions = useMemo(() => {
+    if (city.trim().length < 2) return [];
     const q = city.trim().toLowerCase();
-    setSuggestions(
-      SETTLEMENTS.filter((s) => s.name.toLowerCase().includes(q))
-        .slice(0, 8)
-        .map((s) => s.name)
-    );
+    return SETTLEMENTS.filter((s) => s.name.toLowerCase().includes(q))
+      .slice(0, 8)
+      .map((s) => s.name);
   }, [city]);
 
   const selectCity = useCallback((name: string) => {

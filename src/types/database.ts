@@ -69,55 +69,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      /**
-       * Flat, user-scoped cart table for authenticated users.
-       * variant_id and product_id are UUID FKs to product_variants and products
-       * respectively (ON DELETE CASCADE — removing a product/variant clears stale
-       * cart items automatically). UNIQUE (user_id, variant_id) enables UPSERT.
-       */
-      user_cart_items: {
-        Row: {
-          id: string;          // UUID PK
-          user_id: string;     // UUID → auth.users(id)
-          variant_id: string;  // UUID → product_variants(id)
-          product_id: string;  // UUID → products(id)
-          product_name: string;
-          variant_label: string;
-          price_agorot: number;
-          quantity: number;
-          image_url: string | null;
-          image_color: string | null;
-          product_icon: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;     // UUID
-          variant_id: string;  // UUID
-          product_id: string;  // UUID
-          product_name: string;
-          variant_label: string;
-          price_agorot: number;
-          quantity: number;
-          image_url?: string | null;
-          image_color?: string | null;
-          product_icon?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          product_name?: string;
-          variant_label?: string;
-          price_agorot?: number;
-          quantity?: number;
-          image_url?: string | null;
-          image_color?: string | null;
-          product_icon?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       addresses: {
         Row: {
           id: string;
@@ -208,6 +159,10 @@ export interface Database {
           is_active: boolean;
           is_featured: boolean;
           sort_order: number;
+          /** Bundle deal: buy qty_deal_quantity units for qty_deal_price_agorot total */
+          qty_deal_enabled: boolean;
+          qty_deal_quantity: number | null;
+          qty_deal_price_agorot: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -221,6 +176,9 @@ export interface Database {
           is_active?: boolean;
           is_featured?: boolean;
           sort_order?: number;
+          qty_deal_enabled?: boolean;
+          qty_deal_quantity?: number | null;
+          qty_deal_price_agorot?: number | null;
         };
         Update: {
           category_id?: string;
@@ -231,6 +189,9 @@ export interface Database {
           is_active?: boolean;
           is_featured?: boolean;
           sort_order?: number;
+          qty_deal_enabled?: boolean;
+          qty_deal_quantity?: number | null;
+          qty_deal_price_agorot?: number | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -244,6 +205,12 @@ export interface Database {
           price_agorot: number;
           compare_price_agorot: number | null;
           stock_quantity: number | null;
+          /** 'per_kg': total = price_agorot × quantity. 'fixed': total = price_agorot */
+          quantity_pricing_mode: 'fixed' | 'per_kg';
+          /** Increment/decrement step for fractional quantities (e.g. 0.5 for 500g steps) */
+          quantity_step: number;
+          /** Minimum purchasable quantity (first add initialises to this value) */
+          min_quantity: number;
           is_available: boolean;
           is_default: boolean;
           sort_order: number;
@@ -258,6 +225,9 @@ export interface Database {
           price_agorot: number;
           compare_price_agorot?: number | null;
           stock_quantity?: number | null;
+          quantity_pricing_mode?: 'fixed' | 'per_kg';
+          quantity_step?: number;
+          min_quantity?: number;
           is_available?: boolean;
           is_default?: boolean;
           sort_order?: number;
@@ -268,6 +238,9 @@ export interface Database {
           price_agorot?: number;
           compare_price_agorot?: number | null;
           stock_quantity?: number | null;
+          quantity_pricing_mode?: 'fixed' | 'per_kg';
+          quantity_step?: number;
+          min_quantity?: number;
           is_available?: boolean;
           is_default?: boolean;
           sort_order?: number;
@@ -443,6 +416,7 @@ export interface Database {
           order_id: string;
           product_variant_id: string;
           product_snapshot: Json;
+          /** NUMERIC(10,4) — supports fractional kg quantities */
           quantity: number;
           unit_price_agorot: number;
           total_price_agorot: number;
@@ -458,6 +432,87 @@ export interface Database {
           total_price_agorot: number;
         };
         Update: Record<string, never>;
+        Relationships: [];
+      };
+      otp_rate_limits: {
+        Row: {
+          id: string;
+          channel: "sms" | "email";
+          identifier: string;
+          requested_at: string;
+        };
+        Insert: {
+          id?: string;
+          channel: "sms" | "email";
+          identifier: string;
+          requested_at?: string;
+        };
+        Update: {
+          channel?: "sms" | "email";
+          identifier?: string;
+          requested_at?: string;
+        };
+        Relationships: [];
+      };
+      user_cart_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          variant_id: string;
+          product_id: string;
+          product_name: string;
+          variant_label: string;
+          price_agorot: number;
+          quantity: number;
+          quantity_pricing_mode: "fixed" | "per_kg";
+          quantity_step: number;
+          min_quantity: number;
+          deal_enabled: boolean;
+          deal_quantity: number | null;
+          deal_price_agorot: number | null;
+          image_url: string | null;
+          image_color: string | null;
+          product_icon: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          variant_id: string;
+          product_id: string;
+          product_name: string;
+          variant_label: string;
+          price_agorot: number;
+          quantity: number;
+          quantity_pricing_mode?: "fixed" | "per_kg";
+          quantity_step?: number;
+          min_quantity?: number;
+          deal_enabled?: boolean;
+          deal_quantity?: number | null;
+          deal_price_agorot?: number | null;
+          image_url?: string | null;
+          image_color?: string | null;
+          product_icon?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          product_name?: string;
+          variant_label?: string;
+          price_agorot?: number;
+          quantity?: number;
+          quantity_pricing_mode?: "fixed" | "per_kg";
+          quantity_step?: number;
+          min_quantity?: number;
+          deal_enabled?: boolean;
+          deal_quantity?: number | null;
+          deal_price_agorot?: number | null;
+          image_url?: string | null;
+          image_color?: string | null;
+          product_icon?: string | null;
+          updated_at?: string;
+        };
         Relationships: [];
       };
     };

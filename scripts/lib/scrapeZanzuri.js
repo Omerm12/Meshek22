@@ -8,7 +8,7 @@
 const fs   = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { findBestMatch, generateQueries, HIGH_THRESHOLD, LOW_THRESHOLD } = require('./matchProducts');
+const { findBestMatch, generateQueries, LOW_THRESHOLD } = require('./matchProducts');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

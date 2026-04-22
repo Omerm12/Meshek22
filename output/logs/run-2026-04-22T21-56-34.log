@@ -1,0 +1,567 @@
+[2026-04-22T21:56:34.544Z] Supabase: URL present ✓  |  Service role key present ✓  |  Bucket: product-images
+[2026-04-22T21:56:34.548Z] Pipeline start: 56 product(s) | model=gpt-image-1 | dry-run=false | upload=true | update-db=true
+[2026-04-22T21:56:34.548Z] Output: raw → output/raw/  |  processed → output/processed/
+[2026-04-22T21:56:34.550Z] [1/56] persimmon: prompt built
+[2026-04-22T21:56:34.551Z] [1/56] persimmon: calling gpt-image-1...
+[2026-04-22T21:56:35.773Z] ERROR: persimmon: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:36.374Z] [2/56] peach: prompt built
+[2026-04-22T21:56:36.375Z] [2/56] peach: calling gpt-image-1...
+[2026-04-22T21:56:37.564Z] ERROR: peach: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:38.165Z] [3/56] basil: prompt built
+[2026-04-22T21:56:38.165Z] [3/56] basil: calling gpt-image-1...
+[2026-04-22T21:56:38.622Z] ERROR: basil: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:39.228Z] [4/56] shallot: prompt built
+[2026-04-22T21:56:39.229Z] [4/56] shallot: calling gpt-image-1...
+[2026-04-22T21:56:40.396Z] ERROR: shallot: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:40.998Z] [5/56] guava: prompt built
+[2026-04-22T21:56:40.998Z] [5/56] guava: calling gpt-image-1...
+[2026-04-22T21:56:41.473Z] ERROR: guava: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:42.089Z] [6/56] butternut-squash: prompt built
+[2026-04-22T21:56:42.089Z] [6/56] butternut-squash: calling gpt-image-1...
+[2026-04-22T21:56:42.253Z] ERROR: butternut-squash: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:42.871Z] [7/56] acorn-squash: prompt built
+[2026-04-22T21:56:42.881Z] [7/56] acorn-squash: calling gpt-image-1...
+[2026-04-22T21:56:43.373Z] ERROR: acorn-squash: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:43.977Z] [8/56] caesar-hearts-lettuce: prompt built
+[2026-04-22T21:56:43.979Z] [8/56] caesar-hearts-lettuce: calling gpt-image-1...
+[2026-04-22T21:56:44.453Z] ERROR: caesar-hearts-lettuce: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:45.055Z] [9/56] lalik-lettuce: prompt built
+[2026-04-22T21:56:45.055Z] [9/56] lalik-lettuce: calling gpt-image-1...
+[2026-04-22T21:56:45.531Z] ERROR: lalik-lettuce: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:46.144Z] [10/56] sage: prompt built
+[2026-04-22T21:56:46.145Z] [10/56] sage: calling gpt-image-1...
+[2026-04-22T21:56:46.340Z] ERROR: sage: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:46.942Z] [11/56] alfalfa-sprouts: prompt built
+[2026-04-22T21:56:46.942Z] [11/56] alfalfa-sprouts: calling gpt-image-1...
+[2026-04-22T21:56:47.123Z] ERROR: alfalfa-sprouts: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:47.728Z] [12/56] chinese-sprouts: prompt built
+[2026-04-22T21:56:47.729Z] [12/56] chinese-sprouts: calling gpt-image-1...
+[2026-04-22T21:56:47.888Z] ERROR: chinese-sprouts: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:48.495Z] [13/56] nectarine: prompt built
+[2026-04-22T21:56:48.495Z] [13/56] nectarine: calling gpt-image-1...
+[2026-04-22T21:56:48.662Z] ERROR: nectarine: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:49.273Z] [14/56] baby-leaves: prompt built
+[2026-04-22T21:56:49.273Z] [14/56] baby-leaves: calling gpt-image-1...
+[2026-04-22T21:56:49.468Z] ERROR: baby-leaves: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:50.071Z] [15/56] spinach-leaves: prompt built
+[2026-04-22T21:56:50.072Z] [15/56] spinach-leaves: calling gpt-image-1...
+[2026-04-22T21:56:50.271Z] ERROR: spinach-leaves: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:50.882Z] [16/56] portobello-mushrooms: prompt built
+[2026-04-22T21:56:50.882Z] [16/56] portobello-mushrooms: calling gpt-image-1...
+[2026-04-22T21:56:51.047Z] ERROR: portobello-mushrooms: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:51.647Z] [17/56] white-champignon-mushrooms: prompt built
+[2026-04-22T21:56:51.648Z] [17/56] white-champignon-mushrooms: calling gpt-image-1...
+[2026-04-22T21:56:51.808Z] ERROR: white-champignon-mushrooms: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:52.413Z] [18/56] parsley-root: prompt built
+[2026-04-22T21:56:52.414Z] [18/56] parsley-root: calling gpt-image-1...
+[2026-04-22T21:56:52.596Z] ERROR: parsley-root: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:53.199Z] [19/56] papaya: prompt built
+[2026-04-22T21:56:53.200Z] [19/56] papaya: calling gpt-image-1...
+[2026-04-22T21:56:53.368Z] ERROR: papaya: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:53.981Z] [20/56] habanero-pepper: prompt built
+[2026-04-22T21:56:53.981Z] [20/56] habanero-pepper: calling gpt-image-1...
+[2026-04-22T21:56:54.470Z] ERROR: habanero-pepper: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:55.082Z] [21/56] jalapeno-pepper: prompt built
+[2026-04-22T21:56:55.083Z] [21/56] jalapeno-pepper: calling gpt-image-1...
+[2026-04-22T21:56:55.243Z] ERROR: jalapeno-pepper: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:55.857Z] [22/56] padron-pepper: prompt built
+[2026-04-22T21:56:55.857Z] [22/56] padron-pepper: calling gpt-image-1...
+[2026-04-22T21:56:56.022Z] ERROR: padron-pepper: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:56.638Z] [23/56] chili-pepper: prompt built
+[2026-04-22T21:56:56.639Z] [23/56] chili-pepper: calling gpt-image-1...
+[2026-04-22T21:56:57.104Z] ERROR: chili-pepper: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:57.706Z] [24/56] shushka-pepper: prompt built
+[2026-04-22T21:56:57.706Z] [24/56] shushka-pepper: calling gpt-image-1...
+[2026-04-22T21:56:57.866Z] ERROR: shushka-pepper: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:58.472Z] [25/56] radish: prompt built
+[2026-04-22T21:56:58.473Z] [25/56] radish: calling gpt-image-1...
+[2026-04-22T21:56:58.668Z] ERROR: radish: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:56:59.271Z] [26/56] black-radish: prompt built
+[2026-04-22T21:56:59.271Z] [26/56] black-radish: calling gpt-image-1...
+[2026-04-22T21:56:59.446Z] ERROR: black-radish: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:00.053Z] [27/56] round-zucchini: prompt built
+[2026-04-22T21:57:00.053Z] [27/56] round-zucchini: calling gpt-image-1...
+[2026-04-22T21:57:00.222Z] ERROR: round-zucchini: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:00.835Z] [28/56] carambola: prompt built
+[2026-04-22T21:57:00.836Z] [28/56] carambola: calling gpt-image-1...
+[2026-04-22T21:57:01.002Z] ERROR: carambola: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:01.607Z] [29/56] arugula: prompt built
+[2026-04-22T21:57:01.607Z] [29/56] arugula: calling gpt-image-1...
+[2026-04-22T21:57:01.768Z] ERROR: arugula: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:02.372Z] [30/56] celery-root: prompt built
+[2026-04-22T21:57:02.372Z] [30/56] celery-root: calling gpt-image-1...
+[2026-04-22T21:57:02.559Z] ERROR: celery-root: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:03.171Z] [31/56] green-beans: prompt built
+[2026-04-22T21:57:03.172Z] [31/56] green-beans: calling gpt-image-1...
+[2026-04-22T21:57:03.394Z] ERROR: green-beans: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:04.004Z] [32/56] broad-beans-pods: prompt built
+[2026-04-22T21:57:04.005Z] [32/56] broad-beans-pods: calling gpt-image-1...
+[2026-04-22T21:57:04.165Z] ERROR: broad-beans-pods: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:04.771Z] [33/56] green-garlic: prompt built
+[2026-04-22T21:57:04.772Z] [33/56] green-garlic: calling gpt-image-1...
+[2026-04-22T21:57:05.033Z] ERROR: green-garlic: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:05.646Z] [34/56] medjool-dates: prompt built
+[2026-04-22T21:57:05.646Z] [34/56] medjool-dates: calling gpt-image-1...
+[2026-04-22T21:57:05.839Z] ERROR: medjool-dates: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:06.445Z] [35/56] hermon-red-apple: prompt built
+[2026-04-22T21:57:06.445Z] [35/56] hermon-red-apple: calling gpt-image-1...
+[2026-04-22T21:57:06.635Z] ERROR: hermon-red-apple: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:07.242Z] [36/56] gala-apple: prompt built
+[2026-04-22T21:57:07.242Z] [36/56] gala-apple: calling gpt-image-1...
+[2026-04-22T21:57:07.451Z] ERROR: gala-apple: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:08.055Z] [37/56] smith-green-apple: prompt built
+[2026-04-22T21:57:08.055Z] [37/56] smith-green-apple: calling gpt-image-1...
+[2026-04-22T21:57:08.278Z] ERROR: smith-green-apple: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:08.890Z] [38/56] pink-lady-apple: prompt built
+[2026-04-22T21:57:08.891Z] [38/56] pink-lady-apple: calling gpt-image-1...
+[2026-04-22T21:57:09.048Z] ERROR: pink-lady-apple: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:09.659Z] [39/56] golden-apple: prompt built
+[2026-04-22T21:57:09.659Z] [39/56] golden-apple: calling gpt-image-1...
+[2026-04-22T21:57:09.831Z] ERROR: golden-apple: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:10.438Z] [40/56] butter-potatoes: prompt built
+[2026-04-22T21:57:10.439Z] [40/56] butter-potatoes: calling gpt-image-1...
+[2026-04-22T21:57:10.651Z] ERROR: butter-potatoes: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:11.266Z] [41/56] snow-peas: prompt built
+[2026-04-22T21:57:11.267Z] [41/56] snow-peas: calling gpt-image-1...
+[2026-04-22T21:57:11.433Z] ERROR: snow-peas: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:12.038Z] [42/56] red-cherry-tomatoes: prompt built
+[2026-04-22T21:57:12.038Z] [42/56] red-cherry-tomatoes: calling gpt-image-1...
+[2026-04-22T21:57:12.232Z] ERROR: red-cherry-tomatoes: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:12.842Z] [43/56] yellow-cherry-tomatoes: prompt built
+[2026-04-22T21:57:12.842Z] [43/56] yellow-cherry-tomatoes: calling gpt-image-1...
+[2026-04-22T21:57:13.060Z] ERROR: yellow-cherry-tomatoes: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:13.673Z] [44/56] striped-cherry-tomatoes: prompt built
+[2026-04-22T21:57:13.674Z] [44/56] striped-cherry-tomatoes: calling gpt-image-1...
+[2026-04-22T21:57:13.862Z] ERROR: striped-cherry-tomatoes: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:14.472Z] [45/56] orange-cherry-tomatoes: prompt built
+[2026-04-22T21:57:14.473Z] [45/56] orange-cherry-tomatoes: calling gpt-image-1...
+[2026-04-22T21:57:14.665Z] ERROR: orange-cherry-tomatoes: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:15.271Z] [46/56] parsley-mehadrin: prompt built
+[2026-04-22T21:57:15.272Z] [46/56] parsley-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:15.436Z] ERROR: parsley-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:16.040Z] [47/56] dill-mehadrin: prompt built
+[2026-04-22T21:57:16.040Z] [47/56] dill-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:16.206Z] ERROR: dill-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:16.810Z] [48/56] cilantro-mehadrin: prompt built
+[2026-04-22T21:57:16.811Z] [48/56] cilantro-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:16.981Z] ERROR: cilantro-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:17.595Z] [49/56] mint-mehadrin: prompt built
+[2026-04-22T21:57:17.596Z] [49/56] mint-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:17.763Z] ERROR: mint-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:18.378Z] [50/56] celery-mehadrin: prompt built
+[2026-04-22T21:57:18.378Z] [50/56] celery-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:19.786Z] ERROR: celery-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:20.401Z] [51/56] green-onion-mehadrin: prompt built
+[2026-04-22T21:57:20.401Z] [51/56] green-onion-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:20.610Z] ERROR: green-onion-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:21.215Z] [52/56] lettuce-mehadrin: prompt built
+[2026-04-22T21:57:21.216Z] [52/56] lettuce-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:21.410Z] ERROR: lettuce-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:22.013Z] [53/56] lalik-lettuce-mehadrin: prompt built
+[2026-04-22T21:57:22.014Z] [53/56] lalik-lettuce-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:22.179Z] ERROR: lalik-lettuce-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:22.795Z] [54/56] salanova-mehadrin: prompt built
+[2026-04-22T21:57:22.796Z] [54/56] salanova-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:22.960Z] ERROR: salanova-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:23.573Z] [55/56] beet-leaves-mehadrin: prompt built
+[2026-04-22T21:57:23.574Z] [55/56] beet-leaves-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:23.742Z] ERROR: beet-leaves-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:24.353Z] [56/56] white-cabbage-mehadrin: prompt built
+[2026-04-22T21:57:24.353Z] [56/56] white-cabbage-mehadrin: calling gpt-image-1...
+[2026-04-22T21:57:24.515Z] ERROR: white-cabbage-mehadrin: OpenAI API error 400: {
+  "error": {
+    "message": "Billing hard limit has been reached.",
+    "type": "billing_limit_user_error",
+    "param": null,
+    "code": "billing_hard_limit_reached"
+  }
+}
+[2026-04-22T21:57:24.519Z] ─────────────────────────────────────────────────────
+[2026-04-22T21:57:24.520Z] Done. 0 succeeded, 56 failed.
+[2026-04-22T21:57:24.520Z] Failed: persimmon, peach, basil, shallot, guava, butternut-squash, acorn-squash, caesar-hearts-lettuce, lalik-lettuce, sage, alfalfa-sprouts, chinese-sprouts, nectarine, baby-leaves, spinach-leaves, portobello-mushrooms, white-champignon-mushrooms, parsley-root, papaya, habanero-pepper, jalapeno-pepper, padron-pepper, chili-pepper, shushka-pepper, radish, black-radish, round-zucchini, carambola, arugula, celery-root, green-beans, broad-beans-pods, green-garlic, medjool-dates, hermon-red-apple, gala-apple, smith-green-apple, pink-lady-apple, golden-apple, butter-potatoes, snow-peas, red-cherry-tomatoes, yellow-cherry-tomatoes, striped-cherry-tomatoes, orange-cherry-tomatoes, parsley-mehadrin, dill-mehadrin, cilantro-mehadrin, mint-mehadrin, celery-mehadrin, green-onion-mehadrin, lettuce-mehadrin, lalik-lettuce-mehadrin, salanova-mehadrin, beet-leaves-mehadrin, white-cabbage-mehadrin
+[2026-04-22T21:57:24.521Z] Details: output/failed-products.json

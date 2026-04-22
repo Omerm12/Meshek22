@@ -6,8 +6,19 @@ import { X, ShoppingCart, Minus, Plus, Trash2, Leaf, ArrowLeft } from "lucide-re
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
-import { useCart } from "@/store/cart";
+import { useCart, calculateLineTotal, type CartLineItem } from "@/store/cart";
 import { Button } from "@/components/ui/Button";
+
+/** Round to the decimal precision implied by the step size. */
+function roundToStep(value: number, step: number): number {
+  const decimals = (step.toString().split(".")[1] ?? "").length;
+  return parseFloat(value.toFixed(decimals));
+}
+
+/** Format a fractional quantity for display (strips unnecessary trailing zeros). */
+function formatQty(qty: number): string {
+  return parseFloat(qty.toFixed(3)).toString();
+}
 
 export function CartDrawer() {
   const { isOpen, closeCart, items, updateQty, removeItem, subtotalAgorot, totalItems } =
@@ -15,7 +26,6 @@ export function CartDrawer() {
 
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -25,7 +35,6 @@ export function CartDrawer() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, closeCart]);
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -43,7 +52,7 @@ export function CartDrawer() {
         aria-hidden="true"
       />
 
-      {/* Drawer panel — slides in from the right */}
+      {/* Drawer panel */}
       <div
         ref={drawerRef}
         role="dialog"
@@ -82,74 +91,12 @@ export function CartDrawer() {
           ) : (
             <ul className="divide-y divide-stone-100 px-5" role="list">
               {items.map((item) => (
-                <li key={item.variantId} className="py-4 flex gap-3">
-                  {/* Product image */}
-                  <div
-                    className="h-16 w-16 rounded-xl shrink-0 relative overflow-hidden"
-                    style={{ backgroundColor: item.imageColor ?? "#f0fdf0" }}
-                    aria-hidden="true"
-                  >
-                    {item.imageUrl ? (
-                      <Image
-                        loader={supabaseImageLoader}
-                        src={item.imageUrl}
-                        alt={item.productName}
-                        fill
-                        sizes="64px"
-                        className="object-contain p-1"
-                      />
-                    ) : (
-                      <span className="absolute inset-0 flex items-center justify-center text-2xl">
-                        {item.productIcon ?? "🛒"}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 leading-snug truncate">
-                      {item.productName}
-                    </p>
-                    <p className="text-xs text-stone-400 mt-0.5">{item.variantLabel}</p>
-
-                    <div className="flex items-center justify-between mt-2 gap-2">
-                      {/* Qty control */}
-                      <div className="flex items-center gap-1 bg-stone-100 rounded-full p-0.5">
-                        <button
-                          onClick={() => updateQty(item.variantId, item.quantity - 1)}
-                          aria-label="הפחת כמות"
-                          className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-stone-200 text-stone-600 transition-colors cursor-pointer"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="w-5 text-center text-xs font-bold text-gray-900">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQty(item.variantId, item.quantity + 1)}
-                          aria-label="הוסף כמות"
-                          className="h-6 w-6 flex items-center justify-center rounded-full bg-brand-600 text-white hover:bg-brand-700 transition-colors cursor-pointer"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </div>
-
-                      {/* Line price */}
-                      <span className="text-sm font-bold text-gray-900 shrink-0">
-                        {formatPrice(item.priceAgorot * item.quantity)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Remove */}
-                  <button
-                    onClick={() => removeItem(item.variantId)}
-                    aria-label={`הסר ${item.productName}`}
-                    className="shrink-0 self-start mt-0.5 h-7 w-7 flex items-center justify-center rounded-full text-stone-300 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </li>
+                <CartItem
+                  key={item.variantId}
+                  item={item}
+                  onUpdateQty={updateQty}
+                  onRemove={removeItem}
+                />
               ))}
             </ul>
           )}
@@ -158,21 +105,16 @@ export function CartDrawer() {
         {/* ── Footer / Checkout ── */}
         {items.length > 0 && (
           <div className="border-t border-stone-100 px-5 py-5 bg-white">
-            {/* Subtotal row */}
             <div className="flex items-center justify-between mb-1 text-sm">
-              <span className="text-stone-500">סה"כ מוצרים</span>
+              <span className="text-stone-500">סה&quot;כ מוצרים</span>
               <span className="font-semibold text-gray-900">{formatPrice(subtotalAgorot)}</span>
             </div>
             <div className="flex items-center justify-between mb-4 text-xs text-stone-400">
               <span>דמי משלוח יחושבו בקופה</span>
             </div>
-
-            {/* Divider */}
             <div className="h-px bg-stone-100 mb-4" />
-
-            {/* Total */}
             <div className="flex items-center justify-between mb-4">
-              <span className="font-bold text-gray-900">סה"כ לתשלום</span>
+              <span className="font-bold text-gray-900">סה&quot;כ לתשלום</span>
               <span className="text-xl font-bold text-brand-700">
                 {formatPrice(subtotalAgorot)}
               </span>
@@ -205,7 +147,119 @@ export function CartDrawer() {
   );
 }
 
-// ── Empty state ──────────────────────────────────────────────────────────────
+// ── Single cart item row ──────────────────────────────────────────────────────
+
+function CartItem({
+  item,
+  onUpdateQty,
+  onRemove,
+}: {
+  item: CartLineItem;
+  onUpdateQty: (variantId: string, qty: number) => void;
+  onRemove: (variantId: string) => void;
+}) {
+  const isPerKg = item.quantityPricingMode === "per_kg";
+  const step    = item.quantityStep ?? 1;
+  const minQty  = item.minQuantity  ?? 1;
+
+  const handleDecrement = () => {
+    const next = roundToStep(item.quantity - step, step);
+    onUpdateQty(item.variantId, next < minQty ? 0 : next);
+  };
+
+  const handleIncrement = () => {
+    onUpdateQty(item.variantId, roundToStep(item.quantity + step, step));
+  };
+
+  const lineTotal = calculateLineTotal(item);
+
+  return (
+    <li className="py-4 flex gap-3">
+      {/* Product image */}
+      <div
+        className="h-16 w-16 rounded-xl shrink-0 relative overflow-hidden"
+        style={{ backgroundColor: item.imageColor ?? "#f0fdf0" }}
+        aria-hidden="true"
+      >
+        {item.imageUrl ? (
+          <Image
+            loader={supabaseImageLoader}
+            src={item.imageUrl}
+            alt={item.productName}
+            fill
+            sizes="64px"
+            className="object-contain p-1"
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center text-2xl">
+            {item.productIcon ?? "🛒"}
+          </span>
+        )}
+      </div>
+
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm text-gray-900 leading-snug truncate">
+          {item.productName}
+        </p>
+        <p className="text-xs text-stone-400 mt-0.5">
+          {item.variantLabel}
+          {isPerKg && (
+            <span className="ms-1 text-stone-300">
+              · {formatPrice(item.priceAgorot)}/ק&quot;ג
+            </span>
+          )}
+          {item.dealEnabled && item.dealQuantity != null && item.dealPriceAgorot != null && (
+            <span className="ms-1 text-orange-500 font-medium">
+              · {item.dealQuantity} ב-{formatPrice(item.dealPriceAgorot)}
+            </span>
+          )}
+        </p>
+
+        <div className="flex items-center justify-between mt-2 gap-2">
+          {/* Qty control */}
+          <div className="flex items-center gap-1 bg-stone-100 rounded-full p-0.5">
+            <button
+              onClick={handleDecrement}
+              aria-label="הפחת כמות"
+              className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-stone-200 text-stone-600 transition-colors cursor-pointer"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="min-w-[20px] text-center text-xs font-bold text-gray-900 px-0.5">
+              {formatQty(item.quantity)}
+              {isPerKg && <span className="text-[9px] font-normal ms-0.5">ק&quot;ג</span>}
+            </span>
+            <button
+              onClick={handleIncrement}
+              aria-label="הוסף כמות"
+              className="h-6 w-6 flex items-center justify-center rounded-full bg-brand-600 text-white hover:bg-brand-700 transition-colors cursor-pointer"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+
+          {/* Line price */}
+          <span className="text-sm font-bold text-gray-900 shrink-0">
+            {formatPrice(lineTotal)}
+          </span>
+        </div>
+      </div>
+
+      {/* Remove */}
+      <button
+        onClick={() => onRemove(item.variantId)}
+        aria-label={`הסר ${item.productName} מהסל`}
+        title="הסר מהסל"
+        className="shrink-0 self-start mt-0.5 h-8 w-8 flex items-center justify-center rounded-full text-stone-400 hover:text-red-500 hover:bg-red-50 active:scale-90 transition-all duration-150 cursor-pointer"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </li>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyCart({ onClose }: { onClose: () => void }) {
   return (

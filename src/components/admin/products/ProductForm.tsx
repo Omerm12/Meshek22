@@ -98,6 +98,7 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
   const [serverError, setServerError] = useState("");
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!defaultValues?.slug);
+  const [dealOpen, setDealOpen] = useState(!!defaultValues?.qty_deal_enabled);
 
   const {
     register,
@@ -109,16 +110,24 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
   } = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      category_id:  defaultValues?.category_id  ?? "",
-      name:         defaultValues?.name          ?? "",
-      slug:         defaultValues?.slug          ?? "",
-      description:  defaultValues?.description   ?? "",
-      image_url:    defaultValues?.image_url     ?? "",
-      is_active:    defaultValues?.is_active     ?? true,
-      is_featured:  defaultValues?.is_featured   ?? false,
-      sort_order:   defaultValues?.sort_order    ?? 0,
-      variants:     defaultValues?.variants      ?? [
-        { unit: "unit", label: "יחידה", price: 0, compare_price: null, stock_quantity: null, is_available: true, is_default: true, sort_order: 0 },
+      category_id:       defaultValues?.category_id       ?? "",
+      name:              defaultValues?.name               ?? "",
+      slug:              defaultValues?.slug               ?? "",
+      description:       defaultValues?.description        ?? "",
+      image_url:         defaultValues?.image_url          ?? "",
+      is_active:         defaultValues?.is_active          ?? true,
+      is_featured:       defaultValues?.is_featured        ?? false,
+      sort_order:        defaultValues?.sort_order         ?? 0,
+      qty_deal_enabled:  defaultValues?.qty_deal_enabled   ?? false,
+      qty_deal_quantity: defaultValues?.qty_deal_quantity  ?? null,
+      qty_deal_price:    defaultValues?.qty_deal_price     ?? null,
+      variants:          defaultValues?.variants            ?? [
+        {
+          unit: "unit", label: "יחידה", price: 0, compare_price: null,
+          stock_quantity: null, quantity_pricing_mode: "fixed" as const,
+          quantity_step: 1, min_quantity: 1,
+          is_available: true, is_default: true, sort_order: 0,
+        },
       ],
     },
   });
@@ -287,6 +296,63 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
             </div>
           </Field>
         </div>
+
+        {/* Bundle deal */}
+        <div className="border border-gray-200 rounded-xl p-4 space-y-4">
+          <div className="flex items-center gap-3">
+            <input
+              id="qty_deal_enabled"
+              type="checkbox"
+              {...register("qty_deal_enabled", {
+                onChange: (e) => setDealOpen(e.target.checked),
+              })}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+            />
+            <label htmlFor="qty_deal_enabled" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+              מבצע כמות (לדוגמה: 4 ב-10 ₪)
+            </label>
+          </div>
+
+          {dealOpen && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="קנו כמה יחידות"
+                id="qty_deal_quantity"
+                required
+                error={errors.qty_deal_quantity?.message}
+              >
+                <input
+                  id="qty_deal_quantity"
+                  type="number"
+                  min={1}
+                  max={99}
+                  dir="ltr"
+                  placeholder="4"
+                  {...register("qty_deal_quantity", { valueAsNumber: true })}
+                  className={errors.qty_deal_quantity ? errInputCls : inputCls}
+                />
+              </Field>
+              <Field
+                label="תמורת (₪)"
+                id="qty_deal_price"
+                required
+                error={errors.qty_deal_price?.message}
+              >
+                <input
+                  id="qty_deal_price"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  dir="ltr"
+                  placeholder="10.00"
+                  {...register("qty_deal_price", { valueAsNumber: true })}
+                  className={errors.qty_deal_price ? errInputCls : inputCls}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* ── Divider ───────────────────────────────────────────────────────── */}

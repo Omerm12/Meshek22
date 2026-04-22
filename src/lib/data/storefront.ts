@@ -36,6 +36,9 @@ type VariantRow = {
   is_default: boolean;
   is_available: boolean;
   sort_order: number;
+  quantity_pricing_mode: 'per_kg' | 'fixed';
+  quantity_step: number;
+  min_quantity: number;
 };
 
 type ProductRow = {
@@ -46,6 +49,10 @@ type ProductRow = {
   image_url: string | null;
   is_featured: boolean;
   sort_order: number;
+  created_at: string;
+  qty_deal_enabled: boolean;
+  qty_deal_quantity: number | null;
+  qty_deal_price_agorot: number | null;
   categories: { id: string; name: string; slug: string } | null;
   product_variants: VariantRow[];
 };
@@ -81,6 +88,9 @@ function toMockProduct(row: ProductRow): MockProduct {
       priceAgorot: v.price_agorot,
       comparePriceAgorot: v.compare_price_agorot,
       isDefault: v.is_default,
+      quantityPricingMode: v.quantity_pricing_mode,
+      quantityStep: v.quantity_step,
+      minQuantity: v.min_quantity,
     }));
 
   if (variants.length > 0 && !variants.some((v) => v.isDefault)) {
@@ -99,13 +109,17 @@ function toMockProduct(row: ProductRow): MockProduct {
     imageColor: display.imageColor,
     icon: display.icon,
     imageUrl: row.image_url ?? null,
+    dealEnabled:      row.qty_deal_enabled      ?? false,
+    dealQuantity:     row.qty_deal_quantity      ?? null,
+    dealPriceAgorot:  row.qty_deal_price_agorot  ?? null,
   };
 }
 
 const PRODUCT_SELECT = `
-  id, name, slug, description, image_url, is_featured, sort_order,
+  id, name, slug, description, image_url, is_featured, sort_order, created_at,
+  qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot,
   categories ( id, name, slug ),
-  product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order )
+  product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order, quantity_pricing_mode, quantity_step, min_quantity )
 `;
 
 // ─── Category queries ──────────────────────────────────────────────────────────
@@ -264,17 +278,18 @@ export async function fetchProductsByCategory(
   const { data, error } = await supabase
     .from("products")
     .select(`
-      id, name, slug, description, image_url, is_featured, sort_order,
+      id, name, slug, description, image_url, is_featured, sort_order, created_at,
       categories!inner ( id, name, slug ),
-      product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order )
+      product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order, quantity_pricing_mode, quantity_step, min_quantity )
     `)
     .eq("categories.slug", categorySlug)
     .eq("is_active", true)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct);
+  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
 }
 
 /**
@@ -313,11 +328,12 @@ export async function fetchProductsByParentCategorySlug(
     .select(PRODUCT_SELECT)
     .in("category_id", childIds)
     .eq("is_active", true)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct);
+  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
 }
 
 /**
@@ -354,11 +370,12 @@ export async function fetchFeaturedProducts(
     .eq("is_active", true)
     .eq("is_featured", true)
     .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true })
     .limit(limit);
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct);
+  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
 }
 
 /**
@@ -371,11 +388,12 @@ export async function fetchAllProducts(): Promise<MockProduct[]> {
     .from("products")
     .select(PRODUCT_SELECT)
     .eq("is_active", true)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct);
+  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
 }
 
 /**

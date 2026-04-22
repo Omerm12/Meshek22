@@ -14,14 +14,6 @@ export type ActionResult =
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Convert ₪ string to integer agorot. Returns null if empty/falsy. */
-function shekelToAgorot(value: string | null): number | null {
-  if (!value || value.trim() === "") return null;
-  const parsed = parseFloat(value);
-  if (isNaN(parsed)) return null;
-  return Math.round(parsed * 100);
-}
-
 function parseForm(formData: FormData) {
   // delivery_days comes as repeated form entries
   const deliveryDays = formData.getAll("delivery_days").map(String);

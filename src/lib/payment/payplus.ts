@@ -11,6 +11,8 @@
  * API docs: https://developers.payplus.co.il
  */
 
+import crypto from "crypto";
+
 const BASE_URL =
   process.env.PAYPLUS_SANDBOX === "true"
     ? "https://sandbox.payplus.co.il/api/v1.0"
@@ -135,9 +137,6 @@ export function verifyWebhookSignature(
   if (!secretKey) return false;
   if (!signatureHeader) return false;
 
-  // Dynamic import to avoid bundling crypto in edge environments
-  // Use in Node.js runtime only (not edge runtime)
-  const crypto = require("crypto") as typeof import("crypto");
   const expected = crypto
     .createHmac("sha256", secretKey)
     .update(rawBody)

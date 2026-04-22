@@ -255,7 +255,8 @@ function analyzeProduct(name) {
  */
 function generateQueries(name) {
   const analysis           = analyzeProduct(name);
-  const { base, extra, normalized } = analysis;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { base, extra: _extra, normalized } = analysis;
 
   const set = new Set();
 
@@ -434,6 +435,7 @@ function scoreWithDebug(query, candNorm, queryBase, queryExtra) {
 }
 
 /** Thin wrapper: returns only the numeric score. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function scoreOnePair(query, candNorm, queryBase, queryExtra) {
   return scoreWithDebug(query, candNorm, queryBase, queryExtra).score;
 }

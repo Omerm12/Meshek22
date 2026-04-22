@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   const windowStart = new Date(now.getTime() - WINDOW_MS).toISOString();
 
   // ── Check rolling-window rate limit ──────────────────────────────────────
-  const { data: attempts, error: countError } = await admin
+  const { data: attemptsRaw, error: countError } = await admin
     .from("otp_rate_limits")
     .select("requested_at")
     .eq("channel", "sms")
@@ -74,12 +74,14 @@ export async function POST(req: NextRequest) {
     .gte("requested_at", windowStart)
     .order("requested_at", { ascending: true });
 
+  const attempts = (attemptsRaw ?? []) as { requested_at: string }[];
+
   if (countError) {
     console.error("[send-otp] rate limit lookup failed", countError.message);
     return NextResponse.json({ error: "שגיאת שרת. נסו שוב." }, { status: 500 });
   }
 
-  if (attempts && attempts.length >= SMS_LIMIT) {
+  if (attempts.length >= SMS_LIMIT) {
     // Oldest attempt in the window exits first; retryAt = that time + 1 hour.
     const oldestAt = new Date(attempts[0].requested_at);
     const retryAt  = new Date(oldestAt.getTime() + WINDOW_MS).toISOString();

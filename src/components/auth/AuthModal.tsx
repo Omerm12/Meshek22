@@ -20,7 +20,7 @@ export function AuthModal() {
 
   // Reset to login tab each time the modal opens
   useEffect(() => {
-    if (isOpen) setTab("login");
+    if (isOpen) queueMicrotask(() => setTab("login"));
   }, [isOpen]);
 
   // Close on Escape

@@ -88,7 +88,7 @@ export function HeroSection() {
   // Keep a ref in sync with paused so the interval callback can read the
   // latest value without needing the interval to be recreated.
   const pausedRef = useRef(false);
-  pausedRef.current = paused;
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   // Navigate to a specific slide
   const goTo = useCallback(
@@ -109,7 +109,6 @@ export function HeroSection() {
       }
     }, INTERVAL_MS);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

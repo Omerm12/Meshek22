@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import type { Database, Json } from "@/types/database";
+import type { Json } from "@/types/database";
 import {
   sendCustomerOrderConfirmation,
   sendAdminNewOrderNotification,
@@ -123,7 +123,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
 
   const { data: variants, error: variantError } = await supabase
     .from("product_variants")
-    .select("id, price_agorot, is_available, label, products(id, name)")
+    .select("id, price_agorot, is_available, label, quantity_pricing_mode, products(id, name, qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot)")
     .in("id", variantIds);
 
   if (variantError || !variants) {
@@ -155,14 +155,38 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     if (!variant.is_available) {
       return { error: `המוצר "${cartItem.productName}" אינו זמין כרגע` };
     }
-    if (cartItem.quantity < 1 || cartItem.quantity > 99) {
+    // Validate quantity: must be positive and finite.
+    // Per-kg variants use fractional quantities (e.g. 0.5, 1.5); fixed variants use integers.
+    if (
+      typeof cartItem.quantity !== "number" ||
+      !isFinite(cartItem.quantity) ||
+      cartItem.quantity <= 0 ||
+      cartItem.quantity > 999
+    ) {
       return { error: `כמות לא תקינה עבור "${cartItem.productName}"` };
     }
 
-    const unitPriceAgorot  = variant.price_agorot;
-    const totalPriceAgorot = unitPriceAgorot * cartItem.quantity;
+    const unitPriceAgorot = variant.price_agorot;
+    const product = variant.products as unknown as {
+      id: string;
+      name: string;
+      qty_deal_enabled: boolean | null;
+      qty_deal_quantity: number | null;
+      qty_deal_price_agorot: number | null;
+    } | null;
 
-    const product = variant.products as unknown as { id: string; name: string } | null;
+    // Apply bundle deal pricing server-side when the deal is active and qty qualifies.
+    let totalPriceAgorot: number;
+    const dealEnabled  = product?.qty_deal_enabled  ?? false;
+    const dealQuantity = product?.qty_deal_quantity  ?? null;
+    const dealPrice    = product?.qty_deal_price_agorot ?? null;
+    if (dealEnabled && dealQuantity != null && dealPrice != null && cartItem.quantity >= dealQuantity) {
+      const groups    = Math.floor(cartItem.quantity / dealQuantity);
+      const remainder = cartItem.quantity % dealQuantity;
+      totalPriceAgorot = groups * dealPrice + Math.round(remainder * unitPriceAgorot);
+    } else {
+      totalPriceAgorot = Math.round(unitPriceAgorot * cartItem.quantity);
+    }
     const productName = product?.name ?? cartItem.productName;
 
     lineItems.push({

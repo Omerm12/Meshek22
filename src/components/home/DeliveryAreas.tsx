@@ -89,9 +89,9 @@ export async function DeliveryAreas() {
                   </div>
 
                   <p className="text-sm text-stone-500 mb-3 leading-relaxed pe-1">
-                    הזמנה מינימלית {formatPrice(zone.min_order_agorot)}
-                    {zone.free_delivery_threshold_agorot
-                      ? `. משלוח חינם מ-${formatPrice(zone.free_delivery_threshold_agorot)}`
+                    הזמנה מינימלית {formatPrice(zone.min_order_agorot ?? 0)}
+                    {(zone.free_delivery_threshold_agorot ?? 0) > 0
+                      ? `. משלוח חינם מ-${formatPrice(zone.free_delivery_threshold_agorot ?? 0)}`
                       : ""}
                   </p>
 
@@ -102,9 +102,9 @@ export async function DeliveryAreas() {
                         ? `עד ${zone.estimated_delivery_hours} שעות`
                         : "בתיאום"}
                     </span>
-                    {zone.free_delivery_threshold_agorot ? (
+                    {(zone.free_delivery_threshold_agorot ?? 0) > 0 ? (
                       <span className="text-sm font-semibold text-brand-600 bg-brand-50 rounded-full px-2.5 py-0.5">
-                        חינם מ-{formatPrice(zone.free_delivery_threshold_agorot)}
+                        חינם מ-{formatPrice(zone.free_delivery_threshold_agorot ?? 0)}
                       </span>
                     ) : (
                       <span className="text-sm text-stone-400 bg-stone-50 rounded-full px-2.5 py-0.5">

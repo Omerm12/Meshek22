@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ClipboardList } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/auth";
 import { fetchOrdersPage } from "./actions";
 import { OrderFilters } from "@/components/admin/orders/OrderFilters";

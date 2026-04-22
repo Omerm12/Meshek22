@@ -48,14 +48,6 @@ function paymentLabel(method: string | null): string {
 // ── Layout helpers ────────────────────────────────────────────────────────────
 
 /**
- * Horizontal rule — rendered as a table row because <hr> is unreliable in Outlook.
- */
-const HR = `
-<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-  <tr><td style="font-size:0; line-height:0; border-bottom:1px solid #e5e7eb;">&nbsp;</td></tr>
-</table>`;
-
-/**
  * Section heading — used to introduce each content block.
  * A colored left-border (visually right-border in RTL) gives hierarchy without being heavy.
  */

@@ -103,23 +103,20 @@ function isDefault(s: A11ySettings) {
 const A11yContext = createContext<A11yContextValue | null>(null);
 
 export function AccessibilityProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<A11ySettings>(DEFAULT);
-  const initialised = useRef(false);
+  // Lazy initializer reads localStorage once on mount (typeof guard for SSR).
+  const [settings, setSettings] = useState<A11ySettings>(() => {
+    if (typeof window === "undefined") return DEFAULT;
+    return loadSettings();
+  });
 
-  // Load from localStorage on mount and apply immediately
+  // Apply on mount (first run), apply+save on every subsequent change.
+  const isFirstRun = useRef(true);
   useEffect(() => {
-    if (initialised.current) return;
-    initialised.current = true;
-    const loaded = loadSettings();
-    setSettings(loaded);
-    applySettings(loaded);
-  }, []);
-
-  // Apply to DOM and persist on every change (after initial load)
-  const prevSettings = useRef(settings);
-  useEffect(() => {
-    if (prevSettings.current === settings) return;
-    prevSettings.current = settings;
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      applySettings(settings);
+      return;
+    }
     applySettings(settings);
     saveSettings(settings);
   }, [settings]);

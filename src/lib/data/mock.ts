@@ -26,6 +26,12 @@ export interface MockVariant {
   priceAgorot: number;
   comparePriceAgorot: number | null;
   isDefault: boolean;
+  /** 'per_kg': charge = priceAgorot × qty. 'fixed': charge = priceAgorot regardless of qty. */
+  quantityPricingMode: 'per_kg' | 'fixed';
+  /** How much qty changes per tap of +/−. For 0.5 kg steps: 0.5. For integers: 1. */
+  quantityStep: number;
+  /** Minimum purchasable quantity. First add initialises cart to this value. */
+  minQuantity: number;
 }
 
 export interface MockProduct {
@@ -42,4 +48,8 @@ export interface MockProduct {
   icon: string;        // emoji fallback
   /** Supabase Storage public URL. Null/undefined → show emoji fallback. */
   imageUrl: string | null;
+  /** Bundle deal: buy dealQuantity units for dealPriceAgorot total */
+  dealEnabled: boolean;
+  dealQuantity: number | null;
+  dealPriceAgorot: number | null;
 }

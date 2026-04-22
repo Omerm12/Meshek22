@@ -1,5 +1,6 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Tag, Sparkles, ArrowLeft, Truck } from "lucide-react";
+import { Tag, Sparkles, ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { CategoryHero } from "@/components/shop/CategoryHero";
 import { getCategoryHero } from "@/lib/config/category-heroes";
@@ -108,6 +109,11 @@ function formatShekels(agorot: number) {
 }
 
 export default function PromotionsPage() {
+  notFound();
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function PromotionsPageContent() {
   const hero = getCategoryHero("sale");
 
   return (

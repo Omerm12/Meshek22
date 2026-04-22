@@ -16,15 +16,6 @@ const STORAGE_BUCKET       = "product-images";
 
 export type UploadResult = { url: string } | { error: string };
 
-/**
- * Upload a product image to Supabase Storage and return the public URL.
- *
- * Security model:
- *   - requireAdmin() validates the caller is an authenticated admin.
- *   - Upload uses the admin (service role) client — bypasses storage RLS.
- *   - File type and size are validated server-side; client values are not trusted.
- *   - Filename is a random UUID so URLs are not guessable and cannot collide.
- */
 export async function uploadProductImage(formData: FormData): Promise<UploadResult> {
   await requireAdmin();
 
@@ -41,8 +32,6 @@ export async function uploadProductImage(formData: FormData): Promise<UploadResu
     return { error: "הקובץ גדול מדי (מקסימום 5MB)" };
   }
 
-  // Random UUID filename prevents collisions and predictable URLs.
-  // Extension is derived from the uploaded file's name.
   const ext      = (file.name.split(".").pop() ?? "jpg").toLowerCase();
   const filename = `products/${crypto.randomUUID()}.${ext}`;
 
@@ -65,21 +54,26 @@ export async function uploadProductImage(formData: FormData): Promise<UploadResu
   return { url: publicUrl };
 }
 
+// ─── Variant → DB row ─────────────────────────────────────────────────────────
+
 function toDbVariant(
   v: ProductFormData["variants"][number],
   productId: string
 ) {
   return {
     ...(v.id ? { id: v.id } : {}),
-    product_id:           productId,
-    unit:                 v.unit,
-    label:                v.label,
-    price_agorot:         Math.round(v.price * 100),
-    compare_price_agorot: v.compare_price != null ? Math.round(v.compare_price * 100) : null,
-    stock_quantity:       v.stock_quantity ?? null,
-    is_available:         v.is_available,
-    is_default:           v.is_default,
-    sort_order:           v.sort_order,
+    product_id:            productId,
+    unit:                  v.unit,
+    label:                 v.label,
+    price_agorot:          Math.round(v.price * 100),
+    compare_price_agorot:  v.compare_price != null ? Math.round(v.compare_price * 100) : null,
+    stock_quantity:        v.stock_quantity ?? null,
+    quantity_pricing_mode: v.quantity_pricing_mode,
+    quantity_step:         v.quantity_step,
+    min_quantity:          v.min_quantity,
+    is_available:          v.is_available,
+    is_default:            v.is_default,
+    sort_order:            v.sort_order,
   };
 }
 
@@ -102,11 +96,19 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
   if (!parsed) return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
 
   const supabase = await createAdminClient();
-  const { variants, ...productFields } = parsed;
+  const { variants, qty_deal_price, ...productFields } = parsed;
+
+  const productRecord = {
+    ...productFields,
+    qty_deal_price_agorot: productFields.qty_deal_enabled && qty_deal_price != null
+      ? Math.round(qty_deal_price * 100)
+      : null,
+    qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
+  };
 
   const { data: product, error: productError } = await supabase
     .from("products")
-    .insert(productFields)
+    .insert(productRecord)
     .select("id")
     .single();
 
@@ -121,7 +123,6 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
     .insert(variants.map((v) => toDbVariant(v, product.id)));
 
   if (variantsError) {
-    // Manual rollback — remove orphaned product
     await supabase.from("products").delete().eq("id", product.id);
     return { success: false, error: "שגיאה ביצירת הגרסאות. המוצר לא נשמר." };
   }
@@ -143,12 +144,20 @@ export async function updateProduct(
   if (!parsed) return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
 
   const supabase = await createAdminClient();
-  const { variants, ...productFields } = parsed;
+  const { variants, qty_deal_price, ...productFields } = parsed;
+
+  const productRecord = {
+    ...productFields,
+    qty_deal_price_agorot: productFields.qty_deal_enabled && qty_deal_price != null
+      ? Math.round(qty_deal_price * 100)
+      : null,
+    qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
+  };
 
   // 1. Update product record
   const { error: productError } = await supabase
     .from("products")
-    .update(productFields)
+    .update(productRecord)
     .eq("id", id);
 
   if (productError) {
@@ -157,15 +166,49 @@ export async function updateProduct(
     return { success: false, error: "שגיאה בעדכון המוצר" };
   }
 
-  // 2. Determine which existing variants were removed
-  const submittedIds = variants.filter((v) => v.id).map((v) => v.id!);
+  // 2. Fetch current variants (need price + unit for kg→unit price sync)
   const { data: currentVariants } = await supabase
     .from("product_variants")
-    .select("id")
+    .select("id, unit, price_agorot, compare_price_agorot")
     .eq("product_id", id);
 
-  const currentIds  = (currentVariants ?? []).map((v) => v.id);
-  const idsToDelete = currentIds.filter((cid) => !submittedIds.includes(cid));
+  // 3. Unit-price sync: if the 1kg variant price changed, update the 'unit'
+  //    variant price proportionally (same percentage change).
+  //    This runs before the upsert so the adjusted price is what gets saved.
+  const mutableVariants = variants.map((v) => ({ ...v }));
+
+  const currentKg = (currentVariants ?? []).find((v) => v.unit === "1kg");
+  const newKgIdx  = mutableVariants.findIndex((v) => v.unit === "1kg" && v.id);
+
+  if (currentKg && newKgIdx >= 0) {
+    const oldKgAgorot = currentKg.price_agorot;
+    const newKgAgorot = Math.round(mutableVariants[newKgIdx].price * 100);
+
+    if (oldKgAgorot !== newKgAgorot && oldKgAgorot > 0) {
+      const ratio = newKgAgorot / oldKgAgorot;
+
+      // Find the 'unit' variant in the current DB state and in the submitted form
+      const currentUnit = (currentVariants ?? []).find((v) => v.unit === "unit");
+      const newUnitIdx  = mutableVariants.findIndex((v) => v.unit === "unit");
+
+      if (currentUnit && newUnitIdx >= 0) {
+        // Sync price
+        mutableVariants[newUnitIdx].price =
+          Math.round(currentUnit.price_agorot * ratio) / 100;
+
+        // Sync compare_price if the unit variant has one
+        if (currentUnit.compare_price_agorot != null) {
+          mutableVariants[newUnitIdx].compare_price =
+            Math.round(currentUnit.compare_price_agorot * ratio) / 100;
+        }
+      }
+    }
+  }
+
+  // 4. Determine which existing variants were removed
+  const submittedIds = mutableVariants.filter((v) => v.id).map((v) => v.id!);
+  const currentIds   = (currentVariants ?? []).map((v) => v.id);
+  const idsToDelete  = currentIds.filter((cid) => !submittedIds.includes(cid));
 
   if (idsToDelete.length > 0) {
     const { error: deleteError } = await supabase
@@ -180,14 +223,14 @@ export async function updateProduct(
     }
   }
 
-  // 3. Clear defaults first to avoid unique-partial-index violation during upsert
+  // 5. Clear defaults first to avoid unique-partial-index violation during upsert
   await supabase
     .from("product_variants")
     .update({ is_default: false })
     .eq("product_id", id);
 
-  // 4. Upsert existing variants (have id)
-  const existingVariants = variants.filter((v) => v.id);
+  // 6. Upsert existing variants (have id)
+  const existingVariants = mutableVariants.filter((v) => v.id);
   if (existingVariants.length > 0) {
     const { error } = await supabase
       .from("product_variants")
@@ -195,8 +238,8 @@ export async function updateProduct(
     if (error) return { success: false, error: "שגיאה בעדכון גרסאות" };
   }
 
-  // 5. Insert new variants (no id)
-  const newVariants = variants.filter((v) => !v.id);
+  // 7. Insert new variants (no id)
+  const newVariants = mutableVariants.filter((v) => !v.id);
   if (newVariants.length > 0) {
     const { error } = await supabase
       .from("product_variants")

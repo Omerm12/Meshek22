@@ -1,1 +1,338 @@
-[]
+[
+  {
+    "slug": "persimmon",
+    "name": "אפרסמון",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:01:53.937Z"
+  },
+  {
+    "slug": "peach",
+    "name": "אפרסק",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:02:31.375Z"
+  },
+  {
+    "slug": "basil",
+    "name": "בזיליקום",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:02:32.178Z"
+  },
+  {
+    "slug": "shallot",
+    "name": "בצל שאלוט",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:02:32.951Z"
+  },
+  {
+    "slug": "guava",
+    "name": "גויאבה",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:02:33.728Z"
+  },
+  {
+    "slug": "butternut-squash",
+    "name": "דלורית",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:03:11.640Z"
+  },
+  {
+    "slug": "acorn-squash",
+    "name": "דלעת ערמונים",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:03:53.178Z"
+  },
+  {
+    "slug": "caesar-hearts-lettuce",
+    "name": "חסה לבבות קיסר",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:04:37.535Z"
+  },
+  {
+    "slug": "lalik-lettuce",
+    "name": "חסה לליק",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:05:19.182Z"
+  },
+  {
+    "slug": "sage",
+    "name": "מרווה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:05:56.157Z"
+  },
+  {
+    "slug": "alfalfa-sprouts",
+    "name": "נבטים אלפלפא",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:05:56.922Z"
+  },
+  {
+    "slug": "chinese-sprouts",
+    "name": "נבטים סיניים",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:06:33.267Z"
+  },
+  {
+    "slug": "nectarine",
+    "name": "נקטרינה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:07:11.326Z"
+  },
+  {
+    "slug": "baby-leaves",
+    "name": "עלי בייבי",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:07:52.472Z"
+  },
+  {
+    "slug": "spinach-leaves",
+    "name": "עלי תרד",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:07:53.240Z"
+  },
+  {
+    "slug": "portobello-mushrooms",
+    "name": "פטריות פורטובלו",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:08:40.766Z"
+  },
+  {
+    "slug": "white-champignon-mushrooms",
+    "name": "פטריות שמפיניון לבן",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:09:20.890Z"
+  },
+  {
+    "slug": "parsley-root",
+    "name": "פטרוזיליה שורש",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:09:21.695Z"
+  },
+  {
+    "slug": "papaya",
+    "name": "פפאיה",
+    "error": "OpenAI API error 400: {\n  \"error\": {\n    \"message\": \"Billing hard limit has been reached.\",\n    \"type\": \"billing_limit_user_error\",\n    \"param\": null,\n    \"code\": \"billing_hard_limit_reached\"\n  }\n}",
+    "failedAt": "2026-04-22T22:09:22.533Z"
+  },
+  {
+    "slug": "habanero-pepper",
+    "name": "פלפל הבנרו",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:09:58.771Z"
+  },
+  {
+    "slug": "jalapeno-pepper",
+    "name": "פלפל חלפיניו",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:10:43.341Z"
+  },
+  {
+    "slug": "padron-pepper",
+    "name": "פלפל פדרון",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:11:23.764Z"
+  },
+  {
+    "slug": "chili-pepper",
+    "name": "פלפל צ'ילי",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:12:01.278Z"
+  },
+  {
+    "slug": "shushka-pepper",
+    "name": "פלפל שושקה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:12:50.521Z"
+  },
+  {
+    "slug": "radish",
+    "name": "צנון",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:13:26.618Z"
+  },
+  {
+    "slug": "black-radish",
+    "name": "צנון שחור",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:14:03.534Z"
+  },
+  {
+    "slug": "round-zucchini",
+    "name": "קישוא עגול",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:14:41.610Z"
+  },
+  {
+    "slug": "carambola",
+    "name": "קרמבולה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:15:21.769Z"
+  },
+  {
+    "slug": "arugula",
+    "name": "רוקלה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:15:59.851Z"
+  },
+  {
+    "slug": "celery-root",
+    "name": "שורש סלרי",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:16:38.823Z"
+  },
+  {
+    "slug": "green-beans",
+    "name": "שעועית ירוקה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:17:12.235Z"
+  },
+  {
+    "slug": "broad-beans-pods",
+    "name": "שעועית רחבה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:17:49.077Z"
+  },
+  {
+    "slug": "green-garlic",
+    "name": "שום ירוק",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:18:24.545Z"
+  },
+  {
+    "slug": "medjool-dates",
+    "name": "תמר מג'הול",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:19:00.239Z"
+  },
+  {
+    "slug": "hermon-red-apple",
+    "name": "תפוח אדום חרמון",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:19:44.534Z"
+  },
+  {
+    "slug": "gala-apple",
+    "name": "תפוח גאלה",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:20:20.529Z"
+  },
+  {
+    "slug": "smith-green-apple",
+    "name": "תפוח סמיט ירוק",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:21:03.370Z"
+  },
+  {
+    "slug": "pink-lady-apple",
+    "name": "תפוח פינק ליידי",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:21:47.441Z"
+  },
+  {
+    "slug": "golden-apple",
+    "name": "תפוח מוזהב",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:22:26.277Z"
+  },
+  {
+    "slug": "butter-potatoes",
+    "name": "תפוח אדמה באטר",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:23:01.866Z"
+  },
+  {
+    "slug": "snow-peas",
+    "name": "אפונת שלג",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:23:40.690Z"
+  },
+  {
+    "slug": "red-cherry-tomatoes",
+    "name": "שרי אדום",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:24:18.345Z"
+  },
+  {
+    "slug": "yellow-cherry-tomatoes",
+    "name": "שרי צהוב",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:25:02.170Z"
+  },
+  {
+    "slug": "striped-cherry-tomatoes",
+    "name": "שרי מנומר",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:25:39.232Z"
+  },
+  {
+    "slug": "orange-cherry-tomatoes",
+    "name": "שרי כתום",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:26:15.662Z"
+  },
+  {
+    "slug": "parsley-mehadrin",
+    "name": "פטרוזיליה מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:27:00.487Z"
+  },
+  {
+    "slug": "dill-mehadrin",
+    "name": "שמיר מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:27:41.605Z"
+  },
+  {
+    "slug": "cilantro-mehadrin",
+    "name": "כוסברה מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:28:30.157Z"
+  },
+  {
+    "slug": "mint-mehadrin",
+    "name": "נענע מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:29:19.220Z"
+  },
+  {
+    "slug": "celery-mehadrin",
+    "name": "סלרי מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:29:58.358Z"
+  },
+  {
+    "slug": "green-onion-mehadrin",
+    "name": "בצל ירוק מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:30:36.293Z"
+  },
+  {
+    "slug": "lettuce-mehadrin",
+    "name": "חסה מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:31:24.041Z"
+  },
+  {
+    "slug": "lalik-lettuce-mehadrin",
+    "name": "חסה לליק מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:32:05.632Z"
+  },
+  {
+    "slug": "salanova-mehadrin",
+    "name": "חסה סלנובה מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:32:46.135Z"
+  },
+  {
+    "slug": "beet-leaves-mehadrin",
+    "name": "עלי סלק מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:33:26.604Z"
+  },
+  {
+    "slug": "white-cabbage-mehadrin",
+    "name": "כרוב לבן מהדרין",
+    "error": "DB update failed: invalid input syntax for type uuid: \"null\"",
+    "failedAt": "2026-04-22T22:34:13.242Z"
+  }
+]

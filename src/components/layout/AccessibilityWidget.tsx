@@ -11,7 +11,6 @@ import {
   AlignJustify,
   RotateCcw,
   X,
-  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAccessibility } from "@/store/accessibility";

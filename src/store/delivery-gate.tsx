@@ -18,7 +18,6 @@ import {
   useContext,
   useState,
   useCallback,
-  useEffect,
   useRef,
   useMemo,
   type ReactNode,
@@ -28,6 +27,8 @@ import type { CartLineItem } from "@/store/cart";
 // sessionStorage: resets when the browser tab/session ends, so the modal
 // reappears on every new visit while not repeating during the same session.
 const STORAGE_KEY = "meshek22_delivery_confirmed";
+// Tracks whether the modal was already shown this session (even if dismissed).
+const SHOWN_KEY   = "meshek22_delivery_shown";
 
 export type PendingCartItem = Omit<CartLineItem, "quantity"> & { quantity?: number };
 
@@ -61,39 +62,33 @@ const DeliveryGateContext = createContext<DeliveryGateContextValue>({
 
 export function DeliveryGateProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen]           = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false);
+  // Lazy initializer: read sessionStorage once on mount (SSR-safe via try/catch).
+  // sessionStorage resets when the browser session ends, so the gate reappears
+  // on every new visit while staying suppressed during the same session.
+  const [isConfirmed, setIsConfirmed] = useState(() => {
+    try { return sessionStorage.getItem(STORAGE_KEY) === "true"; } catch { return false; }
+  });
   const [pendingItem, setPendingItem] = useState<PendingCartItem | null>(null);
   // Ref mirrors pendingItem for stable closure access inside callbacks
   const pendingRef = useRef<PendingCartItem | null>(null);
 
-  // Restore confirmed flag from sessionStorage on mount (client only).
-  // sessionStorage resets when the browser session ends, so the gate reappears
-  // on every new visit while staying suppressed during the same session.
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem(STORAGE_KEY) === "true") {
-        setIsConfirmed(true);
-      }
-    } catch {
-      // sessionStorage unavailable (SSR guard, private browsing policy, etc.)
-    }
-  }, []);
-
   const requestAdd = useCallback((item: PendingCartItem): boolean => {
-    // Check both in-memory state and localStorage (for the case where state
-    // hasn't synced yet on first render after localStorage was set).
-    let confirmed = isConfirmed;
+    let confirmed    = isConfirmed;
+    let alreadyShown = false;
     try {
-      confirmed = confirmed || sessionStorage.getItem(STORAGE_KEY) === "true";
+      confirmed    = confirmed || sessionStorage.getItem(STORAGE_KEY) === "true";
+      alreadyShown = sessionStorage.getItem(SHOWN_KEY) === "true";
     } catch {}
 
-    if (confirmed) return false; // Gate not needed — proceed with direct add
+    if (confirmed)    return false; // Already confirmed — proceed with direct add
+    if (alreadyShown) return false; // Dismissed this session — do not reopen
 
-    // Stash the item and open the gate modal
+    // Mark as shown and open the modal
+    try { sessionStorage.setItem(SHOWN_KEY, "true"); } catch {}
     pendingRef.current = item;
     setPendingItem(item);
     setIsOpen(true);
-    return true; // Gate opened — caller must not add yet
+    return true;
   }, [isConfirmed]);
 
   const closeGate = useCallback(() => {

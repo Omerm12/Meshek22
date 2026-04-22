@@ -103,7 +103,7 @@ export default async function AdminDeliveryZonesPage() {
                       {formatShekel(zone.delivery_fee_agorot)}
                     </td>
                     <td className="px-5 py-3.5 text-gray-700 tabular-nums">
-                      {zone.min_order_agorot > 0 ? formatShekel(zone.min_order_agorot) : "ללא"}
+                      {(zone.min_order_agorot ?? 0) > 0 ? formatShekel(zone.min_order_agorot) : "ללא"}
                     </td>
                     <td className="px-5 py-3.5 text-gray-700 tabular-nums">
                       {zone.free_delivery_threshold_agorot

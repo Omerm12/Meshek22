@@ -4,8 +4,8 @@ import { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { formatPrice } from "@/lib/utils/money";
-import { useCart } from "@/store/cart";
+import { formatPrice, formatPriceCompact } from "@/lib/utils/money";
+import { useCart, calculateLineTotal } from "@/store/cart";
 import { useUser } from "@/store/user";
 import { useDeliveryGate } from "@/store/delivery-gate";
 import { flyToCart } from "@/lib/utils/fly-to-cart";
@@ -19,18 +19,77 @@ interface ProductCardProps {
   priority?: boolean;
 }
 
+/** Round to the decimal precision implied by the step size. */
+function roundToStep(value: number, step: number): number {
+  const decimals = (step.toString().split(".")[1] ?? "").length;
+  return parseFloat(value.toFixed(decimals));
+}
+
+/** Format a fractional quantity for display (removes unnecessary trailing zeros). */
+function formatQty(qty: number): string {
+  return parseFloat(qty.toFixed(3)).toString();
+}
+
 export function ProductCard({ product, className, priority = false }: ProductCardProps) {
   const { addItem, items, updateQty } = useCart();
   const { user } = useUser();
   const { requestAdd } = useDeliveryGate();
   const imageRef = useRef<HTMLDivElement>(null);
 
-  const defaultVariant = product.variants.find((v) => v.isDefault) ?? product.variants[0];
-  const [selectedVariant, setSelectedVariant] = useState<MockVariant>(defaultVariant);
+  const defaultVariant: MockVariant | undefined =
+    product.variants.find((v) => v.isDefault) ?? product.variants[0];
 
-  const cartItem = items.find((i) => i.variantId === selectedVariant.id);
+  const [selectedVariant, setSelectedVariant] = useState<MockVariant | undefined>(defaultVariant);
+
+  const cartItem = items.find((i) =>
+    selectedVariant ? i.variantId === selectedVariant.id : false
+  );
   const qty = cartItem?.quantity ?? 0;
   const isInCart = qty > 0;
+
+  const handleAdd = useCallback(() => {
+    if (!selectedVariant) return;
+    const item = {
+      variantId:           selectedVariant.id,
+      productId:           product.id,
+      productName:         product.name,
+      variantLabel:        selectedVariant.label,
+      priceAgorot:         selectedVariant.priceAgorot,
+      imageUrl:            product.imageUrl,
+      imageColor:          product.imageColor,
+      productIcon:         product.icon,
+      quantityPricingMode: selectedVariant.quantityPricingMode,
+      quantityStep:        selectedVariant.quantityStep,
+      minQuantity:         selectedVariant.minQuantity,
+      quantity:            selectedVariant.minQuantity,
+      dealEnabled:         product.dealEnabled,
+      dealQuantity:        product.dealQuantity,
+      dealPriceAgorot:     product.dealPriceAgorot,
+    };
+    if (!user && requestAdd(item)) return;
+    addItem(item);
+    if (imageRef.current) flyToCart(imageRef.current);
+  }, [addItem, requestAdd, user, selectedVariant, product]);
+
+  // Guard: product has no available variants — render nothing rather than crash.
+  if (!selectedVariant) return null;
+
+  // ── Stepper helpers ────────────────────────────────────────────────────────
+  const step   = selectedVariant.quantityStep;
+  const minQty = selectedVariant.minQuantity;
+
+  const handleDecrement = () => {
+    const next = roundToStep(qty - step, step);
+    updateQty(selectedVariant.id, next < minQty ? 0 : next);
+  };
+
+  const handleIncrement = () => {
+    updateQty(selectedVariant.id, roundToStep(qty + step, step));
+  };
+
+  const isPerKg = selectedVariant.quantityPricingMode === "per_kg";
+
+  const hasDeal = product.dealEnabled && product.dealQuantity != null && product.dealPriceAgorot != null;
 
   const hasSale = selectedVariant.comparePriceAgorot !== null;
   const discountPct = hasSale
@@ -40,24 +99,6 @@ export function ProductCard({ product, className, priority = false }: ProductCar
           100,
       )
     : 0;
-
-  const handleAdd = useCallback(() => {
-    const item = {
-      variantId:    selectedVariant.id,
-      productId:    product.id,
-      productName:  product.name,
-      variantLabel: selectedVariant.label,
-      priceAgorot:  selectedVariant.priceAgorot,
-      imageUrl:     product.imageUrl,
-      imageColor:   product.imageColor,
-      productIcon:  product.icon,
-    };
-
-    if (!user && requestAdd(item)) return;
-
-    addItem(item);
-    if (imageRef.current) flyToCart(imageRef.current);
-  }, [addItem, requestAdd, user, selectedVariant, product]);
 
   const visibleVariants = product.variants.slice(0, 3);
   const hasImage = !!product.imageUrl;
@@ -72,9 +113,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
     <article
       className={cn(
         "group relative bg-white border transition-all duration-300",
-        // Mobile: horizontal card — RTL flex-row puts image at START (right) and content at END (left)
         "flex items-center gap-3 p-3 rounded-2xl",
-        // Desktop: vertical card
         "md:flex-col md:gap-0 md:p-0 md:overflow-hidden md:rounded-2xl",
         isInCart
           ? "border-brand-300 shadow-[0_4px_24px_-4px_rgba(46,125,46,0.18)]"
@@ -83,7 +122,6 @@ export function ProductCard({ product, className, priority = false }: ProductCar
       )}
     >
       {/* ── Image ──────────────────────────────────────────────────────────── */}
-      {/* data-fly-* read by flyToCart to produce a non-white fallback circle */}
       <div
         ref={imageRef}
         style={imageBg}
@@ -115,18 +153,30 @@ export function ProductCard({ product, className, priority = false }: ProductCar
           </div>
         )}
 
+        {/* ── Deal badge: compact single-color pill ─────────────────────── */}
+        {hasDeal && !hasSale && (
+          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-orange-500 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(234,88,12,0.45)]">
+            <span className="text-[11px] md:text-[12px] font-black text-white leading-none tracking-tight whitespace-nowrap">
+              {product.dealQuantity} ב-{formatPriceCompact(product.dealPriceAgorot!)}
+            </span>
+          </div>
+        )}
+
+        {/* ── Discount badge: "-20%" ─────────────────────────────────────── */}
         {hasSale && (
-          <span className="absolute top-1.5 end-1.5 md:top-3 md:end-3 bg-red-500 text-white text-[10px] md:text-[11px] font-bold rounded-full px-1.5 py-0.5 leading-none z-10">
-            -{discountPct}%
-          </span>
+          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 flex items-center justify-center bg-red-500 rounded-lg min-w-[38px] md:min-w-[44px] px-1.5 md:px-2 py-1 md:py-1.5 shadow-[0_3px_10px_rgba(220,38,38,0.5)]">
+            <span className="text-[14px] md:text-[17px] font-black text-white leading-none tracking-tight tabular-nums">
+              -{discountPct}%
+            </span>
+          </div>
         )}
 
         {isInCart && (
           <span
             className="absolute top-1.5 start-1.5 md:top-3 md:start-3 h-5 md:h-6 min-w-5 md:min-w-6 px-1 md:px-1.5 bg-brand-600 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-pop z-10"
-            aria-label={`${qty} בסל`}
+            aria-label={`${formatQty(qty)}${isPerKg ? ' ק"ג' : ''} בסל`}
           >
-            {qty}
+            {formatQty(qty)}
           </span>
         )}
       </div>
@@ -135,8 +185,6 @@ export function ProductCard({ product, className, priority = false }: ProductCar
       <div className="flex flex-col flex-1 min-w-0 py-0.5 md:py-0 md:px-4 md:pt-3 md:pb-4">
 
         {/* ── Body ────────────────────────────────────────────────────────── */}
-        {/* md:flex-1 makes the body grow to fill available vertical space,
-            which pins the footer to the card bottom regardless of chip count. */}
         <div className="flex flex-col gap-1 md:gap-2 md:flex-1">
           <h3 className="font-bold text-gray-900 leading-snug text-sm md:text-[15px]">
             {product.name}
@@ -147,8 +195,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             {selectedVariant.label}
           </p>
 
-          {/* Variant chips — desktop only.
-              min-h-[26px] reserves space so single-chip cards don't collapse. */}
+          {/* Variant chips — desktop only */}
           <div className="hidden md:flex flex-wrap gap-1 items-start min-h-[26px]">
             {visibleVariants.map((v) => (
               <button
@@ -168,27 +215,39 @@ export function ProductCard({ product, className, priority = false }: ProductCar
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}
-        {/* Completely independent of chip count.
-            Price zone (flex-1) fills the right — RTL text-align pins text to the right edge.
-            Cart zone (shrink-0) is pinned to the left.
-            Both anchors are stable across every product, 1 tag or 5. */}
         <div className="flex items-center gap-2 mt-2 md:mt-0 md:pt-3">
 
-          {/* Price zone — fills remaining width; RTL default right-aligns text */}
+          {/* Price zone */}
           <div className="flex flex-col leading-none flex-1 min-w-0">
-            <span className="text-[17px] font-bold text-gray-900 tracking-tight md:text-[22px]">
+            {/* Current / sale price */}
+            <span className={cn(
+              "text-[17px] font-bold tracking-tight md:text-[22px] leading-none",
+              hasSale ? "text-red-600" : "text-gray-900",
+            )}>
               {formatPrice(selectedVariant.priceAgorot)}
+              {isPerKg && (
+                <span className="text-xs font-normal text-stone-400 ms-0.5">
+                  /ק&quot;ג
+                </span>
+              )}
             </span>
+
+            {/* Original price (strikethrough) */}
             {hasSale && (
-              <span className="text-xs text-stone-400 line-through mt-0.5">
+              <span className="text-[11px] font-medium text-stone-400 line-through mt-1 leading-none">
                 {formatPrice(selectedVariant.comparePriceAgorot!)}
+              </span>
+            )}
+
+            {/* Live line total for per_kg or active deal */}
+            {isInCart && (isPerKg || hasDeal) && cartItem && (
+              <span className="text-xs text-brand-600 font-medium mt-1 leading-none">
+                סה&quot;כ {formatPrice(calculateLineTotal(cartItem))}
               </span>
             )}
           </div>
 
-          {/* Cart zone — LEFT anchor.
-              Desktop: fixed 100px so circle↔pill never shifts the price.
-              Mobile: natural width. */}
+          {/* Cart zone */}
           <div className="shrink-0 flex items-center justify-end md:w-[100px]">
             {qty === 0 ? (
               <button
@@ -208,17 +267,17 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             ) : (
               <div className="flex items-center gap-0.5 bg-brand-600 rounded-full p-0.5 shadow-sm md:w-full">
                 <button
-                  onClick={() => updateQty(selectedVariant.id, qty - 1)}
+                  onClick={handleDecrement}
                   aria-label="הפחת כמות"
                   className="h-7 w-7 md:h-8 md:w-8 shrink-0 flex items-center justify-center rounded-full text-white hover:bg-brand-500 active:bg-brand-700 transition-colors cursor-pointer"
                 >
                   <Minus className="h-3 w-3 md:h-3.5 md:w-3.5" />
                 </button>
                 <span className="w-6 flex-shrink-0 md:flex-1 text-center text-sm font-bold text-white tabular-nums select-none">
-                  {qty}
+                  {formatQty(qty)}
                 </span>
                 <button
-                  onClick={() => updateQty(selectedVariant.id, qty + 1)}
+                  onClick={handleIncrement}
                   aria-label="הוסף כמות"
                   className="h-7 w-7 md:h-8 md:w-8 shrink-0 flex items-center justify-center rounded-full text-white hover:bg-brand-500 active:bg-brand-700 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-brand-600"
                 >

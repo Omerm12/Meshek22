@@ -30,9 +30,11 @@ export default async function EditProductPage({
         .select(`
           id, category_id, name, slug, description, image_url,
           is_active, is_featured, sort_order,
+          qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot,
           product_variants (
             id, unit, label, price_agorot, compare_price_agorot,
-            stock_quantity, is_available, is_default, sort_order
+            stock_quantity, is_available, is_default, sort_order,
+            quantity_pricing_mode, quantity_step, min_quantity
           )
         `)
         .eq("id", id)
@@ -54,28 +56,36 @@ export default async function EditProductPage({
   const variants: VariantFormData[] = rawVariants
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((v) => ({
-      id:             v.id,
-      unit:           VARIANT_UNITS.includes(v.unit as typeof VARIANT_UNITS[number])
-                        ? (v.unit as typeof VARIANT_UNITS[number])
-                        : "unit",
-      label:          v.label,
-      price:          v.price_agorot / 100,
-      compare_price:  v.compare_price_agorot != null ? v.compare_price_agorot / 100 : null,
-      stock_quantity: v.stock_quantity ?? null,
-      is_available:   v.is_available,
-      is_default:     v.is_default,
-      sort_order:     v.sort_order,
+      id:                    v.id,
+      unit:                  VARIANT_UNITS.includes(v.unit as typeof VARIANT_UNITS[number])
+                               ? (v.unit as typeof VARIANT_UNITS[number])
+                               : "unit",
+      label:                 v.label,
+      price:                 v.price_agorot / 100,
+      compare_price:         v.compare_price_agorot != null ? v.compare_price_agorot / 100 : null,
+      stock_quantity:        v.stock_quantity ?? null,
+      quantity_pricing_mode: (v.quantity_pricing_mode ?? "fixed") as "fixed" | "per_kg",
+      quantity_step:         v.quantity_step  ?? 1,
+      min_quantity:          v.min_quantity   ?? 1,
+      is_available:          v.is_available,
+      is_default:            v.is_default,
+      sort_order:            v.sort_order,
     }));
 
   const defaultValues: ProductFormData = {
-    category_id:  product.category_id,
-    name:         product.name,
-    slug:         product.slug,
-    description:  product.description  ?? "",
-    image_url:    product.image_url    ?? "",
-    is_active:    product.is_active,
-    is_featured:  product.is_featured,
-    sort_order:   product.sort_order,
+    category_id:       product.category_id,
+    name:              product.name,
+    slug:              product.slug,
+    description:       product.description  ?? "",
+    image_url:         product.image_url    ?? "",
+    is_active:         product.is_active,
+    is_featured:       product.is_featured,
+    sort_order:        product.sort_order,
+    qty_deal_enabled:  product.qty_deal_enabled  ?? false,
+    qty_deal_quantity: product.qty_deal_quantity  ?? null,
+    qty_deal_price:    product.qty_deal_price_agorot != null
+      ? product.qty_deal_price_agorot / 100
+      : null,
     variants,
   };
 

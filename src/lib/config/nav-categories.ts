@@ -63,7 +63,7 @@ export const PARENT_CATEGORY_NAV: NavParentCategory[] = [
 export const ALL_PRODUCTS_LINK: NavLink = { label: "כל המוצרים", href: "/products" };
 
 export const SIMPLE_NAV_LINKS: NavLink[] = [
-  { label: "מבצעים",      href: "/promotions" },
+  // { label: "מבצעים", href: "/promotions" }, // temporarily hidden
   { label: "אזורי משלוח", href: "/delivery-areas" },
   { label: "אודות",       href: "/about" },
 ];

@@ -128,8 +128,12 @@ export function ParentCategoryShell({
   const [visible, setVisible] = useState(ITEMS_PER_STEP);
   const sentinelRef           = useRef<HTMLDivElement>(null);
 
+  // Reset visible count when the products prop changes (e.g. subcategory navigation).
+  useEffect(() => {
+    queueMicrotask(() => setVisible(ITEMS_PER_STEP));
+  }, [products]);
+
   const filtered = useMemo(() => {
-    setVisible(ITEMS_PER_STEP); // reset on filter change (anti-pattern but intentional)
     if (!search.trim()) return products;
     const q = search.toLowerCase();
     return products.filter(
@@ -138,7 +142,6 @@ export function ParentCategoryShell({
   }, [products, search]);
 
   const sorted = useMemo(() => {
-    setVisible(ITEMS_PER_STEP);
     const arr = [...filtered];
     switch (sortBy) {
       case "price-asc":  return arr.sort((a, b) => getDefaultPrice(a) - getDefaultPrice(b));
@@ -236,14 +239,14 @@ export function ParentCategoryShell({
               <input
                 type="search"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setVisible(ITEMS_PER_STEP); }}
                 placeholder={`חפשו ב${heroConfig.title}...`}
                 aria-label={`חיפוש ב${heroConfig.title}`}
                 className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
               />
               {search && (
                 <button
-                  onClick={() => setSearch("")}
+                  onClick={() => { setSearch(""); setVisible(ITEMS_PER_STEP); }}
                   aria-label="נקה חיפוש"
                   className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-400 hover:text-stone-700 cursor-pointer transition-colors"
                 >
@@ -256,7 +259,7 @@ export function ParentCategoryShell({
             <div className="relative shrink-0">
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                onChange={(e) => { setSortBy(e.target.value as SortOption); setVisible(ITEMS_PER_STEP); }}
                 aria-label="מיון מוצרים"
                 className="h-11 w-full sm:w-auto bg-white border border-stone-200 rounded-xl ps-4 pe-9 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer appearance-none min-w-[172px]"
               >
@@ -296,7 +299,7 @@ export function ParentCategoryShell({
               )}
             </>
           ) : (
-            <EmptyState search={search} onClear={() => setSearch("")} />
+            <EmptyState search={search} onClear={() => { setSearch(""); setVisible(ITEMS_PER_STEP); }} />
           )}
         </div>
       </Container>

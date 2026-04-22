@@ -69,7 +69,7 @@ export function DeliveryGateModal() {
   useEffect(() => {
     if (!isOpen || deliveryData) return;
     let ignore = false;
-    setDataLoading(true);
+    queueMicrotask(() => { if (!ignore) setDataLoading(true); });
     fetchDeliveryGateData()
       .then((data) => { if (!ignore) { setDeliveryData(data); setDataLoading(false); } })
       .catch(() => { if (!ignore) setDataLoading(false); });
@@ -87,10 +87,7 @@ export function DeliveryGateModal() {
 
   // ── Reset local UI state each time modal opens ─────────────────────────────
   useEffect(() => {
-    if (isOpen) {
-      setQuery("");
-      setResult(null);
-    }
+    if (isOpen) queueMicrotask(() => { setQuery(""); setResult(null); });
   }, [isOpen]);
 
   // ── Keyboard: Escape → close ───────────────────────────────────────────────
