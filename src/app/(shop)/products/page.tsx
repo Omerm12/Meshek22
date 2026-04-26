@@ -28,11 +28,6 @@ export default async function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
             כל המוצרים
           </h1>
-          {products.length > 0 && (
-            <p className="mt-2 text-stone-500 text-base">
-              {products.length} מוצרים
-            </p>
-          )}
         </div>
 
         <ProductsClientShell products={products} totalCount={products.length} />
