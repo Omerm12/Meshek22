@@ -19,13 +19,13 @@ export default async function ProductsPage() {
   return (
     <main className="min-h-screen" style={{ backgroundColor: "var(--color-surface)" }}>
       <CategoryHero config={heroConfig} />
-      <Container className="py-10 lg:py-16">
+      <Container className="py-6 lg:py-12">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <p className="text-xs font-semibold text-brand-600 uppercase tracking-widest mb-2">
             החנות שלנו
           </p>
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl lg:text-5xl">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
             כל המוצרים
           </h1>
           {products.length > 0 && (

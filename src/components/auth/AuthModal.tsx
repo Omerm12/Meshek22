@@ -114,8 +114,8 @@ export function AuthModal() {
         aria-modal="true"
         aria-label={tab === "login" ? "כניסה לחשבון" : "הרשמה"}
         className={cn(
-          "fixed z-50 inset-x-4 top-1/2 -translate-y-1/2 mx-auto",
-          "w-full max-w-[520px] bg-white rounded-2xl shadow-2xl",
+          "fixed z-50 left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2",
+          "w-[calc(100%-2rem)] max-w-[520px] bg-white rounded-2xl shadow-2xl",
           "flex flex-col overflow-hidden"
         )}
       >

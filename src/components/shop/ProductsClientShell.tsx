@@ -94,7 +94,7 @@ export function ProductsClientShell({ products }: ProductsClientShellProps) {
       {/* Product grid — 5 columns on large screens */}
       {displayed.length > 0 ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
             {displayed.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
