@@ -50,7 +50,7 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
   vegetables: {
     title: "ירקות טריים",
     subtitle: "קטיפים יומיים · ישירות מהשדה לביתכם",
-    imageSrc: "/images/heroes/home-vegetables.png",
+    imageSrc: "/images/heroes/home-vegetables.jpeg",
     imageAlt: "ירקות טריים ומגוונים ממשק 22",
     fallbackBg: "bg-green-950",
     containerBg: "#0b2412",
@@ -61,7 +61,7 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
   fruits: {
     title: "פירות טריים",
     subtitle: "עונתיים · מתוקים · ישירות מהפרדס לשולחנכם",
-    imageSrc: "/images/heroes/home-fruits.png",
+    imageSrc: "/images/heroes/home-fruits.jpeg",
     imageAlt: "פירות טריים ומגוונים ממשק 22",
     fallbackBg: "bg-rose-950",
     containerBg: "#2a0810",

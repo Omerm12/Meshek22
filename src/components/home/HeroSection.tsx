@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -14,9 +15,11 @@ const INTERVAL_MS = 5000;
 function SlidePanel({
   slide,
   isActive,
+  priority,
 }: {
   slide: (typeof HERO_SLIDES)[number];
   isActive: boolean;
+  priority: boolean;
 }) {
   return (
     <div
@@ -26,13 +29,20 @@ function SlidePanel({
       )}
       aria-hidden={!isActive}
     >
-      {/* Background: image first, gradient as CSS fallback */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${slide.imagePath}), ${slide.backgroundGradient}`,
-        }}
-      />
+      {/* Background: gradient is CSS (instant), Next.js Image covers it when loaded */}
+      <div className="absolute inset-0" style={{ background: slide.backgroundGradient }}>
+        {slide.imagePath && (
+          <Image
+            src={slide.imagePath}
+            alt=""
+            fill
+            sizes="100vw"
+            priority={priority}
+            className="object-cover object-center"
+            aria-hidden="true"
+          />
+        )}
+      </div>
       {/* Readability scrim */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/10" />
 
@@ -116,8 +126,8 @@ export function HeroSection() {
       className="relative overflow-hidden w-full"
       style={{ height: "clamp(340px, 48vw, 520px)" }}
       aria-label="באנר קידום מכירות"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") setPaused(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse") setPaused(false); }}
     >
       {/* Slides */}
       {HERO_SLIDES.map((slide, idx) => (
@@ -125,6 +135,7 @@ export function HeroSection() {
           key={slide.id}
           slide={slide}
           isActive={idx === current}
+          priority={idx === 0}
         />
       ))}
 

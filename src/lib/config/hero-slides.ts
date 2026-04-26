@@ -52,7 +52,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     subtext: "מגוון רחב · ירקות שורש · עשבי תיבול · חתוכים ושטופים",
     ctaLabel: "לכל הירקות",
     ctaHref: "/vegetables",
-    imagePath: "/images/heroes/home-vegetables.png",
+    imagePath: "/images/heroes/home-vegetables.jpeg",
     backgroundGradient:
       "linear-gradient(135deg, #33691e 0%, #558b2f 55%, #689f38 100%)",
   },
@@ -63,7 +63,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     subtext: "הדר טרי · פירות רגילים · פירות מיוחדים · אורגניים",
     ctaLabel: "לכל הפירות",
     ctaHref: "/fruits",
-    imagePath: "/images/heroes/home-fruits.png",
+    imagePath: "/images/heroes/home-fruits.jpeg",
     backgroundGradient:
       "linear-gradient(135deg, #e65100 0%, #f57c00 55%, #fb8c00 100%)",
   },

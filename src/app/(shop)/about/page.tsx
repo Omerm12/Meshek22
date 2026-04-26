@@ -76,7 +76,7 @@ export default function AboutPage() {
             <h1 className="text-4xl sm:text-5xl font-bold mb-5 leading-tight">
               חקלאות ישראלית<br />ישירות מהשדה אליכם
             </h1>
-            <p className="text-brand-100 text-xl leading-relaxed">
+            <p className="text-brand-100 text-base sm:text-xl leading-relaxed">
               משק 22, בבעלותו של חגי מעודי, ממוקם במושב ינון ופועל מתוך אהבה
               אמיתית לאדמה ולחקלאות הישראלית.
             </p>

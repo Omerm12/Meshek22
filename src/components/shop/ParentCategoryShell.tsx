@@ -287,7 +287,7 @@ export function ParentCategoryShell({
           {/* Product grid */}
           {sorted.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
                 {sorted.slice(0, visible).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

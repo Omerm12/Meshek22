@@ -65,7 +65,7 @@ export function DeliveryChecker({ zones, settlements }: DeliveryCheckerProps) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-stone-100 p-8 sm:p-12">
+    <div className="bg-white rounded-2xl border border-stone-100 p-5 sm:p-8 lg:p-12">
       {/* Heading */}
       <div className="mb-8">
         <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
