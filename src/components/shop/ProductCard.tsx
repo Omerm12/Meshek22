@@ -190,19 +190,14 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             {product.name}
           </h3>
 
-          {/* Variant label — mobile only */}
-          <p className="text-xs text-stone-400 md:hidden truncate">
-            {selectedVariant.label}
-          </p>
-
-          {/* Variant chips — desktop only */}
-          <div className="hidden md:flex flex-wrap gap-1 items-start min-h-[26px]">
+          {/* Variant chips — all screen sizes */}
+          <div className="flex flex-wrap gap-1 items-start md:min-h-[26px]">
             {visibleVariants.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelectedVariant(v)}
                 className={cn(
-                  "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all duration-150 cursor-pointer",
+                  "px-2 md:px-2.5 py-0.5 rounded-full text-[11px] md:text-xs font-medium border transition-all duration-150 cursor-pointer",
                   selectedVariant.id === v.id
                     ? "bg-brand-600 text-white border-brand-600"
                     : "bg-white text-stone-500 border-stone-200 hover:border-brand-300 hover:text-brand-700",
