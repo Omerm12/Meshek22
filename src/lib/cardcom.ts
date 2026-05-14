@@ -26,9 +26,9 @@ export async function createCardComSession({
   const apiPassword = process.env.CARDCOM_API_PASSWORD;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
-  if (!terminalNumber || !apiName || !apiPassword) {
+  if (!terminalNumber || !apiName) {
     throw new Error(
-      "CardCom credentials not configured. Add CARDCOM_TERMINAL_NUMBER, CARDCOM_API_NAME, CARDCOM_API_PASSWORD to .env.local"
+      "CardCom credentials not configured. Add CARDCOM_TERMINAL_NUMBER, CARDCOM_API_NAME to .env.local"
     );
   }
 
@@ -48,12 +48,11 @@ export async function createCardComSession({
   const errorUrl   = `${baseUrl}/checkout/payment-error?orderId=${orderId}`;
   const webhookUrl = `${baseUrl}/api/cardcom/callback`;
 
-  // Build payload with every field explicit — do not inline to avoid typos.
+  // ApiPassword is NOT included — LowProfile/Create does not require it per v11 docs.
   // Field names match the CardCom Low Profile v11 API exactly.
   const payload: Record<string, unknown> = {};
   payload["TerminalNumber"]     = parseInt(terminalNumber, 10);
   payload["ApiName"]            = apiName;
-  payload["ApiPassword"]        = apiPassword;
   payload["Operation"]          = "ChargeOnly";
   payload["ReturnValue"]        = orderId;
   payload["SuccessRedirectUrl"] = successUrl;
@@ -76,29 +75,34 @@ export async function createCardComSession({
     },
   ];
 
-  // Log outgoing payload keys (never log ApiPassword value).
+  const endpoint = "https://secure.cardcom.solutions/api/v11/LowProfile/Create";
+
+  console.log("[cardcom] endpoint", endpoint);
   console.log("[cardcom] payload keys", Object.keys(payload));
 
-  const response = await fetch(
-    "https://secure.cardcom.solutions/api/v11/LowProfile/Create",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    }
-  );
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
 
-  if (!response.ok) {
-    throw new Error(`CardCom API HTTP ${response.status}`);
+  const rawText = await response.text();
+
+  let data: { ResponseCode: number; Description?: string; LowProfileId?: string; url?: string };
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`CardCom returned non-JSON (HTTP ${response.status}): ${rawText.slice(0, 300)}`);
   }
 
-  const data = (await response.json()) as {
-    ResponseCode: number;
-    Description?: string;
-    LowProfileId?: string;
-    url?: string;
-  };
+  console.log("[cardcom] ResponseCode", data.ResponseCode);
+  console.log("[cardcom] Description", data.Description);
+  console.log("[cardcom] full response", JSON.stringify(data));
+
+  if (!response.ok) {
+    throw new Error(`CardCom API HTTP ${response.status}: ${rawText.slice(0, 300)}`);
+  }
 
   if (data.ResponseCode !== 0) {
     throw new Error(
