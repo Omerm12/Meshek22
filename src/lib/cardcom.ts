@@ -89,7 +89,7 @@ export async function createCardComSession({
 
   const rawText = await response.text();
 
-  let data: { ResponseCode: number; Description?: string; LowProfileId?: string; url?: string };
+  let data: { ResponseCode: number; Description?: string; LowProfileId?: string; Url?: string };
   try {
     data = JSON.parse(rawText);
   } catch {
@@ -110,12 +110,12 @@ export async function createCardComSession({
     );
   }
 
-  if (!data.LowProfileId || !data.url) {
-    throw new Error("CardCom response missing LowProfileId or url");
+  if (!data.LowProfileId || !data.Url) {
+    throw new Error("CardCom response missing LowProfileId or Url");
   }
 
   return {
     lowProfileId: data.LowProfileId,
-    paymentUrl: data.url,
+    paymentUrl:   data.Url,
   };
 }
