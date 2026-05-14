@@ -49,19 +49,20 @@ export async function createCardComSession({
   const webhookUrl = `${baseUrl}/api/cardcom/callback`;
 
   // Build payload with every field explicit — do not inline to avoid typos.
+  // Field names match the CardCom Low Profile v11 API exactly.
   const payload: Record<string, unknown> = {};
-  payload["TerminalNumber"]      = parseInt(terminalNumber, 10);
-  payload["ApiName"]             = apiName;
-  payload["ApiPassword"]         = apiPassword;
-  payload["ReturnValue"]         = orderId;
-  payload["SuccessRedirectUrl"]  = successUrl;
-  payload["ErrorRedirectUrl"]    = errorUrl;
-  payload["CancelRedirectUrl"]   = errorUrl;
-  payload["IndicatorUrl"]        = webhookUrl;
-  payload["Amount"]              = amountShekels;
-  payload["CoinID"]              = 1;
-  payload["MaxPayments"]         = 12;
-  payload["InvoiceHead"]         = {
+  payload["TerminalNumber"]     = parseInt(terminalNumber, 10);
+  payload["ApiName"]            = apiName;
+  payload["ApiPassword"]        = apiPassword;
+  payload["Operation"]          = "ChargeOnly";
+  payload["ReturnValue"]        = orderId;
+  payload["SuccessRedirectUrl"] = successUrl;
+  payload["FailedRedirectUrl"]  = errorUrl;
+  payload["WebHookUrl"]         = webhookUrl;
+  payload["Amount"]             = amountShekels;
+  payload["CoinID"]             = 1;
+  payload["MaxPayments"]        = 12;
+  payload["InvoiceHead"]        = {
     CustName:    customerName,
     CustEmail:   customerEmail,
     Language:    "he",
