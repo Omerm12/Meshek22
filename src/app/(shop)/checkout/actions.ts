@@ -2,11 +2,7 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
-import {
-  sendCustomerOrderConfirmation,
-  sendAdminNewOrderNotification,
-} from "@/lib/email/service";
-import type { OrderEmailData } from "@/lib/email/types";
+import { createCardComSession } from "@/lib/cardcom";
 
 interface CartItemInput {
   variantId: string;
@@ -21,7 +17,7 @@ type CreateOrderResult = { error: string } | { paymentUrl: string; orderNumber: 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Create an order from checkout form data.
+ * Create an order from checkout form data and initiate a CardCom payment session.
  *
  * Security model:
  * - Auth is verified server-side via supabase.auth.getUser() (JWT validation).
@@ -31,8 +27,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * - Order + items are inserted atomically via create_order_atomic() Postgres RPC.
  * - Idempotency key (UUID generated per checkout session) prevents duplicate orders
  *   on double-click, network retry, or page refresh during submission.
- * - Mock payment update uses adminClient to bypass the missing orders_own_update
- *   RLS policy (same as the zone lookup). In production this would be a webhook.
+ * - Payment status is set to paid ONLY by the CardCom server-side webhook at
+ *   /api/cardcom/callback — never based on the user's success redirect URL.
  */
 export async function createOrder(formData: FormData): Promise<CreateOrderResult> {
   const supabase = await createClient();
@@ -276,9 +272,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
   const { out_order_id: orderId, out_order_number: orderNumber, out_is_duplicate: isDuplicate } =
     rpcResult[0];
 
-  // ── Mock payment ───────────────────────────────────────────────────────────
-  // If this is an idempotent replay AND the order was already paid, skip the
-  // update and return the success URL immediately — no double payment.
+  // ── Idempotent duplicate: if already paid return success directly ──────────
   if (isDuplicate) {
     const { data: existingOrder } = await adminClient
       .from("orders")
@@ -287,100 +281,40 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       .single();
 
     if (existingOrder?.payment_status === "paid") {
-      // Already completed — return the success URL without touching the order.
-      // Clear the DB cart (idempotent — may already be empty from the first time).
       await supabase.from("user_cart_items").delete().eq("user_id", user.id);
       const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
       return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };
     }
+    // pending_payment duplicate: create a new CardCom session below (old one may have expired).
   }
 
-  // TODO: Replace with PayPlus when PAYPLUS_API_KEY is configured.
-  // Preserved integration point:
-  //   const paymentResult = await createPaymentPage({ orderId, ... });
-  //   await adminClient.from("orders").update({ payment_reference: paymentResult.paypageUid }).eq("id", orderId);
-  //   return { paymentUrl: paymentResult.paymentPageLink, orderNumber };
+  // ── Initiate CardCom payment session ───────────────────────────────────────
+  // All CardCom API calls are server-side only. Credentials never reach the client.
+  let cardComSession: Awaited<ReturnType<typeof createCardComSession>>;
+  try {
+    cardComSession = await createCardComSession({
+      orderId,
+      orderNumber,
+      totalAgorot,
+      customerName,
+      customerEmail,
+    });
+  } catch (e) {
+    console.error("[createOrder] CardCom session creation failed", e);
+    return { error: "שגיאה בתחילת תהליך התשלום. נא לנסות שוב או לפנות לתמיכה." };
+  }
 
-  // adminClient is used for the payment update because there is no orders_own_update
-  // RLS policy for regular users (payment confirmation in production comes from a webhook,
-  // not from the user session).
-  const { error: paymentUpdateError } = await adminClient
+  // Store the CardCom LowProfileId so the webhook can correlate the callback.
+  // adminClient is used because there is no orders_own_update RLS policy.
+  await adminClient
     .from("orders")
-    .update({
-      payment_status:    "paid",
-      order_status:      "confirmed",
-      payment_method:    "card_mock",
-      payment_reference: `MOCK-${Date.now()}`,
-    })
+    .update({ payment_reference: cardComSession.lowProfileId })
     .eq("id", orderId);
 
-  if (paymentUpdateError) {
-    // Order was created successfully; log the failure but do not surface it to
-    // the user — a real webhook would retry this update independently.
-    console.error("[createOrder] mock payment update failed", {
-      orderId,
-      error: paymentUpdateError.message,
-    });
-  }
-
-  // ── Transactional emails ───────────────────────────────────────────────────
-  // Build the shared payload from data already in scope — no extra DB query needed.
-  const emailData: OrderEmailData = {
-    orderId,
-    orderNumber,
-    createdAt: new Date().toISOString(),
-    customerName: customerName,
-    customerEmail: customerEmail,
-    customerPhone: customerPhone,
-    addressStreet: addressStreet,
-    addressHouseNumber: addressHouseNumber,
-    addressApartment: addressApartment,
-    addressCity: addressCity,
-    deliveryNotes: deliveryNotes,
-    items: lineItems.map((item) => {
-      const snap = item.snapshot as {
-        product_name: string;
-        variant_label: string;
-        price_agorot: number;
-      };
-      return {
-        productName: snap.product_name,
-        variantLabel: snap.variant_label,
-        quantity: item.quantity,
-        unitPriceAgorot: item.unitPriceAgorot,
-        totalPriceAgorot: item.totalPriceAgorot,
-      };
-    }),
-    subtotalAgorot: subtotalAgorot,
-    deliveryFeeAgorot: deliveryFeeAgorot,
-    totalAgorot: totalAgorot,
-    paymentMethod: "card_mock",
-    orderStatus: "confirmed",
-  };
-
-  // Fire both emails concurrently. Email failure never blocks the order response.
-  void Promise.all([
-    sendCustomerOrderConfirmation(emailData),
-    sendAdminNewOrderNotification(emailData),
-  ]).then(([customerResult, adminResult]) => {
-    if (!customerResult.ok) {
-      console.error("[createOrder] customer confirmation email failed", {
-        orderId,
-        error: customerResult.error,
-      });
-    }
-    if (!adminResult.ok) {
-      console.error("[createOrder] admin notification email failed", {
-        orderId,
-        error: adminResult.error,
-      });
-    }
-  });
-
-  // Clear the user's DB cart server-side as part of the order completion response.
-  // Belt-and-suspenders: client-side clearCart() also fires after this returns.
+  // Clear the DB cart — the order is the source of truth from here on.
   await supabase.from("user_cart_items").delete().eq("user_id", user.id);
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };
+  // Confirmation emails are sent by the CardCom webhook at /api/cardcom/callback
+  // once payment is verified server-side.
+  return { paymentUrl: cardComSession.paymentUrl, orderNumber };
 }

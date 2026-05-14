@@ -8,7 +8,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { User, Session } from "@supabase/supabase-js";
+import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
@@ -43,6 +43,7 @@ const UserContext = createContext<UserContextValue>({
 export function UserProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient());
   const [session, setSession] = useState<Session | null>(null);
+  const [authEvent, setAuthEvent] = useState<AuthChangeEvent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
 
@@ -58,7 +59,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      setAuthEvent(event);
       setSession(newSession);
       setIsLoading(false);
     });
@@ -85,14 +87,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         setRole(data?.role ?? null);
 
-        // Client-side defense-in-depth: sign out if last_login_at is DB-backed and
-        // older than 14 days. The authoritative enforcement is in middleware; this
-        // catches the case where the user is on a public route (skipped by middleware).
-        if (isLoginExpired(data?.last_login_at ?? null)) {
+        // Skip expiry check on SIGNED_IN: recordLogin() runs immediately after OTP
+        // verification and will update last_login_at. Enforcing here races against
+        // that write — if the previous last_login_at is >14 days old, the user would
+        // be signed out mid-login before recordLogin() has a chance to refresh the
+        // timestamp. The middleware is the authoritative enforcer on protected routes.
+        if (authEvent !== "SIGNED_IN" && isLoginExpired(data?.last_login_at ?? null)) {
           supabase.auth.signOut();
         }
       });
-  }, [session, supabase]);
+  }, [session, supabase, authEvent]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
