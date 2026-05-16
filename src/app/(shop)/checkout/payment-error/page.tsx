@@ -24,8 +24,7 @@ export default function PaymentErrorPage() {
             התשלום לא הושלם
           </h1>
           <p className="text-stone-500 leading-relaxed mb-8">
-            משהו השתבש במהלך התשלום. ההזמנה שלכם שמורה במערכת — ניתן לנסות שוב
-            או לחזור לסל הקניות.
+            התשלום לא הושלם. אפשר לנסות שוב.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -34,14 +33,14 @@ export default function PaymentErrorPage() {
               className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors"
             >
               <RefreshCcw className="h-4 w-4" aria-hidden="true" />
-              נסו שוב
+              נסה שוב
             </Link>
             <Link
-              href="/cart"
+              href="/checkout"
               className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full border border-stone-300 text-gray-700 font-semibold text-sm hover:bg-stone-50 transition-colors"
             >
               <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-              חזרה לסל
+              חזרה לעריכת ההזמנה
             </Link>
           </div>
         </div>

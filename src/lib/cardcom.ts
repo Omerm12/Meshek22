@@ -3,6 +3,27 @@ export interface CardComSession {
   paymentUrl: string;
 }
 
+export interface CardComLineItem {
+  productId?: string;
+  description: string;
+  quantity: number;
+  unitPriceAgorot: number;
+  totalPriceAgorot: number;
+}
+
+export interface LpResult {
+  ResponseCode: number;
+  Description?: string;
+  ReturnValue?: string;
+  LowProfileId?: string;
+  TranzactionInfo?: {
+    Amount?: number;
+    ApprovalNumber?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 /**
  * Creates a CardCom Low Profile payment session server-side.
  * Returns the hosted payment URL to redirect the user to.
@@ -14,16 +35,21 @@ export async function createCardComSession({
   totalAgorot,
   customerName,
   customerEmail,
+  customerPhone,
+  lineItems,
+  deliveryFeeAgorot,
 }: {
   orderId: string;
   orderNumber: string;
   totalAgorot: number;
   customerName: string;
   customerEmail: string;
+  customerPhone: string;
+  lineItems: CardComLineItem[];
+  deliveryFeeAgorot: number;
 }): Promise<CardComSession> {
   const terminalNumber = process.env.CARDCOM_TERMINAL_NUMBER;
   const apiName = process.env.CARDCOM_API_NAME;
-  const apiPassword = process.env.CARDCOM_API_PASSWORD;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   if (!terminalNumber || !apiName) {
@@ -40,44 +66,63 @@ export async function createCardComSession({
     );
   }
 
-  const amountShekels = totalAgorot / 100;
+  const amountShekels = parseFloat((totalAgorot / 100).toFixed(2));
 
-  // Success URL uses orderNumber (?order=) because the success page reads that param.
-  // Error/cancel URLs use orderId (UUID) for the payment-error page.
   const successUrl = `${baseUrl}/checkout/success?order=${orderNumber}`;
   const errorUrl   = `${baseUrl}/checkout/payment-error?orderId=${orderId}`;
   const webhookUrl = `${baseUrl}/api/cardcom/callback`;
 
-  // ApiPassword is NOT included — LowProfile/Create does not require it per v11 docs.
+  // Build Document.Products — TotalLineCost drives the per-line total (safe for fractional kg quantities)
+  const products: Array<{
+    ProductID?: string;
+    Description: string;
+    Quantity: number;
+    UnitCost: number;
+    TotalLineCost: number;
+  }> = lineItems.map((item) => ({
+    ProductID:     item.productId,
+    Description:   item.description,
+    Quantity:      item.quantity,
+    UnitCost:      parseFloat((item.unitPriceAgorot / 100).toFixed(2)),
+    TotalLineCost: parseFloat((item.totalPriceAgorot / 100).toFixed(2)),
+  }));
+
+  if (deliveryFeeAgorot > 0) {
+    const deliveryShekels = parseFloat((deliveryFeeAgorot / 100).toFixed(2));
+    products.push({
+      Description:   "דמי משלוח",
+      Quantity:      1,
+      UnitCost:      deliveryShekels,
+      TotalLineCost: deliveryShekels,
+    });
+  }
+
   // Field names match the CardCom Low Profile v11 API exactly.
   const payload: Record<string, unknown> = {};
   payload["TerminalNumber"]     = parseInt(terminalNumber, 10);
   payload["ApiName"]            = apiName;
   payload["Operation"]          = "ChargeOnly";
   payload["ReturnValue"]        = orderId;
+  payload["Amount"]             = amountShekels;
+  payload["ISOCoinId"]          = 1;
+  payload["Language"]           = "he";
+  payload["MaxPayments"]        = 12;
+  payload["ProductName"]        = `הזמנה מספר ${orderNumber}`;
   payload["SuccessRedirectUrl"] = successUrl;
   payload["FailedRedirectUrl"]  = errorUrl;
   payload["WebHookUrl"]         = webhookUrl;
-  payload["Amount"]             = amountShekels;
-  payload["CoinID"]             = 1;
-  payload["MaxPayments"]        = 12;
-  payload["InvoiceHead"]        = {
-    CustName:    customerName,
-    CustEmail:   customerEmail,
-    Language:    "he",
-    SendByEmail: false,
+  payload["Document"]           = {
+    DocumentTypeToCreate: "Order",
+    Name:     customerName,
+    Email:    customerEmail,
+    Phone:    customerPhone,
+    Products: products,
   };
-  payload["InvoiceLines"] = [
-    {
-      Description: `הזמנה ${orderNumber} — משק 22`,
-      Price:       amountShekels,
-      Quantity:    1,
-    },
-  ];
 
   const endpoint = "https://secure.cardcom.solutions/api/v11/LowProfile/Create";
 
   console.log("[cardcom] endpoint", endpoint);
+  console.log("[cardcom] amount", amountShekels);
   console.log("[cardcom] payload keys", Object.keys(payload));
 
   const response = await fetch(endpoint, {
@@ -118,4 +163,51 @@ export async function createCardComSession({
     lowProfileId: data.LowProfileId,
     paymentUrl:   data.Url,
   };
+}
+
+/**
+ * Verifies a CardCom payment result server-side via LowProfile/GetLpResult.
+ * Called from the webhook handler after receiving a notification.
+ * This is the authoritative source of truth — never trust the success redirect URL alone.
+ */
+export async function getLpResult(lowProfileId: string): Promise<LpResult> {
+  const terminalNumber = process.env.CARDCOM_TERMINAL_NUMBER;
+  const apiName = process.env.CARDCOM_API_NAME;
+
+  if (!terminalNumber || !apiName) {
+    throw new Error("CardCom credentials not configured");
+  }
+
+  const payload = {
+    TerminalNumber: parseInt(terminalNumber, 10),
+    ApiName:        apiName,
+    LowProfileId:   lowProfileId,
+  };
+
+  const response = await fetch(
+    "https://secure.cardcom.solutions/api/v11/LowProfile/GetLpResult",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    }
+  );
+
+  const rawText = await response.text();
+
+  let data: LpResult;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(
+      `CardCom GetLpResult non-JSON (HTTP ${response.status}): ${rawText.slice(0, 300)}`
+    );
+  }
+
+  console.log("[cardcom] getLpResult ResponseCode", data.ResponseCode);
+  console.log("[cardcom] getLpResult Description", data.Description);
+  console.log("[cardcom] getLpResult full", JSON.stringify(data));
+
+  return data;
 }

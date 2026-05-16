@@ -2,7 +2,7 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
-import { createCardComSession } from "@/lib/cardcom";
+import { createCardComSession, type CardComLineItem } from "@/lib/cardcom";
 
 interface CartItemInput {
   variantId: string;
@@ -290,6 +290,17 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
 
   // ── Initiate CardCom payment session ───────────────────────────────────────
   // All CardCom API calls are server-side only. Credentials never reach the client.
+  const cardComLineItems: CardComLineItem[] = lineItems.map((item) => {
+    const snap = item.snapshot as { product_name: string; variant_label: string };
+    return {
+      productId:        item.variantId,
+      description:      `${snap.product_name} — ${snap.variant_label}`,
+      quantity:         item.quantity,
+      unitPriceAgorot:  item.unitPriceAgorot,
+      totalPriceAgorot: item.totalPriceAgorot,
+    };
+  });
+
   let cardComSession: Awaited<ReturnType<typeof createCardComSession>>;
   try {
     cardComSession = await createCardComSession({
@@ -298,6 +309,9 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       totalAgorot,
       customerName,
       customerEmail,
+      customerPhone,
+      lineItems:        cardComLineItems,
+      deliveryFeeAgorot,
     });
   } catch (e) {
     console.error("[createOrder] CardCom session creation failed", e);
@@ -311,10 +325,24 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     .update({ payment_reference: cardComSession.lowProfileId })
     .eq("id", orderId);
 
-  // Clear the DB cart — the order is the source of truth from here on.
-  await supabase.from("user_cart_items").delete().eq("user_id", user.id);
+  // Cart is NOT cleared here. It is cleared by the webhook after GetLpResult
+  // confirms payment — so the cart is preserved if the user goes back or payment fails.
 
   // Confirmation emails are sent by the CardCom webhook at /api/cardcom/callback
-  // once payment is verified server-side.
+  // once payment is verified server-side via GetLpResult.
   return { paymentUrl: cardComSession.paymentUrl, orderNumber };
+}
+
+/**
+ * Returns the payment_status of an order by order_number.
+ * Used by the success page to poll for payment confirmation after redirect.
+ */
+export async function getOrderPaymentStatus(orderNumber: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("payment_status")
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+  return data?.payment_status ?? null;
 }

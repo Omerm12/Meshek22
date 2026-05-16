@@ -22,6 +22,7 @@ import type { DeliveryZone } from "@/lib/delivery";
 import { createOrder } from "@/app/(shop)/checkout/actions";
 import type { CheckoutSettlement } from "@/app/(shop)/checkout/page";
 import type { Database } from "@/types/database";
+import { PaymentRedirectOverlay } from "@/components/checkout/PaymentRedirectOverlay";
 
 type AddressRow = Database["public"]["Tables"]["addresses"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -123,9 +124,8 @@ export function CheckoutForm({
   // ── Submission ─────────────────────────────────────────────────────────────
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [redirectingTo, setRedirectingTo] = useState<string | null>(null);
 
-  // Set to true immediately before clearCart() on order success so the
-  // empty-cart redirect below does NOT fire and briefly show the cart page.
   const navigatingToSuccessRef = useRef(false);
 
   // ── Redirect if cart empty ─────────────────────────────────────────────────
@@ -161,6 +161,41 @@ export function CheckoutForm({
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // ── Restore checkout draft saved before CardCom redirect ─────────────────
+  // Runs once on mount. Lets the user pick up where they left off if they came
+  // back from CardCom (browser back) or from the payment-error page.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("meshek22_checkout_draft");
+      if (!raw) return;
+      const d = JSON.parse(raw) as Partial<{
+        name: string;
+        phone: string;
+        email: string;
+        notes: string;
+        manualCity: string;
+        manualStreet: string;
+        manualHouseNumber: string;
+        manualApartment: string;
+        useNewAddress: boolean;
+        selectedAddressId: string | null;
+        deliveryZoneId: string | null;
+      }>;
+      if (d.name              !== undefined) setName(d.name);
+      if (d.phone             !== undefined) setPhone(d.phone);
+      if (d.email             !== undefined) setEmail(d.email);
+      if (d.notes             !== undefined) setNotes(d.notes);
+      if (d.manualCity        !== undefined) setManualCity(d.manualCity);
+      if (d.manualStreet      !== undefined) setManualStreet(d.manualStreet);
+      if (d.manualHouseNumber !== undefined) setManualHouseNumber(d.manualHouseNumber);
+      if (d.manualApartment   !== undefined) setManualApartment(d.manualApartment);
+      if (d.useNewAddress     !== undefined) setUseNewAddress(d.useNewAddress);
+      if ("selectedAddressId" in d) setSelectedAddressId(d.selectedAddressId ?? null);
+      if ("deliveryZoneId"    in d) setDeliveryZoneId(d.deliveryZoneId ?? null);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Settlement autocomplete ────────────────────────────────────────────────
@@ -255,11 +290,26 @@ export function CheckoutForm({
         setError(result.error);
         setIsPending(false);
       } else {
-        // Prevent the empty-cart redirect effect from firing while we navigate.
-        // isPending stays true — button shows "מעבד..." until the browser leaves.
+        // Persist form state so it can be restored if user comes back
+        // (browser back from CardCom, or payment-error page → try again).
+        try {
+          sessionStorage.setItem("meshek22_checkout_draft", JSON.stringify({
+            name,
+            phone,
+            email,
+            notes,
+            manualCity,
+            manualStreet,
+            manualHouseNumber,
+            manualApartment,
+            useNewAddress,
+            selectedAddressId,
+            deliveryZoneId,
+          }));
+        } catch {}
         navigatingToSuccessRef.current = true;
-        clearCart();
-        window.location.href = result.paymentUrl;
+        // Cart is NOT cleared here — only cleared by the webhook after payment confirmed.
+        setRedirectingTo(result.paymentUrl);
       }
     } catch {
       setError("שגיאה לא צפויה. נא לנסות שוב.");
@@ -268,6 +318,8 @@ export function CheckoutForm({
   };
 
   if (!isHydrated || items.length === 0) return null;
+
+  if (redirectingTo) return <PaymentRedirectOverlay paymentUrl={redirectingTo} />;
 
   const selectedAddress =
     !useNewAddress && selectedAddressId
@@ -656,7 +708,7 @@ export function CheckoutForm({
               {isPending ? (
                 <><Loader2 className="h-4 w-4 animate-spin" />מעבד...</>
               ) : (
-                <><ShieldCheck className="h-4 w-4" />המשך לתשלום</>
+                <><ShieldCheck className="h-4 w-4" />מעבר לתשלום מאובטח</>
               )}
             </button>
 

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Container } from "@/components/ui/Container";
 import { formatPrice } from "@/lib/utils/money";
 import type { Database } from "@/types/database";
+import { PaymentStatusPoller } from "@/components/checkout/PaymentStatusPoller";
 
 export const metadata: Metadata = {
   title: "ההזמנה התקבלה | משק 22",
@@ -51,6 +52,42 @@ export default async function CheckoutSuccessPage({
 
   const isPaid = order?.payment_status === "paid";
 
+  // ── Payment still pending: show poller ──────────────────────────────────────
+  // This is the normal path when the user lands before the webhook fires.
+  // The poller polls every 2 s and reloads the page once it detects "paid",
+  // at which point this server component re-renders with isPaid = true.
+  if (!isPaid && orderNumber) {
+    return (
+      <main
+        className="flex-1 py-12 lg:py-20"
+        style={{ backgroundColor: "var(--color-surface)" }}
+      >
+        <Container>
+          <div className="max-w-lg mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 mb-5">
+                <CheckCircle2 className="h-10 w-10 text-emerald-300" aria-hidden="true" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">ההזמנה שלך נשמרה</h1>
+              {order && (
+                <p className="text-stone-500 text-sm">
+                  מספר הזמנה:{" "}
+                  <span className="font-mono font-bold text-gray-900">
+                    {order.order_number}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-stone-100 p-6 sm:p-8">
+              <PaymentStatusPoller orderNumber={orderNumber} />
+            </div>
+          </div>
+        </Container>
+      </main>
+    );
+  }
+
   return (
     <main
       className="flex-1 py-12 lg:py-20"
@@ -64,12 +101,10 @@ export default async function CheckoutSuccessPage({
               <CheckCircle2 className="h-10 w-10 text-emerald-500" aria-hidden="true" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {isPaid ? "ההזמנה שולמה ✓" : "ההזמנה התקבלה"}
+              התשלום התקבל בהצלחה
             </h1>
             <p className="text-stone-500 leading-relaxed">
-              {isPaid
-                ? "התשלום אושר. נתחיל לארוז את ההזמנה שלכם בהקדם."
-                : "ההזמנה שלכם נשמרה. עם קבלת אישור התשלום נתחיל בהכנה."}
+              תודה! ההזמנה שלך התקבלה ונשלחה לטיפול.
             </p>
           </div>
 
