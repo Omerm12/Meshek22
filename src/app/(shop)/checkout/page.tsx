@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
@@ -20,26 +21,52 @@ export interface CheckoutSettlement {
   delivery_zone_id: string | null;
 }
 
+// Delivery zones and settlements change only when an admin updates them.
+// Cache for 5 minutes so repeated checkout visits don't hit Supabase on every request.
+// Tag 'delivery-zones' lets admin actions call revalidateTag('delivery-zones') on zone updates.
+const getCachedDeliveryData = unstable_cache(
+  async (): Promise<{ zones: DeliveryZone[]; settlements: CheckoutSettlement[] }> => {
+    const admin = createAdminClient();
+    const [zonesRes, settlementsRes] = await Promise.all([
+      admin
+        .from("delivery_zones")
+        .select(
+          "id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot, estimated_delivery_hours"
+        )
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      admin
+        .from("settlements")
+        .select("name, delivery_zone_id")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+    ]);
+    return {
+      zones:       (zonesRes.data       ?? []) as DeliveryZone[],
+      settlements: (settlementsRes.data ?? []) as CheckoutSettlement[],
+    };
+  },
+  ["checkout-delivery-data"],
+  { revalidate: 300, tags: ["delivery-zones"] }
+);
+
 export default async function CheckoutPage() {
   const supabase = await createClient();
+
+  // Kick off the (cached) delivery data fetch immediately — it does not depend on
+  // auth, so it runs concurrently with getUser() and saves ~100–300 ms per visit.
+  const deliveryDataPromise = getCachedDeliveryData();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Not authenticated — show a friendly gate with a modal trigger instead
-  // of a hard redirect. After login the client calls router.refresh() which
-  // re-runs this server component with the active session.
   if (!user) {
     return <CheckoutLoginGate />;
   }
 
-  // Use admin client for delivery data — bypasses RLS on delivery_zones /
-  // settlements regardless of whether the public-read policies have been
-  // applied yet. User-specific data (addresses, profile) still uses the
-  // regular user client so RLS enforces ownership there.
-  const adminClient = await createAdminClient();
-
-  const [addrRes, profileRes, zonesRes, settlementsRes] = await Promise.all([
+  // User-specific queries + delivery data all in parallel.
+  const [addrRes, profileRes, { zones: deliveryZones, settlements }] = await Promise.all([
     supabase
       .from("addresses")
       .select("*")
@@ -47,22 +74,11 @@ export default async function CheckoutPage() {
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase.from("profiles").select("*").eq("id", user.id).single(),
-    adminClient
-      .from("delivery_zones")
-      .select("id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot, estimated_delivery_hours")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    adminClient
-      .from("settlements")
-      .select("name, delivery_zone_id")
-      .eq("is_active", true)
-      .order("name", { ascending: true }),
+    deliveryDataPromise,
   ]);
 
-  const addresses = (addrRes.data ?? []) as AddressRow[];
-  const profile = (profileRes.data as ProfileRow | null) ?? null;
-  const deliveryZones = (zonesRes.data ?? []) as DeliveryZone[];
-  const settlements = (settlementsRes.data ?? []) as CheckoutSettlement[];
+  const addresses     = (addrRes.data                     ?? []) as AddressRow[];
+  const profile       = (profileRes.data as ProfileRow | null) ?? null;
 
   return (
     <main className="flex-1 py-8 lg:py-12" style={{ backgroundColor: "var(--color-surface)" }}>

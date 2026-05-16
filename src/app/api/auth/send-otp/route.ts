@@ -65,15 +65,32 @@ export async function POST(req: NextRequest) {
   const now   = new Date();
   const windowStart = new Date(now.getTime() - WINDOW_MS).toISOString();
 
-  // ── Check rolling-window rate limit ──────────────────────────────────────
-  const { data: attemptsRaw, error: countError } = await admin
-    .from("otp_rate_limits")
-    .select("requested_at")
-    .eq("channel", "sms")
-    .eq("identifier", phone)
-    .gte("requested_at", windowStart)
-    .order("requested_at", { ascending: true });
+  // Derive local Israeli format once — needed for profile lookup.
+  const localPhone = phone.startsWith("+972") ? "0" + phone.slice(4) : phone;
 
+  // ── Parallel: rate-limit check + profile existence check (login flow) ─────
+  // Both are independent DB queries. Running them together saves ~100 ms compared
+  // to the previous pattern of check-phone (client) → send-otp (client) sequential calls.
+  const [attemptsResult, profileResult] = await Promise.all([
+    admin
+      .from("otp_rate_limits")
+      .select("requested_at")
+      .eq("channel", "sms")
+      .eq("identifier", phone)
+      .gte("requested_at", windowStart)
+      .order("requested_at", { ascending: true }),
+    // Registration flow: phone doesn't need to exist yet — skip the check.
+    isRegistration
+      ? Promise.resolve({ data: null as { id: string } | null, error: null })
+      : admin
+          .from("profiles")
+          .select("id")
+          .or(`phone.eq.${localPhone},phone.eq.${phone}`)
+          .limit(1)
+          .maybeSingle(),
+  ]);
+
+  const { data: attemptsRaw, error: countError } = attemptsResult;
   const attempts = (attemptsRaw ?? []) as { requested_at: string }[];
 
   if (countError) {
@@ -103,6 +120,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { blocked: true, retryAt, hasEmailFallback, maskedEmail, email },
       { status: 429 },
+    );
+  }
+
+  // ── Existence gate: login flow only ──────────────────────────────────────
+  // Replaces the separate client-side /api/auth/check-phone call, eliminating
+  // a full round trip from the browser before the OTP screen appears.
+  if (!isRegistration && !profileResult.data) {
+    return NextResponse.json(
+      { error: "לא קיים חשבון עם מספר זה. נא להירשם.", notFound: true },
+      { status: 400 }
     );
   }
 

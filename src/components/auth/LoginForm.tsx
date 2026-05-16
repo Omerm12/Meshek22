@@ -84,25 +84,11 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   }, [cooldown]);
 
   // ── Step 1: Send SMS OTP ───────────────────────────────────────────────────
+  // Single request: send-otp now includes the existence check internally,
+  // eliminating the previous sequential check-phone → send-otp round trips.
   const handleSendOtp = async (data: PhoneOtpFormData) => {
     setServerError("");
     const normalized = toE164(data.phone);
-
-    // Gate: only existing users may log in via the login tab.
-    const checkRes = await fetch("/api/auth/check-phone", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ phone: normalized }),
-    });
-    if (!checkRes.ok) {
-      setServerError("שגיאה בבדיקת המספר. נסו שוב.");
-      return;
-    }
-    const { exists } = await checkRes.json();
-    if (!exists) {
-      setServerError("לא קיים חשבון עם מספר זה. נא להירשם.");
-      return;
-    }
 
     const res = await fetch("/api/auth/send-otp", {
       method:  "POST",
@@ -113,7 +99,6 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     const json = await res.json();
 
     if (res.status === 429 && json.blocked) {
-      // SMS rate limit hit — switch to the blocked phase.
       setE164Phone(normalized);
       setDisplayPhone(data.phone);
       setBlockedRetryAt(json.retryAt ?? null);
@@ -243,11 +228,14 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
   // ── After OTP verified (either channel) ───────────────────────────────────
   async function afterVerification(supabase: ReturnType<typeof createClient>) {
+    // getSession() reads the session that verifyOtp just set in localStorage —
+    // no network call, unlike getUser() which validates against Supabase servers.
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
 
-    if (!user) {
+    if (!userId) {
       setServerError("שגיאה בכניסה. נסו שוב.");
       return;
     }
@@ -255,11 +243,11 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name")
-      .eq("id", user.id)
+      .eq("id", userId)
       .maybeSingle();
 
     if (profile?.full_name) {
-      await completeAuth();
+      completeAuth();
     } else {
       setPhase("profile");
     }
@@ -280,12 +268,14 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       return;
     }
 
-    await completeAuth();
+    completeAuth();
   };
 
   // ── Finish auth ───────────────────────────────────────────────────────────
-  const completeAuth = async () => {
-    await recordLogin();
+  // recordLogin() only timestamps last_login_at — fire-and-forget so navigation
+  // is instant instead of waiting for a non-critical server action to complete.
+  const completeAuth = () => {
+    void recordLogin();
     if (onSuccess) {
       onSuccess();
     } else {
