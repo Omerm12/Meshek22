@@ -16,6 +16,7 @@ export interface LpResult {
   Description?: string;
   ReturnValue?: string;
   LowProfileId?: string;
+  TerminalNumber?: number;
   TranzactionInfo?: {
     Amount?: number;
     ApprovalNumber?: string;

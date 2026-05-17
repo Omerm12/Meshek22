@@ -57,6 +57,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   const [displayPhone, setDisplayPhone] = useState("");
   const [serverError, setServerError] = useState("");
   const [cooldown, setCooldown]       = useState(0);
+  const [userRole, setUserRole]       = useState<string | undefined>(undefined);
 
   // ── SMS-blocked state ──────────────────────────────────────────────────────
   const [blockedRetryAt, setBlockedRetryAt]         = useState<string | null>(null);
@@ -242,12 +243,15 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, role")
       .eq("id", userId)
       .maybeSingle();
 
-    if (profile?.full_name) {
-      completeAuth();
+    const role = (profile as { full_name?: string; role?: string } | null)?.role ?? undefined;
+    setUserRole(role);
+
+    if ((profile as { full_name?: string } | null)?.full_name) {
+      completeAuth(role);
     } else {
       setPhase("profile");
     }
@@ -268,21 +272,27 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       return;
     }
 
-    completeAuth();
+    completeAuth(userRole);
   };
 
   // ── Finish auth ───────────────────────────────────────────────────────────
   // recordLogin() only timestamps last_login_at — fire-and-forget so navigation
   // is instant instead of waiting for a non-critical server action to complete.
-  const completeAuth = () => {
+  const completeAuth = (role?: string) => {
     void recordLogin();
     if (onSuccess) {
       onSuccess();
-    } else {
-      const next = searchParams.get("next") ?? "/account";
-      router.replace(next);
-      router.refresh();
+      return;
     }
+    // Admin users go directly to the admin portal, bypassing ?next= logic.
+    // window.location.replace gives an immediate hard navigation — no SPA flicker,
+    // and the fresh page load sends the new auth cookie so requireAdmin() succeeds.
+    if (role === "admin") {
+      window.location.replace("/admin");
+      return;
+    }
+    const next = searchParams.get("next") ?? "/account";
+    router.replace(next);
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -336,9 +346,12 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
             disabled={phoneForm.formState.isSubmitting}
             className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            {phoneForm.formState.isSubmitting
-              ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              : "שלח קוד אימות"}
+            {phoneForm.formState.isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                שולחים לך קוד אימות...
+              </>
+            ) : "שלח קוד אימות"}
           </button>
         </form>
 
@@ -395,9 +408,12 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
             disabled={otpForm.formState.isSubmitting}
             className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            {otpForm.formState.isSubmitting
-              ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              : "כניסה"}
+            {otpForm.formState.isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                מאמתים...
+              </>
+            ) : "כניסה"}
           </button>
         </form>
 
@@ -523,9 +539,12 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
             disabled={emailOtpForm.formState.isSubmitting}
             className="w-full h-11 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
-            {emailOtpForm.formState.isSubmitting
-              ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              : "כניסה"}
+            {emailOtpForm.formState.isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                מאמתים...
+              </>
+            ) : "כניסה"}
           </button>
         </form>
 

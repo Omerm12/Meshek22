@@ -377,6 +377,10 @@ export interface Database {
           delivery_notes: string | null;
           requested_delivery_date: string | null;
           confirmed_delivery_date: string | null;
+          customer_email_sent_at: string | null;
+          admin_email_sent_at: string | null;
+          cardcom_approval_number: string | null;
+          payment_metadata: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -406,6 +410,10 @@ export interface Database {
           payment_reference?: string | null;
           delivery_notes?: string | null;
           confirmed_delivery_date?: string | null;
+          customer_email_sent_at?: string | null;
+          admin_email_sent_at?: string | null;
+          cardcom_approval_number?: string | null;
+          payment_metadata?: Json | null;
           updated_at?: string;
         };
         Relationships: [];

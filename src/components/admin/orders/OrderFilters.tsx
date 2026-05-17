@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Loader2 } from "lucide-react";
 import { ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/utils/order-status";
@@ -18,62 +18,104 @@ const inputCls =
 export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFiltersProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const formRef = useRef<HTMLFormElement>(null);
+  const [searchValue, setSearchValue] = useState(search);
+  const [statusValue, setStatusValue] = useState(statusFilter);
+  const [paymentValue, setPaymentValue] = useState(paymentFilter);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const push = (data: FormData) => {
+  // Sync local state if server-rendered props change (browser back/forward)
+  useEffect(() => { setSearchValue(search); }, [search]);
+  useEffect(() => { setStatusValue(statusFilter); }, [statusFilter]);
+  useEffect(() => { setPaymentValue(paymentFilter); }, [paymentFilter]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
+
+  const navigate = (s: string, st: string, p: string) => {
     const params = new URLSearchParams();
-    const s  = (data.get("search")  as string | null)?.trim() ?? "";
-    const st = (data.get("status")  as string | null) ?? "";
-    const p  = (data.get("payment") as string | null) ?? "";
-    if (s)  params.set("search",  s);
-    if (st) params.set("status",  st);
-    if (p)  params.set("payment", p);
+    if (s.trim()) params.set("search",  s.trim());
+    if (st)       params.set("status",  st);
+    if (p)        params.set("payment", p);
     startTransition(() => {
       router.push(`/admin/orders${params.size ? `?${params}` : ""}`);
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    push(new FormData(e.currentTarget));
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchValue(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => navigate(val, statusValue, paymentValue), 300);
   };
 
-  // Selects trigger navigation immediately on change
-  const handleSelectChange = () => {
-    if (formRef.current) push(new FormData(formRef.current));
+  const handleSearchClear = () => {
+    setSearchValue("");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    navigate("", statusValue, paymentValue);
   };
 
-  const hasFilters = search || statusFilter || paymentFilter;
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setStatusValue(val);
+    navigate(searchValue, val, paymentValue);
+  };
+
+  const handlePaymentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setPaymentValue(val);
+    navigate(searchValue, statusValue, val);
+  };
+
+  const handleClearAll = () => {
+    setSearchValue("");
+    setStatusValue("");
+    setPaymentValue("");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    startTransition(() => router.push("/admin/orders"));
+  };
+
+  const hasFilters = !!(searchValue || statusValue || paymentValue);
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={handleSubmit}
+    <div
       className="flex flex-wrap gap-3 items-center"
       role="search"
       aria-label="סינון הזמנות"
     >
-      {/* Text search */}
+      {/* Live text search */}
       <div className="relative flex-1 min-w-52">
-        <Search
-          className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-gray-400 pointer-events-none"
-          aria-hidden="true"
-        />
+        <div className="absolute top-1/2 -translate-y-1/2 start-3 pointer-events-none flex items-center">
+          {isPending ? (
+            <Loader2 className="h-4 w-4 text-gray-400 animate-spin" aria-hidden="true" />
+          ) : (
+            <Search className="h-4 w-4 text-gray-400" aria-hidden="true" />
+          )}
+        </div>
         <input
-          name="search"
-          type="search"
-          defaultValue={search}
+          type="text"
+          value={searchValue}
+          onChange={handleSearchChange}
           placeholder="שם לקוח, טלפון, מספר הזמנה..."
-          className={`${inputCls} w-full ps-9 pe-3`}
+          className={`${inputCls} w-full ps-9 pe-8`}
         />
+        {searchValue && (
+          <button
+            type="button"
+            onClick={handleSearchClear}
+            className="absolute top-1/2 -translate-y-1/2 end-2.5 p-0.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="נקה חיפוש"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {/* Order status filter */}
       <div className="relative">
         <select
-          name="status"
-          defaultValue={statusFilter}
-          onChange={handleSelectChange}
+          value={statusValue}
+          onChange={handleStatusChange}
           className={`${inputCls} px-3 pe-8 min-w-36 appearance-none cursor-pointer`}
           aria-label="סטטוס הזמנה"
         >
@@ -94,9 +136,8 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
       {/* Payment status filter */}
       <div className="relative">
         <select
-          name="payment"
-          defaultValue={paymentFilter}
-          onChange={handleSelectChange}
+          value={paymentValue}
+          onChange={handlePaymentChange}
           className={`${inputCls} px-3 pe-8 min-w-32 appearance-none cursor-pointer`}
           aria-label="סטטוס תשלום"
         >
@@ -114,27 +155,11 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
         </div>
       </div>
 
-      {/* Search button */}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="h-10 px-4 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 transition-colors flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed shrink-0"
-      >
-        {isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        ) : (
-          <Search className="h-4 w-4" aria-hidden="true" />
-        )}
-        חפש
-      </button>
-
-      {/* Clear filters */}
+      {/* Clear all filters */}
       {hasFilters && (
         <button
           type="button"
-          onClick={() =>
-            startTransition(() => router.push("/admin/orders"))
-          }
+          onClick={handleClearAll}
           disabled={isPending}
           className="h-10 px-3 rounded-xl text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
           aria-label="נקה פילטרים"
@@ -143,6 +168,6 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
           נקה
         </button>
       )}
-    </form>
+    </div>
   );
 }

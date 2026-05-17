@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { getOrderPaymentStatus } from "@/app/(shop)/checkout/actions";
 
-const POLL_INTERVAL_MS = 2000;
-const TIMEOUT_MS       = 30_000;
+const POLL_INTERVAL_MS = 2_000;
+const TIMEOUT_MS       = 45_000; // 45 s — gives webhook time to arrive and GetLpResult to respond
 
 export function PaymentStatusPoller({ orderNumber }: { orderNumber: string }) {
-  const [dotCount, setDotCount]   = useState(1);
-  const [timedOut, setTimedOut]   = useState(false);
+  const [dotCount, setDotCount] = useState(1);
+  const [timedOut, setTimedOut] = useState(false);
 
   // Animate "בודקים." → "בודקים.." → "בודקים..."
   useEffect(() => {
@@ -21,16 +22,17 @@ export function PaymentStatusPoller({ orderNumber }: { orderNumber: string }) {
     try {
       const status = await getOrderPaymentStatus(orderNumber);
       if (status === "paid") {
+        // Payment confirmed — clear checkout draft and show final success UI.
         try { sessionStorage.removeItem("meshek22_checkout_draft"); } catch {}
         window.location.reload();
       }
     } catch {
-      // Ignore transient network errors — next tick will retry
+      // Ignore transient network errors — next tick will retry.
     }
   }, [orderNumber]);
 
   useEffect(() => {
-    check(); // Immediate check on mount
+    check(); // Immediate first check in case webhook already fired.
 
     const pollId    = setInterval(check, POLL_INTERVAL_MS);
     const timeoutId = setTimeout(() => {
@@ -46,17 +48,19 @@ export function PaymentStatusPoller({ orderNumber }: { orderNumber: string }) {
 
   if (timedOut) {
     return (
-      <div className="py-6 text-center">
-        <p className="text-gray-900 font-semibold mb-2">ההזמנה שלך נשמרה במערכת</p>
-        <p className="text-stone-500 text-sm leading-relaxed">
-          אם התשלום עבר, תקבלו אישור במייל תוך מספר דקות.
-          <br />
-          אם לא, ניתן לנסות שוב מ
-          <a href="/checkout" className="text-brand-600 hover:underline">
-            דף התשלום
-          </a>
-          .
+      <div className="py-6 text-center space-y-4">
+        <p className="text-gray-900 font-semibold">
+          התשלום התקבל ונמצא בבדיקה. נעדכן את ההזמנה מיד.
         </p>
+        <p className="text-stone-500 text-sm leading-relaxed">
+          תקבלו אישור במייל ברגע שהתשלום אומת.
+        </p>
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center h-10 px-6 rounded-full bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors"
+        >
+          חזרה לדף הבית
+        </Link>
       </div>
     );
   }

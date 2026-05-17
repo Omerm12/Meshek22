@@ -285,7 +285,16 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
       return { paymentUrl: `${origin}/checkout/success?order=${orderNumber}`, orderNumber };
     }
-    // pending_payment duplicate: create a new CardCom session below (old one may have expired).
+
+    // If a previous attempt set the order to "failed", reset to "pending" before
+    // creating a new Cardcom session so the success webhook can apply its CAS update.
+    if (existingOrder?.payment_status === "failed") {
+      await adminClient
+        .from("orders")
+        .update({ payment_status: "pending", updated_at: new Date().toISOString() })
+        .eq("id", orderId);
+    }
+    // Fall through to create a fresh Cardcom session (previous one may have expired).
   }
 
   // ── Initiate CardCom payment session ───────────────────────────────────────
@@ -331,6 +340,152 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
   // Confirmation emails are sent by the CardCom webhook at /api/cardcom/callback
   // once payment is verified server-side via GetLpResult.
   return { paymentUrl: cardComSession.paymentUrl, orderNumber };
+}
+
+/**
+ * Creates a new Cardcom payment session for an existing pending/failed order.
+ *
+ * Called from the payment-error page "נסה שוב" button. Skips the checkout form
+ * entirely — uses the line items and customer details already stored on the order.
+ *
+ * Security:
+ * - Auth is verified server-side.
+ * - Order is fetched by orderId AND user_id so a user can only retry their own order.
+ * - Only pending or failed orders can be retried.
+ * - payment_status is reset to "pending" before creating the session so the
+ *   new webhook's CAS update can succeed.
+ * - payment_reference is updated to the new LowProfileId so the old session's
+ *   webhook (if it ever arrives) is blocked by the LowProfileId mismatch check.
+ */
+export async function retryPayment(orderId: string): Promise<CreateOrderResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "יש להתחבר לחשבון לפני ביצוע תשלום" };
+  }
+
+  const adminClient = createAdminClient();
+
+  // Fetch order — eq on user_id ensures the user can only retry their own order.
+  const { data: order } = await adminClient
+    .from("orders")
+    .select(
+      "id, order_number, user_id, payment_status, total_agorot, delivery_fee_agorot, customer_snapshot, delivery_notes"
+    )
+    .eq("id", orderId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!order) {
+    console.warn("[retryPayment]", { event: "order_not_found", orderId, userId: user.id });
+    return { error: "ההזמנה לא נמצאה" };
+  }
+
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  // Already paid — send directly to success page.
+  if (order.payment_status === "paid") {
+    console.log("[retryPayment]", { event: "already_paid", orderId });
+    return {
+      paymentUrl: `${origin}/checkout/success?order=${order.order_number}`,
+      orderNumber: order.order_number,
+    };
+  }
+
+  // Only pending or failed orders are retryable.
+  if (order.payment_status !== "pending" && order.payment_status !== "failed") {
+    console.warn("[retryPayment]", { event: "not_retryable", orderId, status: order.payment_status });
+    return { error: "לא ניתן לנסות שוב הזמנה זו" };
+  }
+
+  console.log("[retryPayment]", {
+    event: "retry_start",
+    orderId,
+    userId: user.id,
+    currentStatus: order.payment_status,
+  });
+
+  // Fetch order items — rebuilt into Cardcom line items using the stored snapshots.
+  const { data: orderItems } = await adminClient
+    .from("order_items")
+    .select("product_variant_id, product_snapshot, quantity, unit_price_agorot, total_price_agorot")
+    .eq("order_id", orderId);
+
+  if (!orderItems || orderItems.length === 0) {
+    console.error("[retryPayment]", { event: "no_order_items", orderId });
+    return { error: "פרטי הזמנה לא נמצאו" };
+  }
+
+  const customer = order.customer_snapshot as {
+    name?: string;
+    email?: string;
+    phone?: string;
+  } | null;
+
+  type ItemSnap = { product_name: string; variant_label: string };
+  const lineItems: CardComLineItem[] = orderItems.map((item) => {
+    const snap = item.product_snapshot as unknown as ItemSnap;
+    return {
+      productId:        item.product_variant_id,
+      description:      `${snap.product_name} — ${snap.variant_label}`,
+      quantity:         item.quantity,
+      unitPriceAgorot:  item.unit_price_agorot,
+      totalPriceAgorot: item.total_price_agorot,
+    };
+  });
+
+  // Reset to pending so the new webhook's CAS (.in(["pending","failed"])) always wins.
+  if (order.payment_status === "failed") {
+    await adminClient
+      .from("orders")
+      .update({ payment_status: "pending", updated_at: new Date().toISOString() })
+      .eq("id", orderId);
+  }
+
+  let cardComSession: Awaited<ReturnType<typeof createCardComSession>>;
+  try {
+    cardComSession = await createCardComSession({
+      orderId:          order.id,
+      orderNumber:      order.order_number,
+      totalAgorot:      order.total_agorot,
+      customerName:     customer?.name  ?? "",
+      customerEmail:    customer?.email ?? "",
+      customerPhone:    customer?.phone ?? "",
+      lineItems,
+      deliveryFeeAgorot: order.delivery_fee_agorot,
+    });
+  } catch (e) {
+    console.error("[retryPayment]", { event: "cardcom_session_failed", orderId, error: e });
+    // Revert to failed so the order isn't stuck in an orphaned pending state.
+    await adminClient
+      .from("orders")
+      .update({ payment_status: "failed", updated_at: new Date().toISOString() })
+      .eq("id", orderId)
+      .eq("payment_status", "pending");
+    return { error: "שגיאה בתחילת תהליך התשלום. נא לנסות שוב." };
+  }
+
+  // Update payment_reference to the new LowProfileId.
+  // The old session's webhook (if delayed) will be blocked because
+  // its LowProfileId no longer matches order.payment_reference.
+  await adminClient
+    .from("orders")
+    .update({ payment_reference: cardComSession.lowProfileId })
+    .eq("id", orderId);
+
+  console.log("[retryPayment]", {
+    event: "new_session_created",
+    orderId,
+    userId:         user.id,
+    orderNumber:    order.order_number,
+    newLowProfileId: cardComSession.lowProfileId,
+    redirectTarget: cardComSession.paymentUrl,
+  });
+
+  return { paymentUrl: cardComSession.paymentUrl, orderNumber: order.order_number };
 }
 
 /**

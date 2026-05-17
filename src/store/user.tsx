@@ -92,7 +92,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // that write — if the previous last_login_at is >14 days old, the user would
         // be signed out mid-login before recordLogin() has a chance to refresh the
         // timestamp. The middleware is the authoritative enforcer on protected routes.
-        if (authEvent !== "SIGNED_IN" && isLoginExpired(data?.last_login_at ?? null)) {
+        //
+        // Also skip when authEvent is null: getSession() resolves before
+        // onAuthStateChange fires, so the first effect run has authEvent=null.
+        // Signing out at that point would log the user out on every page load.
+        if (
+          authEvent !== null &&
+          authEvent !== "SIGNED_IN" &&
+          isLoginExpired(data?.last_login_at ?? null)
+        ) {
           supabase.auth.signOut();
         }
       });

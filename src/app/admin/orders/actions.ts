@@ -29,7 +29,7 @@ export interface OrderPageResult {
   nextCursor: string | null;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 // ─── fetchOrdersPage ──────────────────────────────────────────────────────────
 
