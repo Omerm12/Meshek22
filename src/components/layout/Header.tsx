@@ -25,6 +25,7 @@ import {
   SIMPLE_NAV_LINKS,
   ALL_PRODUCTS_LINK,
 } from "@/lib/config/nav-categories";
+import { NavbarSearch } from "@/components/layout/NavbarSearch";
 
 export function Header() {
   const { totalItems, subtotalAgorot, openCart } = useCart();
@@ -103,23 +104,25 @@ export function Header() {
         )}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-[96px]">
+          <div className="flex items-center h-[96px]">
 
-            {/* ── Logo ──────────────────────────────────────────────────────── */}
-            <Link
-              href="/"
-              className="flex items-center"
-              aria-label="דף הבית"
-            >
-              <Image
-                src="/images/heroes/logo.png"
-                alt="משק 22"
-                width={180}
-                height={80}
-                className="h-[80px] w-auto object-contain"
-                priority
-              />
-            </Link>
+            {/* ── Start group: Logo + Desktop Nav ───────────────────────────── */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Logo */}
+              <Link
+                href="/"
+                className="flex items-center"
+                aria-label="דף הבית"
+              >
+                <Image
+                  src="/images/heroes/logo.png"
+                  alt="משק 22"
+                  width={180}
+                  height={80}
+                  className="h-[80px] w-auto object-contain"
+                  priority
+                />
+              </Link>
 
             {/* ── Desktop Nav ───────────────────────────────────────────────── */}
             <nav className="hidden md:flex items-center gap-0.5" aria-label="ניווט ראשי">
@@ -205,6 +208,16 @@ export function Header() {
                 </Link>
               ))}
             </nav>
+            </div>{/* ── end: Start group ── */}
+
+            {/* ── Spacer ────────────────────────────────────────────────────── */}
+            <div className="flex-1" />
+
+            {/* ── End group: Desktop Search + Actions ───────────────────────── */}
+            <div className="flex items-center gap-3">
+
+              {/* Desktop search */}
+              <NavbarSearch className="hidden md:block w-64 lg:w-72" />
 
             {/* ── Actions ───────────────────────────────────────────────────── */}
             <div className="flex items-center gap-2">
@@ -326,9 +339,15 @@ export function Header() {
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
+            </div>{/* ── end: End group ── */}
           </div>
         </div>
       </header>
+
+      {/* ── Mobile search strip ──────────────────────────────────────────────── */}
+      <div className="md:hidden bg-white/95 backdrop-blur-sm border-b border-stone-100 px-4 sm:px-6 py-2.5">
+        <NavbarSearch />
+      </div>
 
       {/* ── Mobile overlay ───────────────────────────────────────────────────── */}
       {mobileOpen && (

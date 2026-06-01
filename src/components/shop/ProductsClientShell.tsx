@@ -14,7 +14,12 @@ interface ProductsClientShellProps {
 }
 
 export function ProductsClientShell({ products }: ProductsClientShellProps) {
-  const [search, setSearch]   = useState("");
+  // Lazy initializer: pre-fill search from ?q= URL param on first client render
+  const [search, setSearch]   = useState(() =>
+    typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("q") ?? "")
+      : ""
+  );
   const [visible, setVisible] = useState(ITEMS_PER_STEP);
   const sentinelRef           = useRef<HTMLDivElement>(null);
 

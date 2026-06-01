@@ -219,10 +219,13 @@ export function ParentCategoryShell({
         {/* Product area */}
         <div>
           {/* Section heading */}
-          <div className="flex items-baseline justify-between mb-4 gap-2">
+          <div className="mb-4">
             <h2 className="text-xl font-bold text-gray-900">
               {activeSubCategory ? activeSubCategory.name : `כל ה${heroConfig.title}`}
             </h2>
+            <p className="mt-1 text-xs text-stone-400">
+              * משקל המוצרים עשוי להיות מעט גבוה או נמוך מהטווח המוצג באתר.
+            </p>
           </div>
 
           {/* Toolbar */}

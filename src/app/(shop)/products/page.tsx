@@ -28,6 +28,9 @@ export default async function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
             כל המוצרים
           </h1>
+          <p className="mt-1.5 text-xs text-stone-400">
+            * משקל המוצרים עשוי להיות מעט גבוה או נמוך מהטווח המוצג באתר.
+          </p>
         </div>
 
         <ProductsClientShell products={products} totalCount={products.length} />
