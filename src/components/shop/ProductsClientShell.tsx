@@ -69,12 +69,17 @@ export function ProductsClientShell({ products }: ProductsClientShellProps) {
           aria-hidden="true"
         />
         <input
-          type="search"
+          type="text"
+          inputMode="search"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="חפשו מוצרים..."
           aria-label="חיפוש מוצרים"
-          className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-base md:text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
         />
         {search && (
           <button
