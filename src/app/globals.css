@@ -90,6 +90,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100svh;
+  /* Clip (not hide) horizontal overflow: prevents off-screen fixed/translated
+     elements (e.g. CartDrawer when closed with translateX) from widening the
+     document and triggering unwanted horizontal scrolling on mobile.
+     overflow-x:clip does NOT create a scroll container, so position:sticky
+     in children continues to work correctly. */
+  overflow-x: clip;
 }
 
 /* ── Heading refinement ── */

@@ -59,9 +59,13 @@ export function CartDrawer() {
         aria-modal="true"
         aria-label="סל הקניות"
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl",
+          // RTL-correct: drawer on the logical-end (left) side.
+          // Closing via -translate-x-full moves it LEFT (off-screen), which is
+          // the logical-end direction — avoids extending past the scroll-start
+          // (right edge in RTL) and causing document-width overflow on iOS Safari.
+          "fixed inset-y-0 left-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl",
           "transition-transform duration-300 ease-out",
-          isOpen ? "translate-x-0" : "translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* ── Header ── */}

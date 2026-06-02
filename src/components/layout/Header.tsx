@@ -344,8 +344,16 @@ export function Header() {
         </div>
       </header>
 
-      {/* ── Mobile search strip ──────────────────────────────────────────────── */}
-      <div className="md:hidden bg-white/95 backdrop-blur-sm border-b border-stone-100 px-4 sm:px-6 py-2.5">
+      {/* ── Mobile search strip ──────────────────────────────────────────────────
+          relative + z-[41]: establishes a stacking context above all auto-z-index
+          page content (hero, sections) so the dropdown (z-50 within this context)
+          correctly paints over the page. Without an explicit z-index the stacking
+          context produced by backdrop-filter was at "auto" level — painted under
+          page elements that come later in DOM order.
+          bg-white (solid): backdrop-blur-sm was producing the stacking context that
+          caused the z-index trap AND the iOS compositing layer that widened the
+          layout on keyboard focus. Removed it. ── */}
+      <div className="relative z-[39] md:hidden bg-white border-b border-stone-100 px-4 sm:px-6 py-2.5">
         <NavbarSearch />
       </div>
 
