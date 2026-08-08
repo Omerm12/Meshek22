@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
+import { CategoryLoadError } from "@/components/admin/products/CategoryLoadError";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 import { createProduct } from "@/app/meshek22-control/(protected)/products/actions";
 import type { CategoryOption } from "@/components/admin/products/ProductForm";
@@ -20,7 +20,15 @@ export default async function NewProductPage() {
     .order("sort_order", { ascending: true })
     .order("name",       { ascending: true });
 
-  if (error) notFound();
+  // A missing categories table or column means a migration has not been applied.
+  // A 404 would send the shop owner hunting for a broken link; say what is wrong.
+  if (error) {
+    return <CategoryLoadError detail={error.message} />;
+  }
+
+  if ((categories ?? []).length === 0) {
+    return <CategoryLoadError empty />;
+  }
 
   return (
     <div>

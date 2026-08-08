@@ -107,11 +107,16 @@ export default async function CheckoutSuccessPage({
         <Container>
           <div className="max-w-lg mx-auto">
             <div className="text-center mb-8">
-              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 mb-5">
-                <CheckCircle2 className="h-10 w-10 text-emerald-300" aria-hidden="true" />
+              {/* Deliberately NOT "your order was received": until CardCom
+                  verifies the payment there is no order for the shop to pack,
+                  and saying otherwise would mislead the customer. */}
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-amber-50 mb-5">
+                <Clock className="h-10 w-10 text-amber-400" aria-hidden="true" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">ההזמנה שלך נשמרה</h1>
-              <p className="text-stone-500 text-sm">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">בודקים את התשלום</h1>
+              <p className="text-stone-500 text-sm leading-relaxed">
+                ההזמנה תיקלט לטיפול מיד עם אישור חברת האשראי.
+                <br />
                 מספר הזמנה:{" "}
                 <span className="font-mono font-bold text-gray-900">{order.order_number}</span>
               </p>

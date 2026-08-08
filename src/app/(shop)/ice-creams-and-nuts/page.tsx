@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
 import { getCategoryHero } from "@/lib/config/category-heroes";
 import { ICE_CREAMS_AND_NUTS_SLUG } from "@/lib/config/nav-categories";
-import {
-  fetchChildCategoriesByParentSlug,
-  fetchProductsByCategory,
-  fetchProductsByParentCategorySlug,
-} from "@/lib/data/storefront";
+import { fetchProductsByCategory } from "@/lib/data/storefront";
 import { ParentCategoryShell } from "@/components/shop/ParentCategoryShell";
 
-// Dynamic because rendering depends on the ?sub= search param.
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "גלידות ופיצוחים – משק 22",
@@ -17,45 +12,29 @@ export const metadata: Metadata = {
     "משהו מתוק, משהו מלוח — גלידות, ארטיקים, אגוזים ופיצוחים, הכל בעמוד אחד ובמשלוח אחד.",
 };
 
-const PARENT_SLUG = ICE_CREAMS_AND_NUTS_SLUG;
-
 /**
- * The combined גלידות ופיצוחים category page.
+ * גלידות ופיצוחים — one flat category, one page.
  *
- * גלידות and פיצוחים remain separate categories in the database so the shop
- * owner can file each product correctly, but neither has a page of its own —
- * /ice-creams and /nuts permanently redirect here. On this page they appear as
- * filter tabs, exactly like the subcategories of ירקות and פירות.
+ * There is exactly one database category (`ice-creams-and-nuts`) and no children,
+ * so this page has no subcategory tabs and no `?sub=` filtering. Every product
+ * the administrator files under the category appears here once, in the same grid,
+ * with the same cards, cart behaviour and promotion pricing as every other
+ * category page.
  *
- * With no tab selected, fetchProductsByParentCategorySlug returns products
- * assigned to the combined parent AND to either child, each listed once.
+ * fetchProductsByCategory reads by category slug directly, so a product can only
+ * be returned once — there is no parent/child union to deduplicate.
  */
-export default async function IceCreamsAndNutsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ sub?: string }>;
-}) {
-  const { sub } = await searchParams;
-  const heroConfig = getCategoryHero(PARENT_SLUG);
-
-  const subcategories = await fetchChildCategoriesByParentSlug(PARENT_SLUG);
-
-  const activeSubSlug =
-    sub && subcategories.some((c) => c.slug === sub) ? sub : null;
-
-  // Products appear here only once an administrator assigns them to the
-  // combined category or to one of its two children. Nothing is auto-populated.
-  const products = activeSubSlug
-    ? await fetchProductsByCategory(activeSubSlug)
-    : await fetchProductsByParentCategorySlug(PARENT_SLUG);
+export default async function IceCreamsAndNutsPage() {
+  const heroConfig = getCategoryHero(ICE_CREAMS_AND_NUTS_SLUG);
+  const products = await fetchProductsByCategory(ICE_CREAMS_AND_NUTS_SLUG);
 
   return (
     <ParentCategoryShell
       heroConfig={heroConfig}
-      parentSlug={PARENT_SLUG}
-      subcategories={subcategories}
+      parentSlug={ICE_CREAMS_AND_NUTS_SLUG}
+      subcategories={[]}
       products={products}
-      activeSubSlug={activeSubSlug}
+      activeSubSlug={null}
     />
   );
 }

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  BUCKET_STATUSES,
+  BUCKET_LABELS,
+  OPERATIONAL_BUCKETS,
   describeFulfillment,
   describeOrderStatus,
   describePaymentState,
+  isEmployeeVisible,
+  isIncompleteCardcomAttempt,
   isPickupOrder,
+  matchesBucket,
   operationalBucketOf,
   ORDER_STATUS_VALUES,
   type OrderPresentationContext,
@@ -147,24 +151,103 @@ describe("fulfillment", () => {
   });
 });
 
-describe("operational buckets", () => {
-  it("maps every status to exactly one bucket", () => {
-    for (const status of ORDER_STATUS_VALUES) {
-      const bucket = operationalBucketOf(status);
-      expect(bucket, `${status} should belong to a bucket`).not.toBeNull();
+describe("incomplete CardCom attempts", () => {
+  const attempt = ctx({
+    orderStatus: "pending_payment",
+    paymentStatus: "pending",
+    paymentMethod: "credit_card",
+  });
 
-      const matching = Object.entries(BUCKET_STATUSES).filter(([, list]) =>
-        (list as string[]).includes(status)
-      );
-      expect(matching).toHaveLength(1);
+  it("is recognised while the payment is unfinished", () => {
+    expect(isIncompleteCardcomAttempt(attempt)).toBe(true);
+    expect(isEmployeeVisible(attempt)).toBe(false);
+    expect(isIncompleteCardcomAttempt({ ...attempt, paymentStatus: "failed" })).toBe(true);
+  });
+
+  it("becomes a real order once CardCom confirms payment", () => {
+    const paid = { ...attempt, paymentStatus: "paid", orderStatus: "confirmed" };
+    expect(isIncompleteCardcomAttempt(paid)).toBe(false);
+    expect(isEmployeeVisible(paid)).toBe(true);
+    expect(matchesBucket(paid, "new")).toBe(true);
+  });
+
+  it("does not hide cash or phone-credit orders that are simply unpaid", () => {
+    expect(isEmployeeVisible(ctx({ paymentMethod: "cash", paymentStatus: "pending" }))).toBe(true);
+    expect(isEmployeeVisible(ctx({ paymentMethod: "phone_credit", paymentStatus: "pending" }))).toBe(true);
+  });
+
+  it("does not hide historical orders with no recorded method", () => {
+    // Most existing rows have payment_method NULL; they must stay visible.
+    expect(isEmployeeVisible(ctx({ paymentMethod: null, paymentStatus: "pending" }))).toBe(true);
+    expect(isEmployeeVisible(ctx({ paymentMethod: "card_mock", paymentStatus: "pending" }))).toBe(true);
+  });
+
+  it("is excluded from every bucket, including completed and cancelled", () => {
+    for (const bucket of OPERATIONAL_BUCKETS) {
+      expect(matchesBucket({ ...attempt, orderStatus: "delivered" }, bucket)).toBe(false);
+      expect(matchesBucket({ ...attempt, orderStatus: "cancelled" }, bucket)).toBe(false);
+    }
+  });
+});
+
+describe("operational buckets", () => {
+  it("counts only phone-credit customers as awaiting a payment call", () => {
+    const waiting = ctx({
+      orderStatus: "pending_payment",
+      paymentStatus: "pending",
+      paymentMethod: "phone_credit",
+    });
+    expect(matchesBucket(waiting, "awaiting_payment_call")).toBe(true);
+
+    // Explicitly NOT: CardCom pending, CardCom failed, cash, or already paid.
+    expect(matchesBucket({ ...waiting, paymentMethod: "credit_card" }, "awaiting_payment_call")).toBe(false);
+    expect(
+      matchesBucket({ ...waiting, paymentMethod: "credit_card", paymentStatus: "failed" }, "awaiting_payment_call")
+    ).toBe(false);
+    expect(matchesBucket({ ...waiting, paymentMethod: "cash" }, "awaiting_payment_call")).toBe(false);
+    expect(matchesBucket({ ...waiting, paymentStatus: "paid" }, "awaiting_payment_call")).toBe(false);
+  });
+
+  it("treats a confirmed order as new, including an unpaid cash order", () => {
+    expect(matchesBucket(ctx({ orderStatus: "confirmed", paymentMethod: "cash", paymentStatus: "pending" }), "new")).toBe(true);
+  });
+
+  it("separates delivery from pickup at the same enum value", () => {
+    const delivery = ctx({ orderStatus: "out_for_delivery", fulfillmentMethod: "delivery" });
+    const pickup   = ctx({ orderStatus: "out_for_delivery", fulfillmentMethod: "pickup" });
+
+    expect(matchesBucket(delivery, "out_for_delivery")).toBe(true);
+    expect(matchesBucket(delivery, "ready_for_pickup")).toBe(false);
+    expect(matchesBucket(pickup, "ready_for_pickup")).toBe(true);
+    expect(matchesBucket(pickup, "out_for_delivery")).toBe(false);
+  });
+
+  it("counts a legacy order with no fulfillment method as a delivery", () => {
+    const legacy = ctx({ orderStatus: "out_for_delivery", fulfillmentMethod: null });
+    expect(matchesBucket(legacy, "out_for_delivery")).toBe(true);
+    expect(matchesBucket(legacy, "ready_for_pickup")).toBe(false);
+  });
+
+  it("places each visible order in at most one bucket", () => {
+    for (const status of ORDER_STATUS_VALUES) {
+      for (const fulfillment of ["delivery", "pickup"]) {
+        const order = ctx({ orderStatus: status, fulfillmentMethod: fulfillment, paymentMethod: "cash" });
+        const hits = OPERATIONAL_BUCKETS.filter((b) => matchesBucket(order, b));
+        expect(hits.length, `${status}/${fulfillment}`).toBeLessThanOrEqual(1);
+      }
     }
   });
 
-  it("puts unpaid orders in the attention bucket", () => {
-    expect(operationalBucketOf("pending_payment")).toBe("attention");
+  it("returns null for an unknown status rather than guessing", () => {
+    expect(operationalBucketOf(ctx({ orderStatus: "some_future_status" }))).toBeNull();
   });
 
-  it("returns null for an unknown status rather than guessing", () => {
-    expect(operationalBucketOf("some_future_status")).toBeNull();
+  it("labels every bucket in Hebrew", () => {
+    for (const bucket of OPERATIONAL_BUCKETS) {
+      expect(BUCKET_LABELS[bucket].length).toBeGreaterThan(0);
+    }
+    expect(BUCKET_LABELS.awaiting_payment_call).toBe("ממתינות לשיחת תשלום");
+    expect(BUCKET_LABELS.out_for_delivery).toBe("יצאו למשלוח");
+    expect(BUCKET_LABELS.ready_for_pickup).toBe("מוכנות לאיסוף");
   });
 });

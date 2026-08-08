@@ -11,13 +11,19 @@ import {
   Percent,
   PhoneCall,
   ShoppingBag,
+  Store,
   Tag,
   Truck,
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 import { loadDashboardCounts } from "@/lib/admin/dashboard-counts";
-import { ordersTable, selectOrdersWithFallback } from "@/lib/admin/orders-data";
+import {
+  EXCLUDE_INCOMPLETE_CARDCOM,
+  filterRows,
+  ordersTable,
+  selectOrdersWithFallback,
+} from "@/lib/admin/orders-data";
 import {
   describeFulfillment,
   describeOrderStatus,
@@ -60,9 +66,9 @@ interface AttentionCard {
 
 const ATTENTION_CARDS: AttentionCard[] = [
   {
-    bucket: "attention",
-    title: "ממתינות לתשלום או לשיחה",
-    hint: "הזמנות שטרם שולמו, כולל כאלה שצריך להתקשר ללקוח",
+    bucket: "awaiting_payment_call",
+    title: "ממתינות לשיחת תשלום",
+    hint: "לקוחות שביקשו שנחזור אליהם לקבלת תשלום",
     icon: <PhoneCall className="h-6 w-6 text-amber-700" />,
     iconBg: "bg-amber-100",
     ring: "hover:border-amber-300",
@@ -84,10 +90,18 @@ const ATTENTION_CARDS: AttentionCard[] = [
     ring: "hover:border-purple-300",
   },
   {
-    bucket: "ready",
-    title: "מוכנות לאיסוף או בדרך",
-    hint: "יצאו למשלוח או ממתינות לאיסוף עצמי",
-    icon: <Truck className="h-6 w-6 text-teal-700" />,
+    bucket: "out_for_delivery",
+    title: "יצאו למשלוח",
+    hint: "בדרך אל הלקוח",
+    icon: <Truck className="h-6 w-6 text-orange-700" />,
+    iconBg: "bg-orange-100",
+    ring: "hover:border-orange-300",
+  },
+  {
+    bucket: "ready_for_pickup",
+    title: "מוכנות לאיסוף",
+    hint: "ארוזות וממתינות ללקוח במשק",
+    icon: <Store className="h-6 w-6 text-teal-700" />,
     iconBg: "bg-teal-100",
     ring: "hover:border-teal-300",
   },
@@ -163,21 +177,16 @@ export default async function AdminDashboardPage() {
     selectOrdersWithFallback((columns) =>
       ordersTable(supabase)
         .select(columns)
+        .or(EXCLUDE_INCOMPLETE_CARDCOM)
         .order("created_at", { ascending: false })
-        .limit(RECENT_ORDERS_LIMIT)
+        // Over-fetch a little: filterRows drops anything the query could not.
+        .limit(RECENT_ORDERS_LIMIT * 2)
     ),
   ]);
 
-  const bucketCounts: Record<OperationalBucket, number | null> = {
-    attention: counts.ordersByStatus.pending_payment,
-    new:       counts.ordersByStatus.confirmed,
-    preparing: counts.ordersByStatus.preparing,
-    ready:     counts.ordersByStatus.out_for_delivery,
-    completed: counts.ordersByStatus.delivered,
-    cancelled: counts.ordersByStatus.cancelled,
-  };
-
-  const recentOrders = recent.rows;
+  // Incomplete online-card attempts are not operational orders and never appear
+  // in the recent list.
+  const recentOrders = filterRows(recent.rows).slice(0, RECENT_ORDERS_LIMIT);
   const showWarning = counts.hasErrors || recent.error !== null;
 
   return (
@@ -201,9 +210,9 @@ export default async function AdminDashboardPage() {
       {/* ── Primary: what needs attention ── */}
       <section aria-labelledby="attention-heading">
         <h2 id="attention-heading" className="sr-only">הזמנות הדורשות טיפול</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {ATTENTION_CARDS.map((card) => (
-            <AttentionCardTile key={card.bucket} card={card} value={bucketCounts[card.bucket]} />
+            <AttentionCardTile key={card.bucket} card={card} value={counts.buckets[card.bucket]} />
           ))}
         </div>
       </section>

@@ -2,29 +2,40 @@
  * Dashboard counters, with a fallback for a database that has not had the
  * newest migrations applied yet.
  *
- * `admin_dashboard_counts` folds nine counts into one round-trip, but it only
+ * `admin_dashboard_counts` folds every count into one round-trip, but it only
  * exists once migration 20260808_004 has run. Until then PostgREST answers
  * PGRST202 ("could not find the function"), and the dashboard used to treat that
  * as "everything is zero" — showing an empty shop with 158 products in it.
  *
- * So: try the RPC, and if it is genuinely absent, count the tables directly.
- * Each count is isolated with Promise.allSettled, so one missing table (today,
- * `promotions`) cannot blank the other eight. The RPC path starts working again
- * by itself the moment the migration is applied — nothing to switch over.
+ * So: try the RPC, and if it is absent (or predates the current card layout),
+ * count directly instead. Every fallback query runs concurrently and is isolated,
+ * so one missing table — today, `promotions` — cannot blank the other counts.
+ * The RPC path starts working again by itself once the migration is applied.
  *
  * A count that fails for an unexpected reason is reported as `null`, never as
  * `0`. A real zero and a failed query must not look the same to the shop owner.
  */
 
-import { ORDER_STATUS_VALUES, type OrderStatusValue } from "@/lib/admin/order-presentation";
+import {
+  BUCKET_RULES,
+  ORDER_STATUS_VALUES,
+  isPickupOrder,
+  type OperationalBucket,
+  type OrderStatusValue,
+} from "@/lib/admin/order-presentation";
+import {
+  EXCLUDE_INCOMPLETE_CARDCOM,
+  ordersTable,
+  selectOrdersWithFallback,
+} from "@/lib/admin/orders-data";
+import {
+  isMissingObjectError as isMissingObject,
+  type PostgrestErrorLike,
+} from "@/lib/admin/postgrest-errors";
 
-/** The subset of a PostgREST error this module reasons about. */
-export interface CountsError {
-  code?: string;
-  message?: string;
-  details?: string;
-  hint?: string;
-}
+export type { PostgrestErrorLike as CountsError } from "@/lib/admin/postgrest-errors";
+
+type CountsError = PostgrestErrorLike;
 
 interface CountResponse {
   count: number | null;
@@ -36,6 +47,12 @@ interface RpcResponse {
   error: CountsError | null;
 }
 
+/** Chainable count query, narrowed to what this module uses. */
+interface CountQuery extends PromiseLike<CountResponse> {
+  eq(column: string, value: string | boolean): CountQuery;
+  or(filter: string): CountQuery;
+}
+
 /**
  * Structural type covering only what this module calls, so tests can supply a
  * small stub instead of a whole Supabase client.
@@ -43,18 +60,16 @@ interface RpcResponse {
 export interface CountsClient {
   rpc(fn: "admin_dashboard_counts"): PromiseLike<RpcResponse>;
   from(table: string): {
-    select(
-      columns: string,
-      options: { count: "exact"; head: true }
-    ): PromiseLike<CountResponse> & {
-      eq(column: string, value: string | boolean): PromiseLike<CountResponse>;
-    };
+    select(columns: string, options: { count: "exact"; head: true }): CountQuery;
   };
 }
 
 export interface DashboardCounts {
-  /** null = this count could not be determined (never a fabricated zero). */
-  ordersByStatus: Record<OrderStatusValue, number | null>;
+  /**
+   * Operational card counts, keyed by bucket. null = could not be determined
+   * (never a fabricated zero). Incomplete CardCom attempts are excluded.
+   */
+  buckets: Record<OperationalBucket, number | null>;
   productsActive: number | null;
   categoriesActive: number | null;
   settlements: number | null;
@@ -69,25 +84,8 @@ export interface DashboardCounts {
   promotionsUnavailable: boolean;
 }
 
-/**
- * Postgres / PostgREST codes that mean "this object does not exist yet",
- * i.e. a migration has not been applied — as opposed to a real failure.
- */
-const MISSING_OBJECT_CODES = new Set([
-  "PGRST202", // function not found in schema cache
-  "PGRST205", // table not found in schema cache
-  "42883",    // undefined_function
-  "42P01",    // undefined_table
-  "42703",    // undefined_column
-]);
-
-export function isMissingObjectError(error: CountsError | null | undefined): boolean {
-  if (!error) return false;
-  if (error.code && MISSING_OBJECT_CODES.has(error.code)) return true;
-  // Some PostgREST builds report the condition only in the message.
-  const message = error.message ?? "";
-  return /could not find the (function|table)/i.test(message);
-}
+/** Re-exported so existing callers and tests keep one import site. */
+export const isMissingObjectError = isMissingObject;
 
 /** Server-only diagnostics. Never returned to the browser. */
 function logCountFailure(scope: string, error: CountsError): void {
@@ -100,20 +98,32 @@ function logCountFailure(scope: string, error: CountsError): void {
   });
 }
 
-function emptyOrdersByStatus(): Record<OrderStatusValue, number | null> {
-  return Object.fromEntries(ORDER_STATUS_VALUES.map((s) => [s, null])) as Record<
-    OrderStatusValue,
-    number | null
-  >;
+function emptyBuckets(): Record<OperationalBucket, number | null> {
+  return {
+    awaiting_payment_call: null,
+    new: null,
+    preparing: null,
+    out_for_delivery: null,
+    ready_for_pickup: null,
+    completed: null,
+    cancelled: null,
+  };
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 // ─── RPC shape ────────────────────────────────────────────────────────────────
 
 interface RpcCounts {
-  orders_pending_payment?: number;
-  orders_confirmed?: number;
+  orders_awaiting_payment_call?: number;
+  orders_new?: number;
   orders_preparing?: number;
   orders_out_for_delivery?: number;
+  orders_ready_for_pickup?: number;
+  orders_completed?: number;
+  orders_cancelled?: number;
   products_active?: number;
   categories_active?: number;
   settlements?: number;
@@ -121,21 +131,28 @@ interface RpcCounts {
   promotions_active?: number;
 }
 
-function readNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+/**
+ * The RPC is only usable if it speaks the current card vocabulary. An older
+ * deployment returning per-status counts cannot express "phone-credit awaiting a
+ * call" or the delivery/pickup split, so we fall back rather than mis-count.
+ */
+function rpcSupportsCurrentCards(payload: RpcCounts): boolean {
+  return typeof payload.orders_awaiting_payment_call === "number";
 }
 
 function fromRpc(payload: RpcCounts): DashboardCounts {
-  const ordersByStatus = emptyOrdersByStatus();
-  ordersByStatus.pending_payment  = readNumber(payload.orders_pending_payment);
-  ordersByStatus.confirmed        = readNumber(payload.orders_confirmed);
-  ordersByStatus.preparing        = readNumber(payload.orders_preparing);
-  ordersByStatus.out_for_delivery = readNumber(payload.orders_out_for_delivery);
-
   const promotionsActive = readNumber(payload.promotions_active);
 
   return {
-    ordersByStatus,
+    buckets: {
+      awaiting_payment_call: readNumber(payload.orders_awaiting_payment_call),
+      new:                   readNumber(payload.orders_new),
+      preparing:             readNumber(payload.orders_preparing),
+      out_for_delivery:      readNumber(payload.orders_out_for_delivery),
+      ready_for_pickup:      readNumber(payload.orders_ready_for_pickup),
+      completed:             readNumber(payload.orders_completed),
+      cancelled:             readNumber(payload.orders_cancelled),
+    },
     productsActive:   readNumber(payload.products_active),
     categoriesActive: readNumber(payload.categories_active),
     settlements:      readNumber(payload.settlements),
@@ -158,8 +175,6 @@ async function safeCount(
     const { count, error } = await run();
     if (error) {
       const missing = isMissingObjectError(error);
-      // A missing table is an expected, reportable state — not a fault to shout
-      // about on every dashboard render.
       if (!missing) logCountFailure(scope, error);
       else {
         console.warn("[admin:dashboard] object not deployed yet", {
@@ -187,35 +202,85 @@ async function safeCount(
   }
 }
 
+/** Count one bucket whose rule needs no fulfillment column. */
+function countBucket(
+  db: CountsClient,
+  bucket: OperationalBucket
+): Promise<{ value: number | null; missing: boolean }> {
+  const rule = BUCKET_RULES[bucket];
+  return safeCount(`orders:${bucket}`, () => {
+    let q = db
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("order_status", rule.orderStatuses[0]);
+
+    if (rule.paymentMethod) q = q.eq("payment_method", rule.paymentMethod);
+    if (rule.paymentStatus) q = q.eq("payment_status", rule.paymentStatus);
+    // Incomplete online-card attempts never belong on an operational card.
+    // (Redundant when the rule already pins payment_method, harmless otherwise.)
+    q = q.or(EXCLUDE_INCOMPLETE_CARDCOM);
+    return q;
+  });
+}
+
 /**
- * Count every table directly. Used when the RPC is not deployed.
- *
- * The statuses shown on the dashboard are counted individually so that one
- * unavailable count cannot take the rest with it.
+ * Delivery and pickup share one enum value and are split by a column that may
+ * not exist yet, so they are counted by reading the (small) out_for_delivery set
+ * and splitting it in memory, where a legacy row has already been normalised to
+ * "delivery".
  */
+async function countFulfillmentSplit(
+  db: CountsClient
+): Promise<{ delivery: number | null; pickup: number | null }> {
+  try {
+    const { rows, error } = await selectOrdersWithFallback((columns) =>
+      ordersTable(db as unknown as { from(t: string): unknown })
+        .select(columns)
+        .eq("order_status", "out_for_delivery")
+    );
+
+    if (error) return { delivery: null, pickup: null };
+
+    let delivery = 0;
+    let pickup = 0;
+    for (const row of rows) {
+      const ctx = {
+        orderStatus: row.order_status,
+        paymentStatus: row.payment_status,
+        paymentMethod: row.payment_method,
+        fulfillmentMethod: row.fulfillment_method,
+      };
+      if (ctx.paymentMethod === "credit_card" && ctx.paymentStatus !== "paid") continue;
+      if (isPickupOrder(ctx)) pickup += 1;
+      else delivery += 1;
+    }
+    return { delivery, pickup };
+  } catch (thrown) {
+    logCountFailure("orders:fulfillment_split", {
+      message: thrown instanceof Error ? thrown.message : String(thrown),
+    });
+    return { delivery: null, pickup: null };
+  }
+}
+
+/** Count every table directly. Used when the RPC is not deployed. */
 async function loadFallbackCounts(db: CountsClient): Promise<DashboardCounts> {
-  const dashboardStatuses: OrderStatusValue[] = [
-    "pending_payment",
-    "confirmed",
-    "preparing",
-    "out_for_delivery",
-  ];
-
-  const statusTasks = dashboardStatuses.map((status) =>
-    safeCount(`orders:${status}`, () =>
-      db.from("orders").select("id", { count: "exact", head: true }).eq("order_status", status)
-    ).then((result) => ({ status, ...result }))
-  );
-
+  // All independent — issued together, each isolated from the others.
   const [
-    statusResults,
+    awaitingCall,
+    newOrders,
+    preparing,
+    split,
     products,
     categories,
     settlements,
     deliveryZones,
     promotions,
   ] = await Promise.all([
-    Promise.all(statusTasks),
+    countBucket(db, "awaiting_payment_call"),
+    countBucket(db, "new"),
+    countBucket(db, "preparing"),
+    countFulfillmentSplit(db),
     safeCount("products", () =>
       db.from("products").select("id", { count: "exact", head: true }).eq("is_active", true)
     ),
@@ -233,22 +298,27 @@ async function loadFallbackCounts(db: CountsClient): Promise<DashboardCounts> {
     ),
   ]);
 
-  const ordersByStatus = emptyOrdersByStatus();
-  for (const { status, value } of statusResults) {
-    ordersByStatus[status] = value;
-  }
+  const buckets = emptyBuckets();
+  buckets.awaiting_payment_call = awaitingCall.value;
+  buckets.new = newOrders.value;
+  buckets.preparing = preparing.value;
+  buckets.out_for_delivery = split.delivery;
+  buckets.ready_for_pickup = split.pickup;
 
   // The promotions table not existing yet is expected and must not raise the
   // warning banner; anything else failing must.
   const coreFailed =
-    statusResults.some((r) => r.value === null) ||
+    awaitingCall.value === null ||
+    newOrders.value === null ||
+    preparing.value === null ||
+    split.delivery === null ||
     products.value === null ||
     categories.value === null ||
     settlements.value === null ||
     deliveryZones.value === null;
 
   return {
-    ordersByStatus,
+    buckets,
     productsActive:   products.value,
     categoriesActive: categories.value,
     settlements:      settlements.value,
@@ -273,6 +343,7 @@ async function loadFallbackCounts(db: CountsClient): Promise<DashboardCounts> {
  */
 export async function loadDashboardCounts(client: unknown): Promise<DashboardCounts> {
   const db = client as CountsClient;
+
   let rpc: RpcResponse;
   try {
     rpc = await db.rpc("admin_dashboard_counts");
@@ -284,7 +355,9 @@ export async function loadDashboardCounts(client: unknown): Promise<DashboardCou
   }
 
   if (!rpc.error && rpc.data && typeof rpc.data === "object") {
-    return fromRpc(rpc.data as RpcCounts);
+    const payload = rpc.data as RpcCounts;
+    if (rpcSupportsCurrentCards(payload)) return fromRpc(payload);
+    console.warn("[admin:dashboard] counts RPC predates the current cards, counting directly");
   }
 
   if (rpc.error) {
@@ -301,3 +374,6 @@ export async function loadDashboardCounts(client: unknown): Promise<DashboardCou
 
   return loadFallbackCounts(db);
 }
+
+/** Exported for tests that assert the full status vocabulary is covered. */
+export const ALL_ORDER_STATUSES: readonly OrderStatusValue[] = ORDER_STATUS_VALUES;

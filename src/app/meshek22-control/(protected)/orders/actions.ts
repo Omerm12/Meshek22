@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 import {
-  BUCKET_STATUSES,
+  BUCKET_RULES,
   isOperationalBucket,
   isPaymentStatus,
 } from "@/lib/admin/order-presentation";
@@ -16,6 +16,9 @@ import {
   type TransitionAction,
 } from "@/lib/admin/order-transitions";
 import {
+  EXCLUDE_INCOMPLETE_CARDCOM,
+  applyBucketRule,
+  filterRows,
   ordersTable,
   selectOrdersWithFallback,
   type AdminOrderRow,
@@ -56,6 +59,8 @@ export async function fetchOrdersPage(
   // while searching to avoid paging over a partially-filtered set.
   const usingTextSearch = !!term;
 
+  const bucket = filters.status && isOperationalBucket(filters.status) ? filters.status : null;
+
   const { rows, error } = await selectOrdersWithFallback((columns) => {
     let query = ordersTable(supabase)
       .select(columns)
@@ -64,13 +69,14 @@ export async function fetchOrdersPage(
 
     if (!usingTextSearch) query = query.limit(PAGE_SIZE + 1);
 
-    // Operational bucket → the underlying enum values it covers.
-    if (filters.status && isOperationalBucket(filters.status)) {
-      const statuses = BUCKET_STATUSES[filters.status];
-      query = statuses.length === 1
-        ? query.eq("order_status", statuses[0])
-        : query.in("order_status", statuses);
-    }
+    // Incomplete online-card attempts are never part of the employee workflow,
+    // including in the default "הכול" view and in search results.
+    query = query.or(EXCLUDE_INCOMPLETE_CARDCOM);
+
+    // Status + payment constraints go to the database; the fulfillment half of
+    // a bucket rule is applied in memory (see filterRows) because the column may
+    // not exist yet.
+    if (bucket) query = applyBucketRule(query, BUCKET_RULES[bucket]);
 
     if (filters.payment && isPaymentStatus(filters.payment)) {
       query = query.eq("payment_status", filters.payment);
@@ -90,8 +96,11 @@ export async function fetchOrdersPage(
 
   if (error) return { orders: [], nextCursor: null, failed: true };
 
+  // Second pass: enforce the whole rule, including the parts SQL could not.
+  const visible = filterRows(rows, { bucket });
+
   const filtered = term
-    ? rows.filter((o) => {
+    ? visible.filter((o) => {
         const c = o.customer_snapshot as { name?: string; phone?: string } | null;
         return (
           o.order_number.toLowerCase().includes(term) ||
@@ -99,7 +108,7 @@ export async function fetchOrdersPage(
           (c?.phone ?? "").includes(term)
         );
       })
-    : rows;
+    : visible;
 
   if (usingTextSearch) {
     return { orders: filtered, nextCursor: null, failed: false };

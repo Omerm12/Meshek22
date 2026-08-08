@@ -29,15 +29,11 @@ export default async function AdminDeliveryZonesPage({ searchParams }: PageProps
 
   const supabase = await createAdminClient();
 
-  // Count
+  // Count and page data are independent — issued together rather than awaiting
+  // the count first, which cost an extra sequential round-trip on every visit.
   let countQ = supabase.from("delivery_zones").select("id", { count: "exact", head: true });
   if (q) countQ = countQ.ilike("name", `%${q}%`);
-  const { count } = await countQ;
-  const totalCount = count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
 
-  // Data
   let dataQ = supabase
     .from("delivery_zones")
     .select(
@@ -46,9 +42,13 @@ export default async function AdminDeliveryZonesPage({ searchParams }: PageProps
     .order("sort_order", { ascending: true })
     .order("name",       { ascending: true });
   if (q) dataQ = dataQ.ilike("name", `%${q}%`);
-  dataQ = dataQ.range((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE - 1);
+  dataQ = dataQ.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
-  const { data: zones, error } = await dataQ;
+  const [{ count }, { data: zones, error }] = await Promise.all([countQ, dataQ]);
+
+  const totalCount = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
 
   if (error) {
     return (

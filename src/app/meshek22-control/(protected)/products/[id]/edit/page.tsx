@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
+import { CategoryLoadError } from "@/components/admin/products/CategoryLoadError";
 import { ProductForm } from "@/components/admin/products/ProductForm";
 import { updateProduct } from "@/app/meshek22-control/(protected)/products/actions";
 import type { ProductFormData, VariantFormData } from "@/lib/validations/admin-product";
@@ -46,7 +47,18 @@ export default async function EditProductPage({
         .order("name",       { ascending: true }),
     ]);
 
-  if (productError || !product || catError) notFound();
+  // A genuinely missing product is a 404. A failed category load is not — it
+  // almost always means a migration has not been applied, and a 404 would send
+  // the shop owner hunting for a broken link instead of showing the real cause.
+  if (productError || !product) notFound();
+
+  if (catError) {
+    return <CategoryLoadError detail={catError.message} />;
+  }
+
+  if ((categories ?? []).length === 0) {
+    return <CategoryLoadError empty />;
+  }
 
   const rawVariants = Array.isArray(product.product_variants)
     ? product.product_variants

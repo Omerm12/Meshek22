@@ -53,17 +53,18 @@ export async function sendOrderEmails(orderId: string, db: AdminClient): Promise
       | { street?: string; house_number?: string; apartment?: string | null; city?: string }
       | null;
 
-    // No address means nothing to send to. Pickup + cash customers may legitimately
-    // have no email; the admin still sees the order in the panel.
-    if (!customer?.email) return;
+    // A customer without an email (cash and pickup orders do not require one)
+    // must not cost the shop its own notification — the admin email is what
+    // tells them to start packing. Only the customer half is skipped below.
+    const hasCustomerEmail = !!customer?.email;
 
     const emailData: OrderEmailData = {
       orderId:            order.id,
       orderNumber:        order.order_number,
       createdAt:          order.created_at,
-      customerName:       customer.name ?? "",
-      customerEmail:      customer.email,
-      customerPhone:      customer.phone ?? "",
+      customerName:       customer?.name ?? "",
+      customerEmail:      customer?.email ?? "",
+      customerPhone:      customer?.phone ?? "",
       addressStreet:      address?.street ?? "",
       addressHouseNumber: address?.house_number ?? "",
       addressApartment:   address?.apartment ?? null,
@@ -93,12 +94,16 @@ export async function sendOrderEmails(orderId: string, db: AdminClient): Promise
     const ctx = { orderId };
 
     // ── Customer email — atomic claim via DB flag ────────────────────────────
-    const { data: custLock } = await db
-      .from("orders")
-      .update({ customer_email_sent_at: now })
-      .eq("id", orderId)
-      .is("customer_email_sent_at", null)
-      .select("id");
+    // Skipped entirely when there is no address to send to; the admin
+    // notification below is independent and still goes out.
+    const { data: custLock } = hasCustomerEmail
+      ? await db
+          .from("orders")
+          .update({ customer_email_sent_at: now })
+          .eq("id", orderId)
+          .is("customer_email_sent_at", null)
+          .select("id")
+      : { data: null };
 
     if (custLock && custLock.length > 0) {
       const res = await sendCustomerOrderConfirmation(emailData);

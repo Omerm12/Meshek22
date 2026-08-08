@@ -165,47 +165,119 @@ export function describePaymentState(ctx: OrderPresentationContext): Presentatio
 // ─── Operational grouping ─────────────────────────────────────────────────────
 
 /**
+ * An online card payment that was started but never completed.
+ *
+ * Creating the order row BEFORE sending the customer to CardCom is deliberate
+ * and must not change: the webhook needs a trusted record to verify against
+ * (internal id, expected total, guest token hash, idempotency key, LowProfileId).
+ *
+ * But a started-and-abandoned checkout is not an order anyone should pack. These
+ * rows are kept for audit, idempotency and retry, and hidden from every normal
+ * employee view until CardCom itself confirms the payment.
+ *
+ * Note the deliberate narrowness: only `credit_card` counts. A legacy row with
+ * NULL or `card_mock` as its method is a real historical order and stays visible.
+ */
+export function isIncompleteCardcomAttempt(
+  ctx: Pick<OrderPresentationContext, "paymentMethod" | "paymentStatus">
+): boolean {
+  return ctx.paymentMethod === "credit_card" && ctx.paymentStatus !== "paid";
+}
+
+/** The inverse: may this order appear in normal employee screens? */
+export function isEmployeeVisible(
+  ctx: Pick<OrderPresentationContext, "paymentMethod" | "paymentStatus">
+): boolean {
+  return !isIncompleteCardcomAttempt(ctx);
+}
+
+/**
  * The buckets the shop owner actually thinks in, used by both the dashboard
  * cards and the order-list filters so a card always opens the matching filter.
+ *
+ * Delivery and pickup are separate buckets even though they share one enum
+ * value: "out for delivery" and "waiting on the shelf" are different jobs.
  */
 export const OPERATIONAL_BUCKETS = [
-  "attention",
+  "awaiting_payment_call",
   "new",
   "preparing",
-  "ready",
+  "out_for_delivery",
+  "ready_for_pickup",
   "completed",
   "cancelled",
 ] as const;
 
 export type OperationalBucket = (typeof OPERATIONAL_BUCKETS)[number];
 
-/** Order-status values that belong to each bucket. */
-export const BUCKET_STATUSES: Record<OperationalBucket, OrderStatusValue[]> = {
-  attention: ["pending_payment"],
-  new:       ["confirmed"],
-  preparing: ["preparing"],
-  ready:     ["out_for_delivery"],
-  completed: ["delivered"],
-  cancelled: ["cancelled"],
+export const BUCKET_LABELS: Record<OperationalBucket, string> = {
+  awaiting_payment_call: "ממתינות לשיחת תשלום",
+  new:                   "הזמנות חדשות",
+  preparing:             "בהכנה",
+  out_for_delivery:      "יצאו למשלוח",
+  ready_for_pickup:      "מוכנות לאיסוף",
+  completed:             "הושלמו",
+  cancelled:             "בוטלו",
 };
 
-export const BUCKET_LABELS: Record<OperationalBucket, string> = {
-  attention: "דורשות תשומת לב",
-  new:       "הזמנות חדשות",
-  preparing: "בהכנה",
-  ready:     "מוכנות / בדרך",
-  completed: "הושלמו",
-  cancelled: "בוטלו",
+/**
+ * A bucket's membership rule, in a form both a database query and an in-memory
+ * filter can consume, so the dashboard count and the filtered list can never
+ * disagree about what a bucket means.
+ */
+export interface BucketRule {
+  orderStatuses: OrderStatusValue[];
+  paymentMethod?: string;
+  paymentStatus?: PaymentStatusValue;
+  fulfillmentMethod?: "delivery" | "pickup";
+}
+
+export const BUCKET_RULES: Record<OperationalBucket, BucketRule> = {
+  // Only customers who asked to be called back. Never a CardCom attempt, never
+  // cash, never an order that is already paid.
+  awaiting_payment_call: {
+    orderStatuses: ["pending_payment"],
+    paymentMethod: "phone_credit",
+    paymentStatus: "pending",
+  },
+  new:              { orderStatuses: ["confirmed"] },
+  preparing:        { orderStatuses: ["preparing"] },
+  out_for_delivery: { orderStatuses: ["out_for_delivery"], fulfillmentMethod: "delivery" },
+  ready_for_pickup: { orderStatuses: ["out_for_delivery"], fulfillmentMethod: "pickup" },
+  completed:        { orderStatuses: ["delivered"] },
+  cancelled:        { orderStatuses: ["cancelled"] },
 };
 
 export function isOperationalBucket(value: unknown): value is OperationalBucket {
   return typeof value === "string" && (OPERATIONAL_BUCKETS as readonly string[]).includes(value);
 }
 
-/** Which bucket an order currently sits in. */
-export function operationalBucketOf(orderStatus: string): OperationalBucket | null {
+/**
+ * Does this order belong in `bucket`?
+ *
+ * Incomplete CardCom attempts are excluded from every bucket — including
+ * "cancelled" and "completed" — because they are not part of the operational
+ * workflow at all.
+ */
+export function matchesBucket(ctx: OrderPresentationContext, bucket: OperationalBucket): boolean {
+  if (!isEmployeeVisible(ctx)) return false;
+
+  const rule = BUCKET_RULES[bucket];
+  if (!(rule.orderStatuses as string[]).includes(ctx.orderStatus)) return false;
+  if (rule.paymentMethod && ctx.paymentMethod !== rule.paymentMethod) return false;
+  if (rule.paymentStatus && ctx.paymentStatus !== rule.paymentStatus) return false;
+  if (rule.fulfillmentMethod) {
+    const pickup = isPickupOrder(ctx);
+    if (rule.fulfillmentMethod === "pickup" && !pickup) return false;
+    if (rule.fulfillmentMethod === "delivery" && pickup) return false;
+  }
+  return true;
+}
+
+/** The bucket an order currently sits in, or null if it is not operational. */
+export function operationalBucketOf(ctx: OrderPresentationContext): OperationalBucket | null {
   for (const bucket of OPERATIONAL_BUCKETS) {
-    if ((BUCKET_STATUSES[bucket] as string[]).includes(orderStatus)) return bucket;
+    if (matchesBucket(ctx, bucket)) return bucket;
   }
   return null;
 }

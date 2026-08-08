@@ -44,6 +44,10 @@ function SubcategoryTabs({
   activeSlug:    string | null;
   accentClass:   string;
 }) {
+  // A category with no children needs no tab strip — a lone "הכל" pill is just
+  // noise. This is what keeps גלידות ופיצוחים free of filter tabs.
+  if (subcategories.length === 0) return null;
+
   return (
     <div className="bg-white border-b border-stone-100 overflow-x-auto">
       <div className="mx-auto w-full px-4 sm:px-6 lg:px-8 max-w-[1400px]">

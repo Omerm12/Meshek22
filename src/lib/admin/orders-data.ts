@@ -14,7 +14,16 @@
  * async functions, and these constants and mappers are shared with the dashboard.
  */
 
-import { isMissingObjectError, type CountsError } from "@/lib/admin/dashboard-counts";
+import {
+  isMissingObjectError,
+  type PostgrestErrorLike as CountsError,
+} from "@/lib/admin/postgrest-errors";
+import {
+  isEmployeeVisible,
+  matchesBucket,
+  type BucketRule,
+  type OperationalBucket,
+} from "@/lib/admin/order-presentation";
 
 /** Columns the list and dashboard render, once the schema is fully migrated. */
 const ORDER_COLUMNS_FULL =
@@ -156,6 +165,65 @@ export async function selectOrdersWithFallback(
 }
 
 export { ORDER_COLUMNS_FULL, ORDER_COLUMNS_LEGACY };
+
+// ─── Employee visibility ──────────────────────────────────────────────────────
+
+/**
+ * PostgREST `or=` filter that drops incomplete CardCom attempts.
+ *
+ * Equivalent to: NOT (payment_method = 'credit_card' AND payment_status <> 'paid')
+ *
+ * The `payment_method.is.null` arm is essential. In SQL, `NULL <> 'credit_card'`
+ * evaluates to NULL, not TRUE, so a plain `neq` would silently discard every
+ * historical order that has no recorded payment method — which is most of them.
+ */
+export const EXCLUDE_INCOMPLETE_CARDCOM =
+  "payment_method.is.null,payment_method.neq.credit_card,payment_status.eq.paid";
+
+/**
+ * Apply a bucket rule to a query.
+ *
+ * Order status and the payment constraints are pushed into the database.
+ * Fulfillment is deliberately NOT: `orders.fulfillment_method` only exists once
+ * migration 20260808_003 is applied, and filtering on a missing column fails the
+ * whole query. It is applied in memory instead by `filterRows`, where a row
+ * without the column has already been normalised to "delivery".
+ */
+export function applyBucketRule(
+  query: OrdersQueryBuilder,
+  rule: BucketRule
+): OrdersQueryBuilder {
+  let next =
+    rule.orderStatuses.length === 1
+      ? query.eq("order_status", rule.orderStatuses[0])
+      : query.in("order_status", rule.orderStatuses);
+
+  if (rule.paymentMethod) next = next.eq("payment_method", rule.paymentMethod);
+  if (rule.paymentStatus) next = next.eq("payment_status", rule.paymentStatus);
+  return next;
+}
+
+/**
+ * In-memory pass that finishes what the query could not: drop incomplete
+ * CardCom attempts and, when a bucket is fulfillment-specific, keep only the
+ * matching fulfillment.
+ */
+export function filterRows(
+  rows: AdminOrderRow[],
+  options: { bucket?: OperationalBucket | null } = {}
+): AdminOrderRow[] {
+  return rows.filter((row) => {
+    const ctx = {
+      orderStatus: row.order_status,
+      paymentStatus: row.payment_status,
+      paymentMethod: row.payment_method,
+      fulfillmentMethod: row.fulfillment_method,
+    };
+    if (!isEmployeeVisible(ctx)) return false;
+    if (options.bucket) return matchesBucket(ctx, options.bucket);
+    return true;
+  });
+}
 
 // ─── Order detail ─────────────────────────────────────────────────────────────
 
