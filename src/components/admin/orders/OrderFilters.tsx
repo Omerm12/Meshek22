@@ -3,8 +3,37 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Loader2 } from "lucide-react";
-import { ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/utils/order-status";
+import {
+  BUCKET_LABELS,
+  OPERATIONAL_BUCKETS,
+  PAYMENT_STATUS_VALUES,
+  describePaymentState,
+} from "@/lib/admin/order-presentation";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+
+/**
+ * Operational buckets, in the order the work actually flows.
+ * "הכול" is the empty value.
+ */
+const STATUS_OPTIONS = OPERATIONAL_BUCKETS.map((bucket) => ({
+  value: bucket,
+  label: BUCKET_LABELS[bucket],
+}));
+
+/**
+ * Payment remains available as a smaller secondary control. Labels come from the
+ * shared presentation helper so they match the badges; the generic (method-less)
+ * wording is used because a filter spans every payment method at once.
+ */
+const PAYMENT_OPTIONS = PAYMENT_STATUS_VALUES.map((value) => ({
+  value,
+  label: describePaymentState({
+    orderStatus: "",
+    paymentStatus: value,
+    paymentMethod: null,
+    fulfillmentMethod: null,
+  }).label,
+}));
 
 interface OrderFiltersProps {
   search:        string;
@@ -112,16 +141,16 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
         )}
       </div>
 
-      {/* Order status filter */}
+      {/* Operational stage filter */}
       <div className="relative">
         <select
           value={statusValue}
           onChange={handleStatusChange}
-          className={`${inputCls} px-3 pe-8 min-w-36 appearance-none cursor-pointer`}
-          aria-label="סטטוס הזמנה"
+          className={`${inputCls} px-3 pe-8 min-w-44 appearance-none cursor-pointer`}
+          aria-label="שלב ההזמנה"
         >
-          <option value="">כל הסטטוסים</option>
-          {ORDER_STATUS_OPTIONS.map((o) => (
+          <option value="">הכול</option>
+          {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -140,10 +169,10 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
           value={paymentValue}
           onChange={handlePaymentChange}
           className={`${inputCls} px-3 pe-8 min-w-32 appearance-none cursor-pointer`}
-          aria-label="סטטוס תשלום"
+          aria-label="מצב תשלום"
         >
           <option value="">כל התשלומים</option>
-          {PAYMENT_STATUS_OPTIONS.map((o) => (
+          {PAYMENT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>

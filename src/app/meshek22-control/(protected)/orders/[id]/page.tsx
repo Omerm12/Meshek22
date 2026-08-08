@@ -3,14 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, ArrowRight, User, MapPin, Package, CreditCard, Clock, Store, Truck } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from "@/lib/utils/order-status";
 import {
   PICKUP_LOCATION,
   fulfillmentMethodLabel,
   paymentMethodLabel,
 } from "@/lib/checkout/constants";
-import { StatusBadge } from "@/components/admin/orders/StatusBadge";
-import { OrderStatusSelect } from "@/components/admin/orders/OrderStatusSelect";
+import {
+  describeOrderStatus,
+  describePaymentState,
+  isPickupOrder,
+} from "@/lib/admin/order-presentation";
+import { ordersTable, selectOrderDetailWithFallback } from "@/lib/admin/orders-data";
+import { OrderActions } from "@/components/admin/orders/OrderActions";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 
 export const metadata: Metadata = { title: "פרטי הזמנה" };
@@ -91,64 +95,34 @@ export default async function OrderDetailPage({
 }) {
 
   const { id } = await params;
-  const supabase = await createAdminClient();
+  const supabase = createAdminClient();
 
-  const { data: order, error } = await supabase
-    .from("orders")
-    .select(`
-      id,
-      order_number,
-      order_status,
-      payment_status,
-      payment_method,
-      payment_reference,
-      fulfillment_method,
-      subtotal_agorot,
-      delivery_fee_agorot,
-      discount_agorot,
-      discount_breakdown,
-      total_agorot,
-      customer_snapshot,
-      delivery_address_snapshot,
-      delivery_notes,
-      requested_delivery_date,
-      confirmed_delivery_date,
-      created_at,
-      updated_at,
-      order_items (
-        id,
-        quantity,
-        unit_price_agorot,
-        total_price_agorot,
-        discount_agorot,
-        promotion_snapshot,
-        product_snapshot
-      )
-    `)
-    .eq("id", id)
-    .single();
+  // Degrades to the legacy column set when the 20260808 migrations have not been
+  // applied, so the page renders instead of 404-ing on a missing column.
+  const order = await selectOrderDetailWithFallback((columns) =>
+    ordersTable(supabase).select(columns).eq("id", id).maybeSingle()
+  );
 
-  if (error || !order) notFound();
+  if (!order) notFound();
 
   const customer = order.customer_snapshot as unknown as CustomerSnapshot;
   const address  = order.delivery_address_snapshot as unknown as AddressSnapshot;
-  const items    = (order.order_items as unknown as {
-    id:                 string;
-    quantity:           number;
-    unit_price_agorot:  number;
-    total_price_agorot: number;
-    discount_agorot:    number | null;
-    promotion_snapshot: { name?: string } | null;
-    product_snapshot:   unknown;
-  }[]) ?? [];
+  const items    = order.order_items;
 
-  const isPickup = order.fulfillment_method === "pickup";
+  const orderContext = {
+    orderStatus:       order.order_status,
+    paymentStatus:     order.payment_status,
+    paymentMethod:     order.payment_method,
+    fulfillmentMethod: order.fulfillment_method,
+  };
+
+  const isPickup = isPickupOrder(orderContext);
+  const statusPresentation  = describeOrderStatus(orderContext);
+  const paymentPresentation = describePaymentState(orderContext);
 
   // Promotion snapshot recorded at purchase time — stays readable even after the
   // promotion itself is edited or deleted.
-  const appliedPromotions = (order.discount_breakdown as unknown as
-    | { name?: string; groups_applied?: number; discount_agorot?: number }[]
-    | null) ?? [];
+  const appliedPromotions = order.discount_breakdown;
 
   return (
     <div className="space-y-5">
@@ -190,8 +164,12 @@ export default async function OrderDetailPage({
           <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
             {paymentMethodLabel(order.payment_method, true)}
           </span>
-          <StatusBadge map={PAYMENT_STATUS_MAP} value={order.payment_status} />
-          <StatusBadge map={ORDER_STATUS_MAP}   value={order.order_status} />
+          <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold border whitespace-nowrap ${paymentPresentation.cls}`}>
+            {paymentPresentation.label}
+          </span>
+          <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold border whitespace-nowrap ${statusPresentation.cls}`}>
+            {statusPresentation.label}
+          </span>
         </div>
       </div>
 
@@ -284,13 +262,10 @@ export default async function OrderDetailPage({
             </div>
           </SectionCard>
 
-          {/* Status management */}
-          <SectionCard title="ניהול סטטוס" icon={CreditCard}>
-            <OrderStatusSelect
-              orderId={order.id}
-              orderStatus={order.order_status}
-              paymentStatus={order.payment_status}
-            />
+          {/* Workflow actions — only the step that is valid right now. The
+              server re-validates every transition, so this is not the control. */}
+          <SectionCard title="מה עושים עכשיו" icon={CreditCard}>
+            <OrderActions orderId={order.id} context={orderContext} />
           </SectionCard>
         </div>
 

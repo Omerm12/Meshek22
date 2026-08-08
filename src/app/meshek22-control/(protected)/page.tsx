@@ -1,203 +1,346 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  Clock,
-  CheckCircle2,
+  AlertTriangle,
+  ArrowLeft,
+  ClipboardList,
+  Map,
+  MapPin,
+  Package,
   PackageSearch,
-  Truck,
+  Percent,
+  PhoneCall,
   ShoppingBag,
   Tag,
-  MapPin,
-  Map,
-  Percent,
-  ArrowLeft,
+  Truck,
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
-import type { OrderStatus } from "@/types/database";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { loadDashboardCounts } from "@/lib/admin/dashboard-counts";
+import { ordersTable, selectOrdersWithFallback } from "@/lib/admin/orders-data";
+import {
+  describeFulfillment,
+  describeOrderStatus,
+  describePaymentState,
+} from "@/lib/admin/order-presentation";
+import type { OperationalBucket } from "@/lib/admin/order-presentation";
 
 export const metadata: Metadata = { title: "לוח בקרה" };
+// Live operational data — never served from a cache.
 export const dynamic = "force-dynamic";
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
+const RECENT_ORDERS_LIMIT = 10;
 
-interface StatCardProps {
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-  iconBg: string;
-  href: string;
+function formatPrice(agorot: number) {
+  return `₪${(agorot / 100).toLocaleString("he-IL", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
-function StatCard({ label, value, icon, iconBg, href }: StatCardProps) {
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString("he-IL", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// ─── Attention cards ──────────────────────────────────────────────────────────
+
+interface AttentionCard {
+  bucket: OperationalBucket;
+  title: string;
+  hint: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  ring: string;
+}
+
+const ATTENTION_CARDS: AttentionCard[] = [
+  {
+    bucket: "attention",
+    title: "ממתינות לתשלום או לשיחה",
+    hint: "הזמנות שטרם שולמו, כולל כאלה שצריך להתקשר ללקוח",
+    icon: <PhoneCall className="h-6 w-6 text-amber-700" />,
+    iconBg: "bg-amber-100",
+    ring: "hover:border-amber-300",
+  },
+  {
+    bucket: "new",
+    title: "הזמנות חדשות",
+    hint: "אושרו וממתינות שתתחילו להכין אותן",
+    icon: <ClipboardList className="h-6 w-6 text-indigo-700" />,
+    iconBg: "bg-indigo-100",
+    ring: "hover:border-indigo-300",
+  },
+  {
+    bucket: "preparing",
+    title: "בהכנה",
+    hint: "נארזות עכשיו במשק",
+    icon: <PackageSearch className="h-6 w-6 text-purple-700" />,
+    iconBg: "bg-purple-100",
+    ring: "hover:border-purple-300",
+  },
+  {
+    bucket: "ready",
+    title: "מוכנות לאיסוף או בדרך",
+    hint: "יצאו למשלוח או ממתינות לאיסוף עצמי",
+    icon: <Truck className="h-6 w-6 text-teal-700" />,
+    iconBg: "bg-teal-100",
+    ring: "hover:border-teal-300",
+  },
+];
+
+function AttentionCardTile({
+  card,
+  value,
+}: {
+  card: AttentionCard;
+  value: number | null;
+}) {
   return (
     <Link
-      href={href}
-      className="group bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4 hover:border-brand-300 hover:shadow-sm transition-all"
+      href={`${ADMIN_BASE_PATH}/orders?status=${card.bucket}`}
+      className={`group bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3 transition-all hover:shadow-sm ${card.ring}`}
     >
-      <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
-        {icon}
+      <div className="flex items-center justify-between gap-3">
+        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${card.iconBg}`}>
+          {card.icon}
+        </div>
+        <p className="text-4xl font-bold text-gray-900 tabular-nums">
+          {value ?? "—"}
+        </p>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
-        <p className="text-sm text-gray-500 truncate">{label}</p>
+      <div>
+        <p className="font-bold text-gray-900 leading-snug">{card.title}</p>
+        <p className="text-xs text-gray-500 mt-1 leading-relaxed">{card.hint}</p>
       </div>
-      <ArrowLeft className="h-4 w-4 text-gray-300 group-hover:text-brand-500 transition-colors rotate-180 shrink-0" aria-hidden="true" />
+      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 mt-auto pt-1">
+        לצפייה בהזמנות
+        <ArrowLeft className="h-3.5 w-3.5 rotate-180 group-hover:-translate-x-0.5 transition-transform" aria-hidden="true" />
+      </span>
     </Link>
   );
 }
 
-// ─── Row header ───────────────────────────────────────────────────────────────
+// ─── Secondary config tile ────────────────────────────────────────────────────
 
-function RowHeader({ title }: { title: string }) {
-  return <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{title}</h2>;
+function ConfigTile({
+  label,
+  value,
+  icon,
+  href,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3 hover:border-brand-300 transition-colors"
+    >
+      <span className="text-gray-400 shrink-0" aria-hidden="true">{icon}</span>
+      <span className="text-sm text-gray-600 truncate">{label}</span>
+      <span className="ms-auto text-sm font-bold text-gray-900 tabular-nums">{value}</span>
+    </Link>
+  );
 }
-
-// ─── Open order statuses shown in row 1 ──────────────────────────────────────
-
-const OPEN_STATUSES: { status: OrderStatus; label: string; icon: React.ReactNode; iconBg: string }[] = [
-  {
-    status: "pending_payment",
-    label: "ממתין לתשלום",
-    icon: <Clock className="h-5 w-5 text-yellow-600" />,
-    iconBg: "bg-yellow-50",
-  },
-  {
-    status: "confirmed",
-    label: "אושר",
-    icon: <CheckCircle2 className="h-5 w-5 text-indigo-600" />,
-    iconBg: "bg-indigo-50",
-  },
-  {
-    status: "preparing",
-    label: "בהכנה",
-    icon: <PackageSearch className="h-5 w-5 text-purple-600" />,
-    iconBg: "bg-purple-50",
-  },
-  {
-    status: "out_for_delivery",
-    label: "בדרך",
-    icon: <Truck className="h-5 w-5 text-orange-600" />,
-    iconBg: "bg-orange-50",
-  },
-];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-interface DashboardCounts {
-  orders_pending_payment: number;
-  orders_confirmed: number;
-  orders_preparing: number;
-  orders_out_for_delivery: number;
-  products_active: number;
-  categories_active: number;
-  settlements: number;
-  delivery_zones: number;
-  promotions_active: number;
-}
-
 export default async function AdminDashboardPage() {
   // Authorization already ran in (protected)/layout.tsx for this request.
-  // requireAdmin() is memoised, but the page does not need to call it at all —
-  // it cannot render unless the layout above it succeeded.
   const supabase = createAdminClient();
 
-  // One RPC replaces the eight separate head-only COUNT round-trips this page
-  // used to issue. Each of those cost a full PostgREST request (TLS + auth +
-  // planning) even though the queries themselves were trivial.
-  const { data, error } = await supabase.rpc("admin_dashboard_counts");
+  // Counts and recent orders are independent: a failure in one must not blank
+  // the other, so they are awaited together rather than sequentially.
+  const [counts, recent] = await Promise.all([
+    loadDashboardCounts(supabase),
+    selectOrdersWithFallback((columns) =>
+      ordersTable(supabase)
+        .select(columns)
+        .order("created_at", { ascending: false })
+        .limit(RECENT_ORDERS_LIMIT)
+    ),
+  ]);
 
-  if (error) {
-    console.error("[admin:dashboard] counts RPC failed", { error: error.message });
-  }
-
-  const counts = (data ?? {}) as Partial<DashboardCounts>;
-
-  const countByStatus: Record<string, number> = {
-    pending_payment:  counts.orders_pending_payment  ?? 0,
-    confirmed:        counts.orders_confirmed        ?? 0,
-    preparing:        counts.orders_preparing        ?? 0,
-    out_for_delivery: counts.orders_out_for_delivery ?? 0,
+  const bucketCounts: Record<OperationalBucket, number | null> = {
+    attention: counts.ordersByStatus.pending_payment,
+    new:       counts.ordersByStatus.confirmed,
+    preparing: counts.ordersByStatus.preparing,
+    ready:     counts.ordersByStatus.out_for_delivery,
+    completed: counts.ordersByStatus.delivered,
+    cancelled: counts.ordersByStatus.cancelled,
   };
 
-  const productCount      = counts.products_active   ?? null;
-  const categoryCount     = counts.categories_active ?? null;
-  const settlementCount   = counts.settlements       ?? null;
-  const deliveryZoneCount = counts.delivery_zones    ?? null;
-  const promotionCount    = counts.promotions_active ?? null;
+  const recentOrders = recent.rows;
+  const showWarning = counts.hasErrors || recent.error !== null;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">לוח בקרה</h1>
-        <p className="text-sm text-gray-500 mt-1">סקירה תפעולית של פעילות החנות</p>
+        <p className="text-sm text-gray-500 mt-1">מה דורש טיפול עכשיו</p>
       </div>
 
-      {/* Row 1 — Open orders by status */}
-      <div>
-        <RowHeader title="הזמנות פתוחות לפי סטטוס" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {OPEN_STATUSES.map(({ status, label, icon, iconBg }) => (
-            <StatCard
-              key={status}
-              label={label}
-              value={countByStatus[status] ?? 0}
-              icon={icon}
-              iconBg={iconBg}
-              href={`${ADMIN_BASE_PATH}/orders?status=${status}`}
-            />
+      {/* A failed count is reported, never rendered as a convincing zero. */}
+      {showWarning && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+          <span>חלק מנתוני לוח הבקרה לא נטענו. נסו לרענן.</span>
+        </div>
+      )}
+
+      {/* ── Primary: what needs attention ── */}
+      <section aria-labelledby="attention-heading">
+        <h2 id="attention-heading" className="sr-only">הזמנות הדורשות טיפול</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {ATTENTION_CARDS.map((card) => (
+            <AttentionCardTile key={card.bucket} card={card} value={bucketCounts[card.bucket]} />
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Row 2 — Products, Categories & Promotions */}
-      <div>
-        <RowHeader title="קטלוג" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard
+      {/* ── Recent orders ── */}
+      <section aria-labelledby="recent-heading">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h2 id="recent-heading" className="text-lg font-bold text-gray-900">
+            הזמנות אחרונות
+          </h2>
+          <Link
+            href={`${ADMIN_BASE_PATH}/orders`}
+            className="text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+          >
+            כל ההזמנות
+          </Link>
+        </div>
+
+        {recentOrders.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
+            <Package className="h-8 w-8 text-gray-300 mx-auto mb-3" aria-hidden="true" />
+            <p className="text-sm font-semibold text-gray-900">
+              {recent.error ? "לא ניתן לטעון את ההזמנות כרגע" : "אין הזמנות עדיין"}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              {recent.error ? "נסו לרענן את הדף." : "הזמנות חדשות יופיעו כאן."}
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {recentOrders.map((order) => {
+              const ctx = {
+                orderStatus: order.order_status,
+                paymentStatus: order.payment_status,
+                paymentMethod: order.payment_method,
+                fulfillmentMethod: order.fulfillment_method,
+              };
+              const status = describeOrderStatus(ctx);
+              const payment = describePaymentState(ctx);
+              const fulfillment = describeFulfillment(ctx);
+              const customer = order.customer_snapshot as
+                | { name?: string; phone?: string }
+                | null;
+
+              return (
+                <li
+                  key={order.id}
+                  className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    {/* Identity */}
+                    <div className="min-w-0 lg:w-56">
+                      <p className="font-mono text-xs text-gray-500">{order.order_number}</p>
+                      <p className="font-bold text-gray-900 truncate mt-0.5">
+                        {customer?.name ?? "—"}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-0.5" dir="ltr">
+                        {customer?.phone ?? "—"}
+                      </p>
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap items-center gap-2 flex-1">
+                      <span className={`inline-flex items-center h-7 px-3 rounded-full text-xs font-semibold border ${status.cls}`}>
+                        {status.label}
+                      </span>
+                      <span className={`inline-flex items-center h-7 px-3 rounded-full text-xs font-semibold border ${payment.cls}`}>
+                        {payment.label}
+                      </span>
+                      <span className={`inline-flex items-center h-7 px-3 rounded-full text-xs font-semibold border ${fulfillment.cls}`}>
+                        {fulfillment.label}
+                      </span>
+                    </div>
+
+                    {/* Money + action */}
+                    <div className="flex items-center justify-between gap-4 lg:justify-end lg:w-64">
+                      <div className="text-start lg:text-end">
+                        <p className="font-bold text-gray-900 tabular-nums" dir="ltr">
+                          {formatPrice(order.total_agorot)}
+                        </p>
+                        <p className="text-xs text-gray-400">{formatDate(order.created_at)}</p>
+                      </div>
+                      <Link
+                        href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
+                        className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-700 transition-colors shrink-0"
+                      >
+                        פתיחת הזמנה
+                      </Link>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* ── Secondary: catalog & delivery configuration ── */}
+      <section aria-labelledby="config-heading">
+        <h2 id="config-heading" className="text-sm font-semibold text-gray-500 mb-3">
+          קטלוג והגדרות
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+          <ConfigTile
             label="מוצרים פעילים"
-            value={productCount ?? "—"}
-            icon={<ShoppingBag className="h-5 w-5 text-brand-600" />}
-            iconBg="bg-brand-50"
+            value={counts.productsActive ?? "—"}
+            icon={<ShoppingBag className="h-4 w-4" />}
             href={`${ADMIN_BASE_PATH}/products`}
           />
-          <StatCard
-            label="קטגוריות פעילות"
-            value={categoryCount ?? "—"}
-            icon={<Tag className="h-5 w-5 text-purple-600" />}
-            iconBg="bg-purple-50"
+          <ConfigTile
+            label="קטגוריות"
+            value={counts.categoriesActive ?? "—"}
+            icon={<Tag className="h-4 w-4" />}
             href={`${ADMIN_BASE_PATH}/categories`}
           />
-          <StatCard
+          <ConfigTile
             label="מבצעים פעילים"
-            value={promotionCount ?? "—"}
-            icon={<Percent className="h-5 w-5 text-orange-600" />}
-            iconBg="bg-orange-50"
+            // The promotions table ships with a migration that may not be applied
+            // yet; that is expected and must not look like a failure.
+            value={counts.promotionsUnavailable ? "לא זמין" : counts.promotionsActive ?? "—"}
+            icon={<Percent className="h-4 w-4" />}
             href={`${ADMIN_BASE_PATH}/promotions`}
           />
-        </div>
-      </div>
-
-      {/* Row 3 — Settlements & Delivery zones */}
-      <div>
-        <RowHeader title="אזורי משלוח" />
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard
+          <ConfigTile
             label="יישובים"
-            value={settlementCount ?? "—"}
-            icon={<MapPin className="h-5 w-5 text-teal-600" />}
-            iconBg="bg-teal-50"
+            value={counts.settlements ?? "—"}
+            icon={<MapPin className="h-4 w-4" />}
             href={`${ADMIN_BASE_PATH}/settlements`}
           />
-          <StatCard
+          <ConfigTile
             label="אזורי חלוקה"
-            value={deliveryZoneCount ?? "—"}
-            icon={<Map className="h-5 w-5 text-sky-600" />}
-            iconBg="bg-sky-50"
+            value={counts.deliveryZones ?? "—"}
+            icon={<Map className="h-4 w-4" />}
             href={`${ADMIN_BASE_PATH}/delivery-zones`}
           />
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -3,35 +3,40 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
-import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from "@/lib/utils/order-status";
-import type { OrderStatus, PaymentStatus } from "@/types/database";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import {
+  BUCKET_STATUSES,
+  isOperationalBucket,
+  isPaymentStatus,
+} from "@/lib/admin/order-presentation";
+import {
+  actionRequiresCashConfirmation,
+  isTransitionAction,
+  resolveTransition,
+  type TransitionAction,
+} from "@/lib/admin/order-transitions";
+import {
+  ordersTable,
+  selectOrdersWithFallback,
+  type AdminOrderRow,
+} from "@/lib/admin/orders-data";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface OrderRow {
-  id:                 string;
-  order_number:       string;
-  order_status:       string;
-  payment_status:     string;
-  /** 'delivery' | 'pickup' — shown as a badge in the list. */
-  fulfillment_method: string | null;
-  /** 'credit_card' | 'cash' | 'phone_credit', or a legacy value on old orders. */
-  payment_method:     string | null;
-  total_agorot:       number;
-  created_at:         string;
-  customer_snapshot:  unknown;
-}
+export type OrderRow = AdminOrderRow;
 
 export interface OrderPageFilters {
-  search?:  string;
-  status?:  string;
+  search?: string;
+  /** Operational bucket key (attention | new | preparing | ready | completed | cancelled). */
+  status?: string;
   payment?: string;
 }
 
 export interface OrderPageResult {
-  orders:     OrderRow[];
+  orders: OrderRow[];
   nextCursor: string | null;
+  /** True when the read failed outright, so the UI can say so instead of showing "no orders". */
+  failed: boolean;
 }
 
 const PAGE_SIZE = 15;
@@ -44,52 +49,49 @@ export async function fetchOrdersPage(
 ): Promise<OrderPageResult> {
   await requireAdmin();
 
-  const supabase = await createAdminClient();
-
+  const supabase = createAdminClient();
   const term = filters.search?.trim().toLowerCase() ?? "";
 
-  // When text search is active we can't combine cursor pagination with
-  // application-level filtering reliably, so fetch all matching DB rows.
+  // Text search is applied in the application, so cursor pagination is disabled
+  // while searching to avoid paging over a partially-filtered set.
   const usingTextSearch = !!term;
 
-  let query = supabase
-    .from("orders")
-    // Only the columns the list actually renders — never select("*").
-    .select(
-      "id, order_number, order_status, payment_status, fulfillment_method, payment_method, total_agorot, created_at, customer_snapshot"
-    )
-    .order("created_at", { ascending: false })
-    .order("id",         { ascending: false });
+  const { rows, error } = await selectOrdersWithFallback((columns) => {
+    let query = ordersTable(supabase)
+      .select(columns)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
 
-  if (!usingTextSearch) {
-    query = query.limit(PAGE_SIZE + 1);
-  }
+    if (!usingTextSearch) query = query.limit(PAGE_SIZE + 1);
 
-  // Enum filters
-  if (filters.status && Object.keys(ORDER_STATUS_MAP).includes(filters.status)) {
-    query = query.eq("order_status", filters.status as OrderStatus);
-  }
-  if (filters.payment && Object.keys(PAYMENT_STATUS_MAP).includes(filters.payment)) {
-    query = query.eq("payment_status", filters.payment as PaymentStatus);
-  }
-
-  // Cursor condition (only when not doing text search)
-  if (!usingTextSearch && cursor) {
-    const [cursorDate, cursorId] = cursor.split("|");
-    if (cursorDate && cursorId) {
-      query = query.or(
-        `created_at.lt.${cursorDate},and(created_at.eq.${cursorDate},id.lt.${cursorId})`
-      );
+    // Operational bucket → the underlying enum values it covers.
+    if (filters.status && isOperationalBucket(filters.status)) {
+      const statuses = BUCKET_STATUSES[filters.status];
+      query = statuses.length === 1
+        ? query.eq("order_status", statuses[0])
+        : query.in("order_status", statuses);
     }
-  }
 
-  const { data: raw, error } = await query;
+    if (filters.payment && isPaymentStatus(filters.payment)) {
+      query = query.eq("payment_status", filters.payment);
+    }
 
-  if (error || !raw) return { orders: [], nextCursor: null };
+    if (!usingTextSearch && cursor) {
+      const [cursorDate, cursorId] = cursor.split("|");
+      if (cursorDate && cursorId) {
+        query = query.or(
+          `created_at.lt.${cursorDate},and(created_at.eq.${cursorDate},id.lt.${cursorId})`
+        );
+      }
+    }
 
-  // Server-side text search
+    return query;
+  });
+
+  if (error) return { orders: [], nextCursor: null, failed: true };
+
   const filtered = term
-    ? raw.filter((o) => {
+    ? rows.filter((o) => {
         const c = o.customer_snapshot as { name?: string; phone?: string } | null;
         return (
           o.order_number.toLowerCase().includes(term) ||
@@ -97,76 +99,132 @@ export async function fetchOrdersPage(
           (c?.phone ?? "").includes(term)
         );
       })
-    : raw;
+    : rows;
 
   if (usingTextSearch) {
-    return { orders: filtered as OrderRow[], nextCursor: null };
+    return { orders: filtered, nextCursor: null, failed: false };
   }
 
   const hasMore = filtered.length > PAGE_SIZE;
-  const orders  = (hasMore ? filtered.slice(0, PAGE_SIZE) : filtered) as OrderRow[];
+  const orders = hasMore ? filtered.slice(0, PAGE_SIZE) : filtered;
+  const last = orders[orders.length - 1];
 
-  const last       = orders[orders.length - 1];
-  const nextCursor = hasMore && last ? `${last.created_at}|${last.id}` : null;
-
-  return { orders, nextCursor };
+  return {
+    orders,
+    nextCursor: hasMore && last ? `${last.created_at}|${last.id}` : null,
+    failed: false,
+  };
 }
+
+// ─── Order workflow transition ────────────────────────────────────────────────
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
-const VALID_ORDER_STATUSES = [
-  "pending_payment",
-  "confirmed",
-  "preparing",
-  "out_for_delivery",
-  "delivered",
-  "cancelled",
-] as const;
-
-const VALID_PAYMENT_STATUSES = [
-  "pending",
-  "paid",
-  "failed",
-  "refunded",
-] as const;
-
-type ValidOrderStatus   = (typeof VALID_ORDER_STATUSES)[number];
-type ValidPaymentStatus = (typeof VALID_PAYMENT_STATUSES)[number];
-
-export async function updateOrderStatuses(
+/**
+ * Advance an order one step through the workflow.
+ *
+ * This replaces the two free-form status dropdowns. Security does not depend on
+ * which buttons were rendered:
+ *
+ *   1. requireAdmin() — the action is a plain HTTP endpoint, reachable without
+ *      the page ever rendering.
+ *   2. The order is re-read from the database; nothing about its state is taken
+ *      from the client.
+ *   3. resolveTransition() checks the request against the explicit allowlist,
+ *      including payment method and fulfillment method.
+ *   4. A CardCom order can never be marked paid here — only the verified webhook.
+ *   5. The UPDATE carries a compare-and-set on the status the transition expected,
+ *      so if two admins click at once the second one changes nothing and is told
+ *      the order moved on.
+ */
+export async function applyOrderTransition(
   orderId: string,
-  formData: FormData
+  action: string,
+  options?: { cashReceived?: boolean }
 ): Promise<ActionResult> {
   await requireAdmin();
 
-  const orderStatus   = formData.get("order_status")   as string | null;
-  const paymentStatus = formData.get("payment_status") as string | null;
-
-  if (!orderStatus || !VALID_ORDER_STATUSES.includes(orderStatus as ValidOrderStatus)) {
-    return { success: false, error: "סטטוס הזמנה לא תקין" };
+  if (!isTransitionAction(action)) {
+    return { success: false, error: "פעולה לא מוכרת." };
   }
-  if (!paymentStatus || !VALID_PAYMENT_STATUSES.includes(paymentStatus as ValidPaymentStatus)) {
-    return { success: false, error: "סטטוס תשלום לא תקין" };
+  const transitionAction: TransitionAction = action;
+
+  const supabase = createAdminClient();
+
+  // Re-read the order. The client's idea of the current state is irrelevant.
+  const { rows, error: readError } = await selectOrdersWithFallback((columns) =>
+    ordersTable(supabase).select(columns).eq("id", orderId).limit(1)
+  );
+
+  if (readError) {
+    return { success: false, error: "שגיאה בטעינת ההזמנה. נסו שוב." };
   }
 
-  // Business rule: cannot confirm an order unless payment is marked as paid.
-  if (orderStatus === "confirmed" && paymentStatus !== "paid") {
-    return { success: false, error: "לא ניתן לאשר הזמנה ללא אישור תשלום" };
+  const order = rows[0];
+  if (!order) {
+    return { success: false, error: "ההזמנה לא נמצאה." };
   }
 
-  const supabase = await createAdminClient();
+  const ctx = {
+    orderStatus: order.order_status,
+    paymentStatus: order.payment_status,
+    paymentMethod: order.payment_method,
+    fulfillmentMethod: order.fulfillment_method,
+  };
 
-  const { error } = await supabase
+  const resolved = resolveTransition(transitionAction, ctx);
+  if (!resolved.ok) {
+    return { success: false, error: resolved.error };
+  }
+
+  // Settling cash requires the admin to have actually confirmed it.
+  if (actionRequiresCashConfirmation(transitionAction, ctx) && !options?.cashReceived) {
+    return {
+      success: false,
+      error: "יש לאשר שהתקבל התשלום במזומן לפני סימון ההזמנה כהושלמה.",
+    };
+  }
+
+  const update: Record<string, string> = {
+    order_status: resolved.nextOrderStatus,
+    updated_at: new Date().toISOString(),
+  };
+  if (resolved.nextPaymentStatus) {
+    update.payment_status = resolved.nextPaymentStatus;
+  }
+
+  // Compare-and-set: only applies while the order is still in the state the
+  // transition was resolved against.
+  const { data: updated, error: updateError } = await supabase
     .from("orders")
-    .update({
-      order_status:   orderStatus   as ValidOrderStatus,
-      payment_status: paymentStatus as ValidPaymentStatus,
-    })
-    .eq("id", orderId);
+    .update(update)
+    .eq("id", orderId)
+    .eq("order_status", resolved.expectedOrderStatus)
+    .select("id");
 
-  if (error) return { success: false, error: "שגיאה בעדכון הסטטוס" };
+  if (updateError) {
+    console.error("[admin:orders] transition update failed", {
+      orderId,
+      action: transitionAction,
+      code: updateError.code,
+      message: updateError.message,
+      details: updateError.details,
+      hint: updateError.hint,
+    });
+    return { success: false, error: "שגיאה בעדכון ההזמנה. נסו שוב." };
+  }
 
+  if (!updated || updated.length === 0) {
+    // Someone else moved the order between the read and the write.
+    return {
+      success: false,
+      error: "סטטוס ההזמנה השתנה בינתיים. רעננו את הדף ונסו שוב.",
+    };
+  }
+
+  revalidatePath(ADMIN_BASE_PATH);
   revalidatePath(`${ADMIN_BASE_PATH}/orders`);
   revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+
   return { success: true };
 }

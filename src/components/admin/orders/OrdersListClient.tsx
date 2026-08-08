@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLink, Loader2, ClipboardList, Store, Truck } from "lucide-react";
 import { fetchOrdersPage, type OrderRow, type OrderPageFilters } from "@/app/meshek22-control/(protected)/orders/actions";
-import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from "@/lib/utils/order-status";
-import { fulfillmentMethodLabel, paymentMethodLabel } from "@/lib/checkout/constants";
-import { StatusBadge } from "./StatusBadge";
+import {
+  describeOrderStatus,
+  describePaymentState,
+  isPickupOrder,
+} from "@/lib/admin/order-presentation";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 
 function formatPrice(agorot: number) {
@@ -98,6 +100,15 @@ export function OrdersListClient({
             <tbody className="divide-y divide-gray-100">
               {orders.map((order) => {
                 const customer = order.customer_snapshot as { name?: string; phone?: string } | null;
+                const ctx = {
+                  orderStatus: order.order_status,
+                  paymentStatus: order.payment_status,
+                  paymentMethod: order.payment_method,
+                  fulfillmentMethod: order.fulfillment_method,
+                };
+                const status = describeOrderStatus(ctx);
+                const payment = describePaymentState(ctx);
+                const pickup = isPickupOrder(ctx);
                 return (
                   <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3.5">
@@ -113,31 +124,30 @@ export function OrdersListClient({
                       {formatPrice(order.total_agorot)}
                     </td>
                     <td className="px-5 py-3.5 hidden sm:table-cell">
-                      <div className="flex flex-col gap-1 items-start">
-                        <StatusBadge map={PAYMENT_STATUS_MAP} value={order.payment_status} />
-                        <span className="text-[11px] text-gray-500 whitespace-nowrap">
-                          {paymentMethodLabel(order.payment_method, true)}
-                        </span>
-                      </div>
+                      {/* Payment wording already reflects the method, e.g.
+                          "מזומן בעת המסירה" — no separate method column needed. */}
+                      <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold border whitespace-nowrap ${payment.cls}`}>
+                        {payment.label}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 hidden lg:table-cell">
                       <span
                         className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
-                          order.fulfillment_method === "pickup"
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-sky-50 text-sky-700"
+                          pickup ? "bg-amber-50 text-amber-700" : "bg-sky-50 text-sky-700"
                         }`}
                       >
-                        {order.fulfillment_method === "pickup" ? (
+                        {pickup ? (
                           <Store className="h-3 w-3" aria-hidden="true" />
                         ) : (
                           <Truck className="h-3 w-3" aria-hidden="true" />
                         )}
-                        {fulfillmentMethodLabel(order.fulfillment_method)}
+                        {pickup ? "איסוף עצמי" : "משלוח"}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <StatusBadge map={ORDER_STATUS_MAP} value={order.order_status} />
+                      <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold border whitespace-nowrap ${status.cls}`}>
+                        {status.label}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-gray-500 text-xs hidden lg:table-cell whitespace-nowrap">
                       {formatDate(order.created_at)}
