@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ICE_CREAMS_AND_NUTS_SLUG,
+  MERGED_CATEGORY_REDIRECTS,
   PARENT_CATEGORY_NAV,
   SIMPLE_NAV_LINKS,
 } from "@/lib/config/nav-categories";
@@ -31,17 +33,42 @@ describe("storefront navigation", () => {
     }
   });
 
-  it("exposes גלידות and פיצוחים as top-level categories", () => {
-    const iceCreams = PARENT_CATEGORY_NAV.find((c) => c.slug === "ice-creams");
-    const nuts = PARENT_CATEGORY_NAV.find((c) => c.slug === "nuts");
+  it("exposes exactly one combined גלידות ופיצוחים entry", () => {
+    const combined = PARENT_CATEGORY_NAV.filter(
+      (c) => c.slug === ICE_CREAMS_AND_NUTS_SLUG
+    );
 
-    expect(iceCreams).toBeDefined();
-    expect(iceCreams!.label).toBe("גלידות");
-    expect(iceCreams!.href).toBe("/ice-creams");
+    expect(combined).toHaveLength(1);
+    expect(combined[0].label).toBe("גלידות ופיצוחים");
+    expect(combined[0].href).toBe("/ice-creams-and-nuts");
+  });
 
-    expect(nuts).toBeDefined();
-    expect(nuts!.label).toBe("פיצוחים");
-    expect(nuts!.href).toBe("/nuts");
+  it("offers no separate customer-facing גלידות or פיצוחים entry", () => {
+    // Neither as a top-level category…
+    expect(PARENT_CATEGORY_NAV.some((c) => c.slug === "ice-creams")).toBe(false);
+    expect(PARENT_CATEGORY_NAV.some((c) => c.slug === "nuts")).toBe(false);
+
+    // …nor as a standalone label anywhere in the menu.
+    expect(allNavLabels).not.toContain("גלידות");
+    expect(allNavLabels).not.toContain("פיצוחים");
+
+    // …nor as a link to either retired route.
+    expect(allNavHrefs).not.toContain("/ice-creams");
+    expect(allNavHrefs).not.toContain("/nuts");
+  });
+
+  it("renders the combined entry as a single link with no dropdown", () => {
+    const combined = PARENT_CATEGORY_NAV.find(
+      (c) => c.slug === ICE_CREAMS_AND_NUTS_SLUG
+    );
+    // The two children are database-only, for admin product assignment. They
+    // must not surface as extra navigation links.
+    expect(combined!.children).toEqual([]);
+  });
+
+  it("maps both retired routes to the combined page", () => {
+    expect(MERGED_CATEGORY_REDIRECTS["/ice-creams"]).toBe("/ice-creams-and-nuts");
+    expect(MERGED_CATEGORY_REDIRECTS["/nuts"]).toBe("/ice-creams-and-nuts");
   });
 
   it("keeps ירקות and פירות with their subcategories", () => {

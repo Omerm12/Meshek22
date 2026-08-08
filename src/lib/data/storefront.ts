@@ -351,12 +351,56 @@ export async function fetchProductsByCategory(
 }
 
 /**
+ * Every category whose products belong on a parent category's page: the parent
+ * itself, followed by each of its active children.
+ *
+ * Returned in a stable order with duplicates removed, so a malformed row (a
+ * category listing itself as its own child, say) cannot make the same id appear
+ * twice in the query.
+ */
+export function collectCategoryIds(
+  parentId: string,
+  children: { id: string }[] | null | undefined
+): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+
+  for (const id of [parentId, ...(children ?? []).map((c) => c.id)]) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+/**
+ * Keep the first occurrence of each product id.
+ *
+ * A product carries exactly one category_id, so the parent-plus-children query
+ * cannot currently return the same product twice. This makes the "listed exactly
+ * once" guarantee explicit and testable rather than an implicit consequence of
+ * the schema, which matters for the combined גלידות ופיצוחים page where three
+ * categories feed one grid.
+ */
+export function dedupeProductsById(products: MockProduct[]): MockProduct[] {
+  const seen = new Set<string>();
+  return products.filter((product) => {
+    if (seen.has(product.id)) return false;
+    seen.add(product.id);
+    return true;
+  });
+}
+
+/**
  * All active products belonging to a top-level category.
  *
- * Covers BOTH placements, so a flat category such as גלידות (which has no
- * children) works exactly like a nested one such as ירקות:
+ * Covers BOTH placements, so a category whose products sit directly on the
+ * parent works exactly like a nested one such as ירקות:
  *   • products assigned directly to the parent category, and
  *   • products assigned to any of its active child categories.
+ *
+ * This is what lets גלידות ופיצוחים show products filed under the combined
+ * parent, under גלידות, or under פיצוחים — each appearing exactly once.
  */
 export async function fetchProductsByParentCategorySlug(
   parentSlug: string
@@ -384,7 +428,7 @@ export async function fetchProductsByParentCategorySlug(
     .eq("is_active", true);
 
   // 3. Fetch products in the parent itself and in every child category
-  const categoryIds = [parent.id, ...(children ?? []).map((c) => c.id)];
+  const categoryIds = collectCategoryIds(parent.id, children);
 
   const { data, error } = await supabase
     .from("products")
@@ -396,9 +440,11 @@ export async function fetchProductsByParentCategorySlug(
 
   if (error || !data) return [];
 
-  const products = (data as unknown as ProductRow[])
-    .map(toMockProduct)
-    .filter((p) => p.variants.length > 0);
+  const products = dedupeProductsById(
+    (data as unknown as ProductRow[])
+      .map(toMockProduct)
+      .filter((p) => p.variants.length > 0)
+  );
 
   return withPromotions(products, promotionsPromise);
 }

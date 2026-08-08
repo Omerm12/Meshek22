@@ -28,6 +28,28 @@ export interface NavLink {
   href: string;
 }
 
+/**
+ * The combined ice-cream + nut category.
+ *
+ * Declared as constants because the slug and path are referenced by the nav, the
+ * page, the hero config, the revalidation list and the legacy redirects — one
+ * definition keeps them from drifting apart.
+ */
+export const ICE_CREAMS_AND_NUTS_SLUG = "ice-creams-and-nuts";
+export const ICE_CREAMS_AND_NUTS_HREF = `/${ICE_CREAMS_AND_NUTS_SLUG}`;
+
+/**
+ * Storefront routes that were merged into a combined category page.
+ *
+ * Each key is a retired top-level path; the value is where it now permanently
+ * redirects (308). Old bookmarks, printed material and search results keep
+ * working, and the child slugs stay valid for admin product assignment.
+ */
+export const MERGED_CATEGORY_REDIRECTS: Record<string, string> = {
+  "/ice-creams": ICE_CREAMS_AND_NUTS_HREF,
+  "/nuts":       ICE_CREAMS_AND_NUTS_HREF,
+};
+
 export const PARENT_CATEGORY_NAV: NavParentCategory[] = [
   {
     label: "ירקות",
@@ -57,20 +79,17 @@ export const PARENT_CATEGORY_NAV: NavParentCategory[] = [
       { label: "פירות אורגניים", slug: "organic-fruits", href: "/fruits?sub=organic-fruits", icon: "🌱" },
     ],
   },
-  // Flat top-level categories: products are assigned straight to the parent,
-  // so there is no subcategory dropdown to render.
+  // גלידות and פיצוחים are one customer-facing category. They still exist as
+  // child categories in the database so the shop owner can file a product as
+  // one or the other, but neither gets its own page or its own nav entry —
+  // `children` is empty here so the header renders a single link with no
+  // dropdown. Customers narrow the combined page down with the on-page filter
+  // tabs, which the shell builds from the database.
   {
-    label: "גלידות",
-    slug: "ice-creams",
-    href: "/ice-creams",
+    label: "גלידות ופיצוחים",
+    slug: ICE_CREAMS_AND_NUTS_SLUG,
+    href: ICE_CREAMS_AND_NUTS_HREF,
     icon: "🍦",
-    children: [],
-  },
-  {
-    label: "פיצוחים",
-    slug: "nuts",
-    href: "/nuts",
-    icon: "🥜",
     children: [],
   },
 ];

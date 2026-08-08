@@ -1,49 +1,15 @@
-import type { Metadata } from "next";
-import { getCategoryHero } from "@/lib/config/category-heroes";
-import {
-  fetchChildCategoriesByParentSlug,
-  fetchProductsByCategory,
-  fetchProductsByParentCategorySlug,
-} from "@/lib/data/storefront";
-import { ParentCategoryShell } from "@/components/shop/ParentCategoryShell";
+import { permanentRedirect } from "next/navigation";
+import { MERGED_CATEGORY_REDIRECTS } from "@/lib/config/nav-categories";
 
-// Dynamic because rendering depends on the ?sub= search param.
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "פיצוחים – משק 22",
-  description:
-    "אגוזים, שקדים, גרעינים ופיצוחים טריים – נארזים בהזמנה ומגיעים עד הבית.",
-};
-
-const PARENT_SLUG = "nuts";
-
-export default async function NutsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ sub?: string }>;
-}) {
-  const { sub } = await searchParams;
-  const heroConfig = getCategoryHero(PARENT_SLUG);
-
-  const subcategories = await fetchChildCategoriesByParentSlug(PARENT_SLUG);
-
-  const activeSubSlug =
-    sub && subcategories.some((c) => c.slug === sub) ? sub : null;
-
-  // Products appear here only once an administrator assigns them to פיצוחים
-  // (or to one of its subcategories). Nothing is inferred or auto-populated.
-  const products = activeSubSlug
-    ? await fetchProductsByCategory(activeSubSlug)
-    : await fetchProductsByParentCategorySlug(PARENT_SLUG);
-
-  return (
-    <ParentCategoryShell
-      heroConfig={heroConfig}
-      parentSlug={PARENT_SLUG}
-      subcategories={subcategories}
-      products={products}
-      activeSubSlug={activeSubSlug}
-    />
-  );
+/**
+ * Legacy route.
+ *
+ * פיצוחים is no longer a customer-facing page of its own — it was merged into
+ * גלידות ופיצוחים. It still exists as a child category in the database so the
+ * shop owner can file products as nuts, and it appears there as a filter tab.
+ * This route issues a permanent (308) redirect so old bookmarks and search
+ * results keep working.
+ */
+export default function LegacyNutsPage(): never {
+  permanentRedirect(MERGED_CATEGORY_REDIRECTS["/nuts"]);
 }

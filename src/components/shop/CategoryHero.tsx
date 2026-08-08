@@ -17,7 +17,12 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
           ? "h-[250px] sm:h-[310px] lg:h-[370px]" // expanded — ~13% taller, more image visible
           : "h-[220px] sm:h-[270px] lg:h-[320px]", // original
       )}
-      style={{ backgroundColor: config.containerBg }}
+      style={{
+        backgroundColor: config.containerBg,
+        // A category with no photograph can supply a CSS gradient instead. It
+        // paints over containerBg, which stays as the fallback colour.
+        backgroundImage: config.backgroundGradient,
+      }}
     >
       {config.imageSrc && (
         <Image
@@ -30,6 +35,18 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
             objectPosition: config.imageObjectPosition ?? "center",
           }}
           priority
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Optional gradient layer, painted over the photograph and under the
+          text. Used either for decorative glows or — where a photo is light
+          behind the heading — as a contrast scrim that darkens only the text
+          area and leaves the edges of the image at full strength. */}
+      {config.decorativeGradient && (
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: config.decorativeGradient }}
           aria-hidden="true"
         />
       )}
