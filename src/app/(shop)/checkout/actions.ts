@@ -342,7 +342,22 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
   });
 
   if (rpcError || !rpcResult || rpcResult.length === 0) {
-    console.error("[createOrder] create_guest_order_atomic failed", { error: rpcError?.message });
+    console.error("[createOrder] create_guest_order_atomic failed", {
+      code:    rpcError?.code,
+      message: rpcError?.message,
+      details: rpcError?.details,
+      hint:    rpcError?.hint,
+    });
+
+    // Stock is reserved inside the same transaction, so a shortage arrives here
+    // as a raised exception and the order was NOT created. Tell the customer
+    // what actually happened instead of a generic failure.
+    if (rpcError?.message?.includes("insufficient stock")) {
+      return {
+        error: "אחד המוצרים בסל אזל מהמלאי בזמן ההזמנה. נא לעדכן את הסל ולנסות שוב.",
+      };
+    }
+
     return { error: "שגיאה ביצירת ההזמנה. נא לנסות שוב." };
   }
 

@@ -4,7 +4,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
-import { isAdminLoginRateLimited, recordAdminLoginAttempt } from "@/lib/admin/rate-limit";
+import {
+  MissingRateLimitSaltError,
+  isAdminLoginRateLimited,
+  recordAdminLoginAttempt,
+} from "@/lib/admin/rate-limit";
 
 /**
  * The single Hebrew error returned for EVERY failure mode — unknown username,
@@ -13,6 +17,9 @@ import { isAdminLoginRateLimited, recordAdminLoginAttempt } from "@/lib/admin/ra
  */
 const GENERIC_ERROR = "שם המשתמש או הסיסמה שגויים";
 const RATE_LIMIT_ERROR = "יותר מדי ניסיונות התחברות. נסו שוב בעוד מספר דקות.";
+/** Shown when the server is misconfigured — distinct from a wrong password. */
+const CONFIG_ERROR =
+  "תצורת השרת אינה מלאה ולכן ההתחברות חסומה. יש לפנות למנהל המערכת.";
 
 export interface AdminLoginState {
   error: string | null;
@@ -62,8 +69,20 @@ export async function adminLogin(
     { kind: "username" as const, value: username },
   ];
 
-  if (await isAdminLoginRateLimited(identities)) {
-    return { error: RATE_LIMIT_ERROR };
+  // A missing rate-limit salt fails closed: without it the stored identity
+  // digests would be unsalted and trivially reversible, so sign-in is refused
+  // rather than run unprotected. The admin sees a generic message; the real
+  // cause is logged server-side only.
+  try {
+    if (await isAdminLoginRateLimited(identities)) {
+      return { error: RATE_LIMIT_ERROR };
+    }
+  } catch (thrown) {
+    if (thrown instanceof MissingRateLimitSaltError) {
+      console.error("[adminLogin] refusing to sign in: ADMIN_RATE_LIMIT_SALT is not configured");
+      return { error: CONFIG_ERROR };
+    }
+    throw thrown;
   }
 
   const expectedUsername = process.env.ADMIN_LOGIN_USERNAME ?? "";

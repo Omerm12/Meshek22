@@ -60,6 +60,12 @@ BEGIN
   END IF;
 END $$;
 
+-- Parent → children lookup, used by every parent-category storefront page and
+-- by the admin category tree. Defined here, next to the column it indexes,
+-- rather than in a later migration: the column does not exist before this file.
+CREATE INDEX IF NOT EXISTS categories_parent_sort_idx
+  ON public.categories (parent_id, sort_order);
+
 
 -- ── 1. Ensure the combined category exists ───────────────────────────────────
 

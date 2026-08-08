@@ -25,9 +25,14 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
       }}
     >
       {config.imageSrc && (
+        // Decorative: the heading and subtitle beside it already carry the
+        // meaning, so an alt text would only repeat them to a screen reader.
+        // alt="" is the correct way to say that — combining a non-empty alt with
+        // aria-hidden (the previous state) is contradictory, and some assistive
+        // technologies announce the alt anyway.
         <Image
           src={config.imageSrc}
-          alt={config.imageAlt}
+          alt=""
           fill
           sizes="100vw"
           style={{
@@ -35,7 +40,6 @@ export function CategoryHero({ config }: { config: CategoryHeroConfig }) {
             objectPosition: config.imageObjectPosition ?? "center",
           }}
           priority
-          aria-hidden="true"
         />
       )}
 

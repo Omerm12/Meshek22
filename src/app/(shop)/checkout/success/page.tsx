@@ -71,7 +71,7 @@ export default async function CheckoutSuccessPage({
           <div className="max-w-lg mx-auto text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-3">ההזמנה לא נמצאה</h1>
             <p className="text-stone-500 leading-relaxed mb-8">
-              ייתכן שהקישור אינו מלא או שפג תוקפו. אם ביצעתם הזמנה, אישור נשלח אליכם בדוא&quot;ל.
+              ייתכן שהקישור אינו מלא או שפג תוקפו.
               נשמח לעזור בטלפון 050-8863030.
             </p>
             <Link
@@ -94,6 +94,7 @@ export default async function CheckoutSuccessPage({
     | { street?: string; house_number?: string; city?: string; zone_name?: string }
     | null;
 
+  const hasCustomerEmail = !!customerSnapshot?.email;
   const isPickup      = order.fulfillment_method === "pickup";
   const isOnlineCard  = order.payment_method === "credit_card";
   const isPaid        = order.payment_status === "paid";
@@ -284,7 +285,9 @@ export default async function CheckoutSuccessPage({
               <h2 className="font-semibold text-brand-800 text-sm">מה קורה עכשיו?</h2>
             </div>
             <ol className="space-y-2 text-sm text-brand-700 list-decimal list-inside">
-              <li>נשלח לכם אישור בדוא&quot;ל עם פרטי ההזמנה</li>
+              {/* Only promise an email when there is actually an address to send
+                  it to — cash and pickup checkouts do not require one. */}
+              {hasCustomerEmail && <li>נשלח לכם אישור בדוא&quot;ל עם פרטי ההזמנה</li>}
               {order.payment_method === "phone_credit" && (
                 <li>נציג יתקשר אליכם לקבלת פרטי האשראי</li>
               )}

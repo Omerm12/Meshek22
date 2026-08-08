@@ -124,11 +124,29 @@ function toMockProduct(row: ProductRow): MockProduct {
   };
 }
 
-const PRODUCT_SELECT = `
+/**
+ * Every product column the storefront renders, minus the category join.
+ *
+ * Shared so the two select variants below cannot drift apart. They did: the
+ * category-filtered query omitted the qty_deal_* columns, which silently
+ * dropped legacy quantity deals whenever a customer selected a subcategory tab
+ * (and on the whole גלידות ופיצוחים page, which filters by category).
+ */
+const PRODUCT_COLUMNS = `
   id, name, slug, description, image_url, is_featured, sort_order, created_at,
   qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot,
-  categories ( id, name, slug ),
   product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order, quantity_pricing_mode, quantity_step, min_quantity )
+`;
+
+const PRODUCT_SELECT = `
+  ${PRODUCT_COLUMNS},
+  categories ( id, name, slug )
+`;
+
+/** Same columns, but with an inner join so a category-slug filter can be applied. */
+const PRODUCT_SELECT_BY_CATEGORY = `
+  ${PRODUCT_COLUMNS},
+  categories!inner ( id, name, slug )
 `;
 
 // ─── Promotion decoration ──────────────────────────────────────────────────────
@@ -332,11 +350,7 @@ export async function fetchProductsByCategory(
 
   const { data, error } = await supabase
     .from("products")
-    .select(`
-      id, name, slug, description, image_url, is_featured, sort_order, created_at,
-      categories!inner ( id, name, slug ),
-      product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order, quantity_pricing_mode, quantity_step, min_quantity )
-    `)
+    .select(PRODUCT_SELECT_BY_CATEGORY)
     .eq("categories.slug", categorySlug)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })

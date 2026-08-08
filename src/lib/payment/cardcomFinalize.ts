@@ -93,7 +93,11 @@ export async function verifyAndFinalizeCardcomPayment(
     // sending, send the missing emails now.
     if (!order.customer_email_sent_at || !order.admin_email_sent_at) {
       console.log("[cardcom:finalize]", { event: "email_recovery_start", ...ctx });
-      void sendOrderEmails(orderId, db);
+      // Awaited, not fire-and-forget: on a serverless platform the function may
+      // be frozen the instant the response is returned, silently dropping an
+      // untracked promise. sendOrderEmails never throws, so awaiting cannot fail
+      // the webhook — it only delays the 200 by the send.
+      await sendOrderEmails(orderId, db);
     }
     return { outcome: "already_paid" };
   }
@@ -136,12 +140,26 @@ export async function verifyAndFinalizeCardcomPayment(
     return { outcome: "failed", reason: `ResponseCode=${lp.ResponseCode}: ${lp.Description ?? ""}` };
   }
 
-  // ── TerminalNumber mismatch (GetLpResult response) ───────────────────────
-  // A second layer of terminal verification against the authoritative Cardcom
-  // response, independent of the webhook payload.
+  // Every check below REQUIRES its field to be present. A missing verification
+  // field previously skipped the check silently, so a response that simply
+  // omitted TerminalNumber, ReturnValue or Amount was treated as fully verified.
+  // Absent evidence is now "blocked", never "approved".
+
+  // ── TerminalNumber ───────────────────────────────────────────────────────
+  // Must be configured AND returned AND equal. An unset env var is a deployment
+  // fault; failing closed is the only safe reading for money.
   const expectedTerminal = process.env.CARDCOM_TERMINAL_NUMBER ?? "";
+  if (!expectedTerminal) {
+    console.error("[cardcom:finalize]", { event: "terminal_not_configured", ...ctx });
+    return { outcome: "blocked", reason: "terminal_not_configured" };
+  }
+
   const returnedTerminal = lp.TerminalNumber != null ? String(lp.TerminalNumber) : null;
-  if (expectedTerminal && returnedTerminal && returnedTerminal !== expectedTerminal) {
+  if (!returnedTerminal) {
+    console.error("[cardcom:finalize]", { event: "terminal_missing_in_response", ...ctx });
+    return { outcome: "blocked", reason: "terminal_missing" };
+  }
+  if (returnedTerminal !== expectedTerminal) {
     console.error("[cardcom:finalize]", {
       event: "terminal_mismatch",
       ...ctx,
@@ -151,8 +169,14 @@ export async function verifyAndFinalizeCardcomPayment(
     return { outcome: "blocked", reason: "terminal_mismatch" };
   }
 
-  // ── ReturnValue mismatch ─────────────────────────────────────────────────
-  if (lp.ReturnValue && lp.ReturnValue !== orderId) {
+  // ── ReturnValue ──────────────────────────────────────────────────────────
+  // This is what ties the CardCom session to OUR order. Without it there is no
+  // evidence the payment belongs to this order at all.
+  if (!lp.ReturnValue) {
+    console.error("[cardcom:finalize]", { event: "return_value_missing", ...ctx });
+    return { outcome: "blocked", reason: "return_value_missing" };
+  }
+  if (lp.ReturnValue !== orderId) {
     console.error("[cardcom:finalize]", {
       event: "return_value_mismatch",
       ...ctx,
@@ -162,11 +186,20 @@ export async function verifyAndFinalizeCardcomPayment(
     return { outcome: "blocked", reason: "return_value_mismatch" };
   }
 
-  // ── Amount mismatch ──────────────────────────────────────────────────────
-  // 5 agorot tolerance for floating-point rounding at the shekel boundary.
-  const storedShekels   = order.total_agorot / 100;
-  const returnedAmount  = lp.TranzactionInfo?.Amount;
-  if (returnedAmount !== undefined && Math.abs(returnedAmount - storedShekels) > 0.05) {
+  // ── Amount ───────────────────────────────────────────────────────────────
+  // Must be present and finite. 5 agorot tolerance for floating-point rounding
+  // at the shekel boundary.
+  const storedShekels  = order.total_agorot / 100;
+  const returnedAmount = lp.TranzactionInfo?.Amount;
+  if (typeof returnedAmount !== "number" || !Number.isFinite(returnedAmount)) {
+    console.error("[cardcom:finalize]", {
+      event: "amount_missing",
+      ...ctx,
+      received: returnedAmount,
+    });
+    return { outcome: "blocked", reason: "amount_missing" };
+  }
+  if (Math.abs(returnedAmount - storedShekels) > 0.05) {
     console.error("[cardcom:finalize]", {
       event: "amount_mismatch",
       ...ctx,
@@ -176,12 +209,12 @@ export async function verifyAndFinalizeCardcomPayment(
     return { outcome: "blocked", reason: "amount_mismatch" };
   }
 
-  // ── LowProfileId mismatch ────────────────────────────────────────────────
-  // The LowProfileId stored on the order (set when we created the Cardcom session)
-  // must match the incoming one. A mismatch means a different session is being
-  // applied to this order — reject it.
+  // ── LowProfileId ─────────────────────────────────────────────────────────
+  // The session stored on the order (set when we created it) must match the
+  // incoming one, and — when CardCom echoes it — the authoritative response too.
+  // A mismatch means a different session is being applied to this order.
   // Note: for manual recovery, incomingLowProfileId IS the stored reference, so
-  // this check always passes in that case.
+  // the first check always passes in that case.
   if (order.payment_reference && order.payment_reference !== incomingLowProfileId) {
     console.error("[cardcom:finalize]", {
       event: "low_profile_id_mismatch",
@@ -189,6 +222,14 @@ export async function verifyAndFinalizeCardcomPayment(
       storedReference: order.payment_reference,
     });
     return { outcome: "blocked", reason: "low_profile_id_mismatch" };
+  }
+  if (lp.LowProfileId && lp.LowProfileId !== incomingLowProfileId) {
+    console.error("[cardcom:finalize]", {
+      event: "low_profile_id_response_mismatch",
+      ...ctx,
+      responseLowProfileId: lp.LowProfileId,
+    });
+    return { outcome: "blocked", reason: "low_profile_id_response_mismatch" };
   }
 
   // ── All checks passed ────────────────────────────────────────────────────
@@ -204,7 +245,7 @@ export async function verifyAndFinalizeCardcomPayment(
   // ── Atomic CAS: pending/failed → paid ────────────────────────────────────
   // Using .in(["pending","failed"]) instead of .eq("pending") lets a retry
   // succeed after an earlier attempt left the order in "failed" state.
-  const { data: updated } = await db
+  const { data: updated, error: casError } = await db
     .from("orders")
     .update({
       payment_status:          "paid",
@@ -218,6 +259,21 @@ export async function verifyAndFinalizeCardcomPayment(
     .eq("id", orderId)
     .in("payment_status", ["pending", "failed"])
     .select("id");
+
+  // A database failure must NOT be mistaken for "someone else already finalized
+  // it" — that would swallow the error, skip the emails and leave a paid customer
+  // with an unpaid order. Reported as transient so CardCom retries the webhook.
+  if (casError) {
+    console.error("[cardcom:finalize]", {
+      event: "cas_update_failed",
+      ...ctx,
+      code: casError.code,
+      message: casError.message,
+      details: casError.details,
+      hint: casError.hint,
+    });
+    return { outcome: "transient_error", reason: "cas_update_failed" };
+  }
 
   if (!updated || updated.length === 0) {
     // A concurrent call already finalized this order — idempotent no-op.
@@ -251,7 +307,12 @@ export async function verifyAndFinalizeCardcomPayment(
   // Emails are sent from OUR app only — never from Cardcom.
   // sendOrderEmails uses atomic DB locks to prevent duplicates, and is shared
   // with the offline (cash / phone-credit) checkout path.
-  void sendOrderEmails(orderId, db);
+  //
+  // Awaited for the same reason as above: a fire-and-forget promise is not safe
+  // in a serverless request, where the runtime may suspend as soon as the
+  // webhook responds. The order is already marked paid at this point, so a slow
+  // or failing send cannot affect the payment outcome.
+  await sendOrderEmails(orderId, db);
 
   return { outcome: "paid" };
 }

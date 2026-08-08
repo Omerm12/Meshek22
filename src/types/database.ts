@@ -688,6 +688,33 @@ export interface Database {
           out_is_duplicate: boolean;
         }[];
       };
+      /**
+       * Create or update a promotion together with its eligible variants in one
+       * transaction. service_role only. Pass p_promotion_id = null to create.
+       */
+      save_promotion: {
+        Args: {
+          p_promotion_id: string | null;
+          p_name: string;
+          p_description: string | null;
+          p_required_quantity: number;
+          p_bundle_price_agorot: number;
+          p_is_active: boolean;
+          p_starts_at: string | null;
+          p_ends_at: string | null;
+          p_sort_order: number;
+          p_variant_ids: string[];
+        };
+        Returns: string;
+      };
+      /**
+       * Decrement stock for fixed-unit variants with a configured quantity.
+       * Called inside create_guest_order_atomic; not invoked directly by the app.
+       */
+      reserve_stock_for_items: {
+        Args: { p_items: Json };
+        Returns: undefined;
+      };
       /** One-round-trip dashboard counters. service_role only. */
       admin_dashboard_counts: {
         Args: Record<string, never>;

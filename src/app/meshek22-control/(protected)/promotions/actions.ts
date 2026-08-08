@@ -101,37 +101,23 @@ export async function createPromotion(formData: FormData): Promise<ActionResult>
   const perKgError = await rejectPerKgVariants(db, parsed.data.variant_ids);
   if (perKgError) return { success: false, error: perKgError };
 
-  const { data: promotion, error } = await db
-    .from("promotions")
-    .insert({
-      name:                parsed.data.name,
-      description:         parsed.data.description,
-      required_quantity:   parsed.data.required_quantity,
-      bundle_price_agorot: parsed.data.bundle_price_agorot,
-      is_active:           parsed.data.is_active,
-      starts_at:           parsed.data.starts_at,
-      ends_at:             parsed.data.ends_at,
-      sort_order:          parsed.data.sort_order,
-    })
-    .select("id")
-    .single();
+  // One transaction: the promotion and its membership are written together, so a
+  // rejected variant can no longer leave an active promotion with no products.
+  const { error } = await db.rpc("save_promotion", {
+    p_promotion_id:        null,
+    p_name:                parsed.data.name,
+    p_description:         parsed.data.description,
+    p_required_quantity:   parsed.data.required_quantity,
+    p_bundle_price_agorot: parsed.data.bundle_price_agorot,
+    p_is_active:           parsed.data.is_active,
+    p_starts_at:           parsed.data.starts_at,
+    p_ends_at:             parsed.data.ends_at,
+    p_sort_order:          parsed.data.sort_order,
+    p_variant_ids:         parsed.data.variant_ids,
+  });
 
-  if (error || !promotion) {
-    return { success: false, error: translateDbError(error?.message) };
-  }
-
-  const { error: itemsError } = await db.from("promotion_items").insert(
-    parsed.data.variant_ids.map((variantId) => ({
-      promotion_id:       promotion.id,
-      product_variant_id: variantId,
-    }))
-  );
-
-  if (itemsError) {
-    // The promotion row would otherwise be left with no eligible products, which
-    // is invalid — remove it so the owner can correct the selection and retry.
-    await db.from("promotions").delete().eq("id", promotion.id);
-    return { success: false, error: translateDbError(itemsError.message) };
+  if (error) {
+    return { success: false, error: translateDbError(error.message) };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
@@ -155,40 +141,25 @@ export async function updatePromotion(id: string, formData: FormData): Promise<A
   const perKgError = await rejectPerKgVariants(db, parsed.data.variant_ids);
   if (perKgError) return { success: false, error: perKgError };
 
-  const { error } = await db
-    .from("promotions")
-    .update({
-      name:                parsed.data.name,
-      description:         parsed.data.description,
-      required_quantity:   parsed.data.required_quantity,
-      bundle_price_agorot: parsed.data.bundle_price_agorot,
-      is_active:           parsed.data.is_active,
-      starts_at:           parsed.data.starts_at,
-      ends_at:             parsed.data.ends_at,
-      sort_order:          parsed.data.sort_order,
-    })
-    .eq("id", id);
+  // One transaction. The RPC deactivates the promotion, swaps its membership and
+  // only then applies the requested dates and active flag, so the activation
+  // guard judges the FINAL set — and any rejection rolls the whole edit back
+  // instead of leaving the promotion with its products deleted.
+  const { error } = await db.rpc("save_promotion", {
+    p_promotion_id:        id,
+    p_name:                parsed.data.name,
+    p_description:         parsed.data.description,
+    p_required_quantity:   parsed.data.required_quantity,
+    p_bundle_price_agorot: parsed.data.bundle_price_agorot,
+    p_is_active:           parsed.data.is_active,
+    p_starts_at:           parsed.data.starts_at,
+    p_ends_at:             parsed.data.ends_at,
+    p_sort_order:          parsed.data.sort_order,
+    p_variant_ids:         parsed.data.variant_ids,
+  });
 
   if (error) {
     return { success: false, error: translateDbError(error.message) };
-  }
-
-  // Replace the membership set. Removing first keeps the overlap guard happy
-  // when variants are being moved between promotions.
-  const { error: deleteError } = await db.from("promotion_items").delete().eq("promotion_id", id);
-  if (deleteError) {
-    return { success: false, error: "שגיאה בעדכון המוצרים במבצע. נסו שוב." };
-  }
-
-  const { error: itemsError } = await db.from("promotion_items").insert(
-    parsed.data.variant_ids.map((variantId) => ({
-      promotion_id:       id,
-      product_variant_id: variantId,
-    }))
-  );
-
-  if (itemsError) {
-    return { success: false, error: translateDbError(itemsError.message) };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);

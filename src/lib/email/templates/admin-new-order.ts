@@ -31,10 +31,13 @@ function formatDateTime(iso: string): string {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
+  // Current methods.
+  credit_card: "כרטיס אשראי (CardCom)",
+  cash: "מזומן",
+  phone_credit: "אשראי בטלפון",
+  // Historical values still present on old orders.
   card_mock: "כרטיס אשראי",
   card: "כרטיס אשראי",
-  payplus: "כרטיס אשראי (PayPlus)",
-  cash: "מזומן",
 };
 
 const STATUS_LABELS: Record<string, string> = {

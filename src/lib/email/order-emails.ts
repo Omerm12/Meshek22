@@ -94,8 +94,25 @@ export async function sendOrderEmails(orderId: string, db: AdminClient): Promise
     const ctx = { orderId };
 
     // ── Customer email — atomic claim via DB flag ────────────────────────────
-    // Skipped entirely when there is no address to send to; the admin
-    // notification below is independent and still goes out.
+    //
+    // When there is no address to send to, the slot is still claimed and NOTHING
+    // is sent. The flag means "the customer-email step is resolved", not "a
+    // message went out" — without this an order with no email leaves the flag
+    // NULL forever, and cardcomFinalize's crash-recovery check
+    // (`!customer_email_sent_at || !admin_email_sent_at`) would re-enter this
+    // function on every subsequent webhook retry, indefinitely.
+    if (!hasCustomerEmail) {
+      await db
+        .from("orders")
+        .update({ customer_email_sent_at: now })
+        .eq("id", orderId)
+        .is("customer_email_sent_at", null);
+      console.log("[order-emails]", {
+        event: "customer_email_skipped_no_address",
+        orderId,
+      });
+    }
+
     const { data: custLock } = hasCustomerEmail
       ? await db
           .from("orders")

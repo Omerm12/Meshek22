@@ -22,6 +22,9 @@
  */
 
 import sharp from "sharp";
+// sharp 0.35 no longer merges a `sharp` namespace alongside the default export,
+// so its types must be imported explicitly rather than reached via `sharp.X`.
+import type { OutputInfo } from "sharp";
 
 // Color distance threshold: pixels within this distance of the background color
 // are considered background.  38 works well for gpt-image-1 output — aggressive
@@ -34,7 +37,7 @@ const TOLERANCE = 38;
 // Catches residual gray in soft shadows without touching produce.
 const NEAR_WHITE = 248;
 
-type PixelData = { data: Buffer; info: sharp.OutputInfo };
+type PixelData = { data: Buffer; info: OutputInfo };
 
 function colorDist(pixels: Uint8Array, idx: number, channels: number, bgR: number, bgG: number, bgB: number): number {
   const r = pixels[idx * channels];

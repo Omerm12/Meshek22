@@ -20,11 +20,34 @@ import { createAdminClient } from "@/lib/supabase/server";
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 15;
 
+/**
+ * Thrown when ADMIN_RATE_LIMIT_SALT is not configured.
+ *
+ * Without a salt the stored digests are plain unsalted SHA-256 of an IP address
+ * or a username — trivially reversible by a rainbow table, which defeats the
+ * whole reason the values are hashed. Silently continuing would leave the shop
+ * believing identities are protected when they are not, so this fails closed
+ * and the login action reports a configuration error.
+ */
+export class MissingRateLimitSaltError extends Error {
+  constructor() {
+    super("ADMIN_RATE_LIMIT_SALT is not configured");
+    this.name = "MissingRateLimitSaltError";
+  }
+}
+
+function requireSalt(): string {
+  const salt = process.env.ADMIN_RATE_LIMIT_SALT;
+  if (!salt || salt.trim().length === 0) throw new MissingRateLimitSaltError();
+  return salt;
+}
+
 function hashIdentity(value: string): string {
   // The salt makes the stored digest useless for reversing common values such as
   // an IP address or the username "admin".
-  const salt = process.env.ADMIN_RATE_LIMIT_SALT ?? "";
-  return createHash("sha256").update(`${salt}:${value.toLowerCase().trim()}`).digest("hex");
+  return createHash("sha256")
+    .update(`${requireSalt()}:${value.toLowerCase().trim()}`)
+    .digest("hex");
 }
 
 interface Identity {
@@ -39,6 +62,11 @@ interface Identity {
  * still applies.
  */
 export async function isAdminLoginRateLimited(identities: Identity[]): Promise<boolean> {
+  // Deliberately OUTSIDE the try/catch below. A missing salt is a configuration
+  // fault, not a transient outage, and must fail CLOSED — letting it fall into
+  // the fail-open handler would disable rate limiting entirely and silently.
+  requireSalt();
+
   const db = createAdminClient();
   const since = new Date(Date.now() - WINDOW_MINUTES * 60_000).toISOString();
 

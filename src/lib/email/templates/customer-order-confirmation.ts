@@ -34,10 +34,13 @@ function formatDate(iso: string): string {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
+  // Current methods.
+  credit_card: "כרטיס אשראי",
+  cash: "מזומן",
+  phone_credit: "אשראי בטלפון",
+  // Historical values still present on old orders.
   card_mock: "כרטיס אשראי",
   card: "כרטיס אשראי",
-  payplus: "כרטיס אשראי",
-  cash: "מזומן",
 };
 
 function paymentLabel(method: string | null): string {

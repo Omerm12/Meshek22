@@ -11,54 +11,46 @@
 
 
 -- ── 1. Indexes ───────────────────────────────────────────────────────────────
+--
+-- Only indexes that support a query NOT already covered by an existing index or
+-- index prefix. An earlier revision of this file duplicated eight indexes that
+-- 001_initial_schema.sql already creates under different names; a duplicate
+-- index costs write amplification and storage while never being chosen by the
+-- planner over the original.
+--
+-- Deliberately NOT re-created here (already present, listed with their originals):
+--   orders (order_status, created_at DESC)      → idx_orders_status
+--   orders (payment_status)                     → idx_orders_payment
+--   orders (order_number)                       → idx_orders_number
+--   order_items (order_id)                      → idx_order_items_order
+--   product_variants (product_id)               → prefix of idx_variants_product
+--                                                 (product_id, is_available, sort_order)
+--   products (category_id, …)                   → prefix of idx_products_category
+--                                                 (category_id, is_active, sort_order);
+--                                                 no admin or storefront query filters
+--                                                 by category and orders by sort_order
+--                                                 without is_active, so a second
+--                                                 index buys nothing
+--   settlements (name)                          → idx_settlements_name
+--   settlements (delivery_zone_id)              → idx_settlements_zone
+--   categories (parent_id, sort_order)          → created in 20260808_001, next to
+--                                                 the parent_id column it indexes
 
--- /meshek22-control/orders default listing: ORDER BY created_at DESC
+-- The admin order list's default ordering. No existing index leads with
+-- created_at, so this is the one genuinely new access path for orders.
 CREATE INDEX IF NOT EXISTS orders_created_at_desc_idx
   ON public.orders (created_at DESC);
 
--- ?status=<order_status> filter combined with the default sort
-CREATE INDEX IF NOT EXISTS orders_status_created_at_idx
-  ON public.orders (order_status, created_at DESC);
-
--- ?payment=<payment_status> filter and the dashboard payment tiles
-CREATE INDEX IF NOT EXISTS orders_payment_status_idx
-  ON public.orders (payment_status);
+-- Storefront catalog reads: WHERE is_active ORDER BY sort_order.
+-- idx_products_category leads with category_id and so cannot serve this.
+CREATE INDEX IF NOT EXISTS products_active_sort_idx
+  ON public.products (is_active, sort_order);
 
 -- NOTE ON fulfillment_method
 -- No index. It has two values over a table of a few hundred rows, so the planner
 -- will always prefer a sequential scan; the only filter that touches it is
 -- inside admin_dashboard_counts, which already scans the small operational set.
 -- An index here would be write amplification for no measurable read gain.
-
--- Exact order-number lookup (admin search + guest success page)
-CREATE INDEX IF NOT EXISTS orders_order_number_idx
-  ON public.orders (order_number);
-
--- order detail page: SELECT … WHERE order_id = $1
-CREATE INDEX IF NOT EXISTS order_items_order_id_idx
-  ON public.order_items (order_id);
-
--- Product list filtered by category, sorted by sort_order
-CREATE INDEX IF NOT EXISTS products_category_sort_idx
-  ON public.products (category_id, sort_order);
-
-CREATE INDEX IF NOT EXISTS products_active_sort_idx
-  ON public.products (is_active, sort_order);
-
--- Storefront + admin variant fan-out
-CREATE INDEX IF NOT EXISTS product_variants_product_id_idx
-  ON public.product_variants (product_id);
-
--- Settlement admin page: name search + zone filter
-CREATE INDEX IF NOT EXISTS settlements_name_idx
-  ON public.settlements (name);
-
-CREATE INDEX IF NOT EXISTS settlements_zone_idx
-  ON public.settlements (delivery_zone_id);
-
--- Category tree resolution (parent → children) on every category landing page
-CREATE INDEX IF NOT EXISTS categories_parent_sort_idx
-  ON public.categories (parent_id, sort_order);
 
 -- NOTE ON TRIGRAM SEARCH
 -- A pg_trgm GIN index on products.name / orders.order_number was considered and
