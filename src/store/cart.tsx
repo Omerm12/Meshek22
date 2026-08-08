@@ -10,37 +10,18 @@ import {
   useRef,
   useState,
 } from "react";
-import { useUser } from "@/store/user";
-import {
-  dbLoadCart,
-  dbUpsertCartItem,
-  dbRemoveCartItem,
-  dbClearCart,
-} from "@/app/actions/cart";
+import { calculateCartPricing } from "@/lib/promotions/engine";
+import type { CartPricing, PricedItem, Promotion } from "@/lib/promotions/types";
+import { readStoredCart, writeStoredCart, type StoredCartItem } from "@/lib/cart/storage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface CartLineItem {
-  variantId: string;
-  productId: string;
-  productName: string;
-  variantLabel: string;
-  priceAgorot: number;
-  quantity: number;
-  imageUrl?: string | null;
-  imageColor?: string;
-  productIcon?: string;
-  /** 'per_kg': line total = priceAgorot × quantity. 'fixed': line total = priceAgorot. */
-  quantityPricingMode: "per_kg" | "fixed";
-  /** Increment/decrement step for +/− buttons (e.g. 0.5 for 500g steps). */
-  quantityStep: number;
-  /** Minimum allowed quantity; first add initialises the cart item to this value. */
-  minQuantity: number;
-  /** Bundle deal: buy dealQuantity units for dealPriceAgorot total */
-  dealEnabled?: boolean;
-  dealQuantity?: number | null;
-  dealPriceAgorot?: number | null;
-}
+/**
+ * A line in the guest cart. Identical to the persisted shape — the cart is
+ * saved to localStorage verbatim and validated field by field on the way back
+ * in (see @/lib/cart/storage).
+ */
+export type CartLineItem = StoredCartItem;
 
 // Payload for addItem — new fields are optional for backward-compat callers.
 export type AddItemPayload = Omit<
@@ -76,8 +57,13 @@ interface CartContextValue extends CartState {
   closeCart: () => void;
   /** Number of distinct line items in the cart (used for the nav badge). */
   totalItems: number;
+  /** Undiscounted total of every line — matches orders.subtotal_agorot. */
   subtotalAgorot: number;
-  /** True once the auth-aware hydration step has completed. */
+  /** Full promotion breakdown for this cart. Display only; the server recomputes. */
+  pricing: CartPricing;
+  /** Live group promotions, refreshed from the server on mount. */
+  promotions: Promotion[];
+  /** True once localStorage has been read. */
   isHydrated: boolean;
 }
 
@@ -89,27 +75,28 @@ function roundToStep(value: number, step: number): number {
   return parseFloat(value.toFixed(decimals));
 }
 
+/** Convert a cart line into the shape the pricing engine expects. */
+export function toPricedItem(item: CartLineItem): PricedItem {
+  return {
+    variantId:           item.variantId,
+    productId:           item.productId,
+    quantity:            item.quantity,
+    priceAgorot:         item.priceAgorot,
+    quantityPricingMode: item.quantityPricingMode,
+    dealEnabled:         item.dealEnabled,
+    dealQuantity:        item.dealQuantity,
+    dealPriceAgorot:     item.dealPriceAgorot,
+  };
+}
+
 /**
- * Compute the line total for a cart item in agorot, applying bundle deal pricing
- * when the deal is active and the quantity meets the threshold.
- *
- * Deal formula: complete groups × dealPrice + remainder × unitPrice
+ * Undiscounted total for a single line, in agorot.
+ * Kept for callers that only need the "before promotion" figure.
  */
 export function calculateLineTotal(item: CartLineItem): number {
-  if (
-    item.dealEnabled &&
-    item.dealQuantity != null &&
-    item.dealPriceAgorot != null &&
-    item.quantity >= item.dealQuantity
-  ) {
-    const groups    = Math.floor(item.quantity / item.dealQuantity);
-    const remainder = item.quantity % item.dealQuantity;
-    return groups * item.dealPriceAgorot + Math.round(remainder * item.priceAgorot);
-  }
   return Math.round(item.priceAgorot * item.quantity);
 }
 
-/** Default values for the new fields — applied when payload omits them. */
 const DEFAULT_PRICING_MODE = "fixed" as const;
 const DEFAULT_STEP = 1;
 const DEFAULT_MIN = 1;
@@ -201,126 +188,67 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { user, isLoading: authLoading } = useUser();
-  const [state, dispatch] = useReducer(cartReducer, {
-    items: [],
-    isOpen: false,
-  });
+  const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
   const [isHydrated, setIsHydrated] = useState(false);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
 
-  const stateRef = useRef(state);
-  useEffect(() => { stateRef.current = state; }, [state]);
+  // Skip the very first persist pass so an empty initial state never overwrites
+  // a stored cart before hydration has run.
+  const hydratedRef = useRef(false);
 
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
-
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
-
-  // ── Auth-aware DB hydration ───────────────────────────────────────────────
+  // ── Restore from localStorage (once, on mount) ────────────────────────────
+  //
+  // The isHydrated flag is deferred to a microtask so it lands in the same paint
+  // as the restored items rather than triggering a second synchronous render.
   useEffect(() => {
-    if (authLoading) return;
+    const items = readStoredCart();
+    if (items.length > 0) dispatch({ type: "HYDRATE", items });
+    hydratedRef.current = true;
+    queueMicrotask(() => setIsHydrated(true));
+  }, []);
 
-    const prevId = prevUserIdRef.current;
-    const currId = user?.id ?? null;
+  // ── Persist on every change ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    writeStoredCart(state.items);
+  }, [state.items]);
 
-    if (prevId === undefined) {
-      prevUserIdRef.current = currId;
-      if (currId) {
-        dbLoadCart()
-          .then((items) => {
-            dispatch({ type: "HYDRATE", items });
-            setIsHydrated(true);
-          })
-          .catch(() => setIsHydrated(true));
-      } else {
-        queueMicrotask(() => setIsHydrated(true));
-      }
-      return;
-    }
-
-    if (prevId === currId) return;
-    prevUserIdRef.current = currId;
-
-    if (currId && !prevId) {
-      const guestItems = stateRef.current.items;
-      dbLoadCart()
-        .then((dbItems) => {
-          if (guestItems.length === 0) {
-            dispatch({ type: "HYDRATE", items: dbItems });
-            return;
-          }
-          const dbVariantIds  = new Set(dbItems.map((i) => i.variantId));
-          const guestOnlyItems = guestItems.filter((i) => !dbVariantIds.has(i.variantId));
-          const merged = [...dbItems, ...guestOnlyItems];
-          dispatch({ type: "HYDRATE", items: merged });
-          for (const item of guestOnlyItems) {
-            dbUpsertCartItem(item).catch(() => {});
-          }
-        })
-        .catch(() => {});
-    } else if (!currId && prevId) {
-      dispatch({ type: "CLEAR" });
-    }
-  }, [authLoading, user?.id]);
+  // ── Load live promotions ──────────────────────────────────────────────────
+  //
+  // Cosmetic only: it makes the cart show the same saving the server will apply.
+  // Checkout ignores anything sent from the browser and recalculates from the
+  // database, so a stale or tampered response here cannot change what is charged.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/promotions/active")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Promotion[]) => {
+        if (!cancelled && Array.isArray(data)) setPromotions(data);
+      })
+      .catch(() => {
+        // Offline or blocked — fall back to undiscounted display.
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Mutation callbacks ────────────────────────────────────────────────────
 
-  const addItem = useCallback((item: AddItemPayload) => {
-    dispatch({ type: "ADD", payload: item });
-    if (!userRef.current) return;
-    const pricingMode = item.quantityPricingMode ?? DEFAULT_PRICING_MODE;
-    const step        = item.quantityStep ?? DEFAULT_STEP;
-    const minQty      = item.minQuantity  ?? DEFAULT_MIN;
-    const rawQty      = item.quantity ?? minQty;
-    const existing    = stateRef.current.items.find((i) => i.variantId === item.variantId);
-    const finalQty    = roundToStep(
-      Math.min((existing?.quantity ?? 0) + rawQty, 999),
-      step
-    );
-    dbUpsertCartItem({
-      ...item,
-      quantity:            finalQty,
-      quantityPricingMode: pricingMode,
-      quantityStep:        step,
-      minQuantity:         minQty,
-    }).catch(() => {});
-  }, []);
-
-  const removeItem = useCallback((variantId: string) => {
-    dispatch({ type: "REMOVE", variantId });
-    if (!userRef.current) return;
-    dbRemoveCartItem(variantId).catch(() => {});
-  }, []);
-
-  const updateQty = useCallback((variantId: string, quantity: number) => {
-    dispatch({ type: "UPDATE_QTY", variantId, quantity });
-    if (!userRef.current) return;
-    if (quantity <= 0) {
-      dbRemoveCartItem(variantId).catch(() => {});
-    } else {
-      const item = stateRef.current.items.find((i) => i.variantId === variantId);
-      if (item) {
-        const clamped = roundToStep(Math.min(quantity, 999), item.quantityStep ?? 1);
-        dbUpsertCartItem({ ...item, quantity: clamped }).catch(() => {});
-      }
-    }
-  }, []);
-
-  const clearCart = useCallback(() => {
-    dispatch({ type: "CLEAR" });
-    if (!userRef.current) return;
-    dbClearCart().catch(() => {});
-  }, []);
-
-  const openCart  = useCallback(() => dispatch({ type: "OPEN" }),  []);
-  const closeCart = useCallback(() => dispatch({ type: "CLOSE" }), []);
+  const addItem    = useCallback((item: AddItemPayload) => dispatch({ type: "ADD", payload: item }), []);
+  const removeItem = useCallback((variantId: string) => dispatch({ type: "REMOVE", variantId }), []);
+  const updateQty  = useCallback(
+    (variantId: string, quantity: number) => dispatch({ type: "UPDATE_QTY", variantId, quantity }),
+    []
+  );
+  const clearCart  = useCallback(() => dispatch({ type: "CLEAR" }), []);
+  const openCart   = useCallback(() => dispatch({ type: "OPEN" }),  []);
+  const closeCart  = useCallback(() => dispatch({ type: "CLOSE" }), []);
 
   // Number of distinct products in the cart (integer — safe for the nav badge).
   const totalItems = useMemo(() => state.items.length, [state.items]);
 
-  const subtotalAgorot = useMemo(
-    () => state.items.reduce((s, i) => s + calculateLineTotal(i), 0),
-    [state.items]
+  const pricing = useMemo(
+    () => calculateCartPricing(state.items.map(toPricedItem), promotions),
+    [state.items, promotions]
   );
 
   return (
@@ -334,7 +262,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         openCart,
         closeCart,
         totalItems,
-        subtotalAgorot,
+        subtotalAgorot: pricing.subtotalAgorot,
+        pricing,
+        promotions,
         isHydrated,
       }}
     >

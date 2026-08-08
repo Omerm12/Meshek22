@@ -10,7 +10,7 @@ import {
   type DeliveryZoneFormData,
 } from "@/lib/validations/admin-delivery-zone";
 import { slugify } from "@/lib/utils/slugify";
-import type { ActionResult } from "@/app/admin/delivery-zones/actions";
+import type { ActionResult } from "@/app/meshek22-control/(protected)/delivery-zones/actions";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 

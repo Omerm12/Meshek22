@@ -18,6 +18,17 @@ export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
 export type UserRole = "customer" | "admin" | "manager";
 
+/** How the customer receives the order. Constrained by orders_fulfillment_method_chk. */
+export type FulfillmentMethod = "delivery" | "pickup";
+
+/**
+ * Constrained by orders_payment_method_chk (added NOT VALID, so historical rows
+ * may still carry legacy values such as "card_mock").
+ */
+export type OrderPaymentMethod = "credit_card" | "cash" | "phone_credit";
+
+export type PromotionType = "mix_and_match_quantity";
+
 export type VariantUnit =
   | "unit"
   | "500g"
@@ -361,19 +372,26 @@ export interface Database {
         Row: {
           id: string;
           order_number: string;
+          /** NULL for guest orders — every order placed since customer accounts were removed. */
           user_id: string | null;
           idempotency_key: string | null;
-          delivery_zone_id: string;
+          /** NULL only when fulfillment_method = 'pickup' (DB CHECK constraint). */
+          delivery_zone_id: string | null;
+          fulfillment_method: FulfillmentMethod;
           delivery_address_snapshot: Json;
           customer_snapshot: Json;
           subtotal_agorot: number;
           delivery_fee_agorot: number;
           discount_agorot: number;
           total_agorot: number;
+          /** Snapshot of the promotions applied at purchase time. */
+          discount_breakdown: Json | null;
           order_status: OrderStatus;
           payment_status: PaymentStatus;
           payment_method: string | null;
           payment_reference: string | null;
+          /** SHA-256 of the guest's order access token. The plaintext is never stored. */
+          guest_access_token_hash: string | null;
           delivery_notes: string | null;
           requested_delivery_date: string | null;
           confirmed_delivery_date: string | null;
@@ -389,17 +407,20 @@ export interface Database {
           order_number?: string;
           user_id?: string | null;
           idempotency_key?: string | null;
-          delivery_zone_id: string;
+          delivery_zone_id?: string | null;
+          fulfillment_method?: FulfillmentMethod;
           delivery_address_snapshot: Json;
           customer_snapshot: Json;
           subtotal_agorot: number;
           delivery_fee_agorot: number;
           discount_agorot?: number;
           total_agorot: number;
+          discount_breakdown?: Json | null;
           order_status?: OrderStatus;
           payment_status?: PaymentStatus;
           payment_method?: string | null;
           payment_reference?: string | null;
+          guest_access_token_hash?: string | null;
           delivery_notes?: string | null;
           requested_delivery_date?: string | null;
         };
@@ -408,6 +429,7 @@ export interface Database {
           payment_status?: PaymentStatus;
           payment_method?: string | null;
           payment_reference?: string | null;
+          guest_access_token_hash?: string | null;
           delivery_notes?: string | null;
           confirmed_delivery_date?: string | null;
           customer_email_sent_at?: string | null;
@@ -427,7 +449,13 @@ export interface Database {
           /** NUMERIC(10,4) — supports fractional kg quantities */
           quantity: number;
           unit_price_agorot: number;
+          /** Undiscounted line total. Sum of these equals orders.subtotal_agorot. */
           total_price_agorot: number;
+          /** Promotion saving on this line. Charged amount = total_price_agorot − discount_agorot. */
+          discount_agorot: number;
+          /** Promotion that produced the discount. Not a FK: the order outlives the promotion. */
+          promotion_id: string | null;
+          promotion_snapshot: Json | null;
           created_at: string;
         };
         Insert: {
@@ -438,8 +466,86 @@ export interface Database {
           quantity: number;
           unit_price_agorot: number;
           total_price_agorot: number;
+          discount_agorot?: number;
+          promotion_id?: string | null;
+          promotion_snapshot?: Json | null;
         };
         Update: Record<string, never>;
+        Relationships: [];
+      };
+      promotions: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          promotion_type: PromotionType;
+          required_quantity: number;
+          bundle_price_agorot: number;
+          is_active: boolean;
+          starts_at: string | null;
+          ends_at: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          promotion_type?: PromotionType;
+          required_quantity: number;
+          bundle_price_agorot: number;
+          is_active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          promotion_type?: PromotionType;
+          required_quantity?: number;
+          bundle_price_agorot?: number;
+          is_active?: boolean;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      promotion_items: {
+        Row: {
+          promotion_id: string;
+          product_variant_id: string;
+          created_at: string;
+        };
+        Insert: {
+          promotion_id: string;
+          product_variant_id: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      admin_login_attempts: {
+        Row: {
+          id: string;
+          /** Salted SHA-256 of an IP or username — never the raw value. */
+          identity_hash: string;
+          identity_kind: "ip" | "username";
+          succeeded: boolean;
+          attempted_at: string;
+        };
+        Insert: {
+          id?: string;
+          identity_hash: string;
+          identity_kind: "ip" | "username";
+          succeeded?: boolean;
+          attempted_at?: string;
+        };
+        Update: {
+          succeeded?: boolean;
+        };
         Relationships: [];
       };
       otp_rate_limits: {
@@ -553,12 +659,52 @@ export interface Database {
           out_is_duplicate: boolean;
         }[];
       };
+      /**
+       * Guest order creation. EXECUTE is granted to service_role only — anon and
+       * authenticated cannot call it, so prices can never be supplied by a client.
+       */
+      create_guest_order_atomic: {
+        Args: {
+          p_idempotency_key: string;
+          p_fulfillment_method: FulfillmentMethod;
+          p_delivery_zone_id: string | null;
+          p_delivery_address: Json;
+          p_customer: Json;
+          p_subtotal_agorot: number;
+          p_delivery_fee_agorot: number;
+          p_discount_agorot: number;
+          p_total_agorot: number;
+          p_delivery_notes: string | null;
+          p_payment_method: OrderPaymentMethod;
+          p_order_status: "pending_payment" | "confirmed";
+          p_payment_status: "pending" | "paid";
+          p_guest_token_hash: string;
+          p_discount_breakdown: Json;
+          p_items: Json;
+        };
+        Returns: {
+          out_order_id: string;
+          out_order_number: string;
+          out_is_duplicate: boolean;
+        }[];
+      };
+      /** One-round-trip dashboard counters. service_role only. */
+      admin_dashboard_counts: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      prune_admin_login_attempts: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
     };
     Enums: {
       order_status: OrderStatus;
       payment_status: PaymentStatus;
       user_role: UserRole;
       variant_unit: VariantUnit;
+      fulfillment_method: FulfillmentMethod;
+      promotion_type: PromotionType;
     };
   };
 }

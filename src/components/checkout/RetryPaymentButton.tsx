@@ -5,33 +5,28 @@ import { RefreshCcw, Loader2 } from "lucide-react";
 import { retryPayment } from "@/app/(shop)/checkout/actions";
 
 interface Props {
-  /** Order UUID from /checkout/payment-error?orderId=... query param.
-   *  If undefined (user arrived via browser back without the error URL), fall
-   *  back to a simple link to /checkout. */
+  /** Order UUID from /checkout/payment-error?orderId=… */
   orderId?: string;
+  /** Guest access token from the same URL — required to authorise the retry. */
+  token?: string;
 }
 
 /**
- * "נסה שוב" button on the payment-error page.
+ * "נסה שוב" on the payment-error page.
  *
- * When orderId is present:
- * - Calls retryPayment(orderId) server action which creates a new Cardcom
- *   LowProfile session for the existing pending/failed order.
- * - On success, redirects via window.location.href to the new Cardcom URL
- *   (external URL, needs full-page navigation).
- * - Shows a loading spinner while the server action is in flight.
- * - On auth error, navigates to /checkout so the user can sign in again.
+ * With an orderId AND a token it asks the server for a fresh CardCom session for
+ * the existing pending/failed order. Authorisation is the token: there is no
+ * login, and the server refuses the retry if the token does not match the stored
+ * hash — returning the same generic message either way.
  *
- * When orderId is absent (browser-back scenario):
- * - Renders as a plain anchor link to /checkout.
+ * Without them (the customer arrived here via browser back) it degrades to a
+ * plain link back to checkout, where the preserved cart is still waiting.
  */
-export function RetryPaymentButton({ orderId }: Props) {
+export function RetryPaymentButton({ orderId, token }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // No orderId means user arrived here via browser back (not via FailedRedirectUrl).
-  // Just send them back to checkout to restart the flow.
-  if (!orderId) {
+  if (!orderId || !token) {
     return (
       <a
         href="/checkout"
@@ -46,19 +41,14 @@ export function RetryPaymentButton({ orderId }: Props) {
   const handleRetry = () => {
     setError(null);
     startTransition(async () => {
-      const result = await retryPayment(orderId);
+      const result = await retryPayment(orderId, token);
 
       if ("error" in result) {
-        // Auth error → send to checkout/login gate so user can re-authenticate.
-        if (result.error.includes("להתחבר")) {
-          window.location.href = "/checkout";
-          return;
-        }
         setError(result.error);
         return;
       }
 
-      // Redirect to new Cardcom payment URL (external, must use window.location).
+      // External CardCom URL — needs a full-page navigation.
       window.location.href = result.paymentUrl;
     });
   };
@@ -69,7 +59,7 @@ export function RetryPaymentButton({ orderId }: Props) {
         type="button"
         onClick={handleRetry}
         disabled={isPending}
-        className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-full bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

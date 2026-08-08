@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { settlementSchema, type SettlementFormData } from "@/lib/validations/admin-settlement";
-import type { ActionResult } from "@/app/admin/settlements/actions";
+import type { ActionResult } from "@/app/meshek22-control/(protected)/settlements/actions";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 

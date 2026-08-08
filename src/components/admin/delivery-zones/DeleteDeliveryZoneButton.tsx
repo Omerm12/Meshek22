@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
-import { deleteDeliveryZone } from "@/app/admin/delivery-zones/actions";
+import { deleteDeliveryZone } from "@/app/meshek22-control/(protected)/delivery-zones/actions";
 import { useRouter } from "next/navigation";
 
 interface DeleteDeliveryZoneButtonProps {

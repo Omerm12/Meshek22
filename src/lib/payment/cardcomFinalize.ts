@@ -29,11 +29,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import { getLpResult } from "@/lib/cardcom";
-import {
-  sendCustomerOrderConfirmation,
-  sendAdminNewOrderNotification,
-} from "@/lib/email/service";
-import type { OrderEmailData } from "@/lib/email/types";
+import { sendOrderEmails } from "@/lib/email/order-emails";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -97,7 +93,7 @@ export async function verifyAndFinalizeCardcomPayment(
     // sending, send the missing emails now.
     if (!order.customer_email_sent_at || !order.admin_email_sent_at) {
       console.log("[cardcom:finalize]", { event: "email_recovery_start", ...ctx });
-      void sendConfirmationEmails(orderId, db);
+      void sendOrderEmails(orderId, db);
     }
     return { outcome: "already_paid" };
   }
@@ -229,9 +225,15 @@ export async function verifyAndFinalizeCardcomPayment(
     return { outcome: "already_paid" };
   }
 
-  // ── Clear cart ───────────────────────────────────────────────────────────
-  // Scoped strictly to this order's user_id — never a broad delete.
-  // Cleared once here, after verified payment; never on failed/pending/cancel.
+  // ── Cart ─────────────────────────────────────────────────────────────────
+  // A guest cart lives in the customer's own localStorage, so there is nothing
+  // to delete server-side. The browser empties it on the success page, which
+  // only renders after this function has marked the order paid — so a failed or
+  // cancelled payment still leaves the basket intact.
+  //
+  // Legacy orders placed by a signed-in customer (before customer accounts were
+  // removed) may still have server-side cart rows; clear those, scoped strictly
+  // to the order's own user_id — never a broad delete.
   if (order.user_id) {
     const { error: cartErr } = await db
       .from("user_cart_items")
@@ -247,8 +249,9 @@ export async function verifyAndFinalizeCardcomPayment(
 
   // ── Send confirmation emails (fire-and-forget) ───────────────────────────
   // Emails are sent from OUR app only — never from Cardcom.
-  // sendConfirmationEmails uses atomic DB locks to prevent duplicates.
-  void sendConfirmationEmails(orderId, db);
+  // sendOrderEmails uses atomic DB locks to prevent duplicates, and is shared
+  // with the offline (cash / phone-credit) checkout path.
+  void sendOrderEmails(orderId, db);
 
   return { outcome: "paid" };
 }
@@ -280,100 +283,4 @@ export async function recoverPaymentByOrderId(orderId: string): Promise<Finalize
   }
 
   return verifyAndFinalizeCardcomPayment(orderId, order.payment_reference, db);
-}
-
-// ── Internal: email sending with per-email atomic idempotency ─────────────────
-
-type OrderItemSnapshot = { product_name: string; variant_label: string; price_agorot: number };
-
-async function sendConfirmationEmails(orderId: string, db: AdminClient): Promise<void> {
-  try {
-    const [{ data: order }, { data: items }] = await Promise.all([
-      db.from("orders").select("*").eq("id", orderId).single(),
-      db.from("order_items").select("*").eq("order_id", orderId),
-    ]);
-
-    if (!order) return;
-
-    const customer = order.customer_snapshot as
-      | { name?: string; email?: string; phone?: string }
-      | null;
-    const address = order.delivery_address_snapshot as
-      | { street?: string; house_number?: string; apartment?: string | null; city?: string }
-      | null;
-
-    if (!customer?.email) return;
-
-    const emailData: OrderEmailData = {
-      orderId:            order.id,
-      orderNumber:        order.order_number,
-      createdAt:          order.created_at,
-      customerName:       customer.name ?? "",
-      customerEmail:      customer.email,
-      customerPhone:      customer.phone ?? "",
-      addressStreet:      address?.street ?? "",
-      addressHouseNumber: address?.house_number ?? "",
-      addressApartment:   address?.apartment ?? null,
-      addressCity:        address?.city ?? "",
-      deliveryNotes:      order.delivery_notes ?? null,
-      items: (items ?? []).map((item) => {
-        const snap = item.product_snapshot as unknown as OrderItemSnapshot;
-        return {
-          productName:      snap.product_name,
-          variantLabel:     snap.variant_label,
-          quantity:         item.quantity,
-          unitPriceAgorot:  item.unit_price_agorot,
-          totalPriceAgorot: item.total_price_agorot,
-        };
-      }),
-      subtotalAgorot:    order.subtotal_agorot,
-      deliveryFeeAgorot: order.delivery_fee_agorot,
-      totalAgorot:       order.total_agorot,
-      paymentMethod:     "credit_card",
-      orderStatus:       "confirmed",
-    };
-
-    const now = new Date().toISOString();
-    const ctx = { orderId };
-
-    // Customer email — atomic claim via DB flag
-    // UPDATE … WHERE customer_email_sent_at IS NULL returns 0 rows if already set.
-    const { data: custLock } = await db
-      .from("orders")
-      .update({ customer_email_sent_at: now })
-      .eq("id", orderId)
-      .is("customer_email_sent_at", null)
-      .select("id");
-
-    if (custLock && custLock.length > 0) {
-      const res = await sendCustomerOrderConfirmation(emailData);
-      if (!res.ok) {
-        // Reset flag so next retry can try again.
-        await db.from("orders").update({ customer_email_sent_at: null }).eq("id", orderId);
-        console.error("[cardcom:finalize]", { event: "customer_email_failed", ...ctx, error: res.error });
-      } else {
-        console.log("[cardcom:finalize]", { event: "customer_email_sent", ...ctx });
-      }
-    }
-
-    // Admin email — atomic claim via DB flag
-    const { data: adminLock } = await db
-      .from("orders")
-      .update({ admin_email_sent_at: now })
-      .eq("id", orderId)
-      .is("admin_email_sent_at", null)
-      .select("id");
-
-    if (adminLock && adminLock.length > 0) {
-      const res = await sendAdminNewOrderNotification(emailData);
-      if (!res.ok) {
-        await db.from("orders").update({ admin_email_sent_at: null }).eq("id", orderId);
-        console.error("[cardcom:finalize]", { event: "admin_email_failed", ...ctx, error: res.error });
-      } else {
-        console.log("[cardcom:finalize]", { event: "admin_email_sent", ...ctx });
-      }
-    }
-  } catch (e) {
-    console.error("[cardcom:finalize]", { event: "email_threw", orderId, error: e });
-  }
 }

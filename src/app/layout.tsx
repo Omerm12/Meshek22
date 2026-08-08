@@ -3,9 +3,6 @@ import { Rubik, Assistant } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/store/cart";
 import { CartDrawer } from "@/components/layout/CartDrawer";
-import { UserProvider } from "@/store/user";
-import { AuthModalProvider } from "@/store/auth-modal";
-import { AuthModalLoader } from "@/components/auth/AuthModalLoader";
 import { DeliveryGateProvider } from "@/store/delivery-gate";
 import { DeliveryGateModal } from "@/components/shop/DeliveryGateModal";
 import { AccessibilityProvider } from "@/store/accessibility";
@@ -67,21 +64,19 @@ export default function RootLayout({
       className={`${rubik.variable} ${assistant.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-[var(--color-surface)] text-gray-900 antialiased">
-        <UserProvider>
-          <AuthModalProvider>
-            <CartProvider>
-              <DeliveryGateProvider>
-                <AccessibilityProvider>
-                  <A11yFilter>{children}</A11yFilter>
-                  <CartDrawer />
-                  <AuthModalLoader />
-                  <DeliveryGateModal />
-                  <AccessibilityWidget />
-                </AccessibilityProvider>
-              </DeliveryGateProvider>
-            </CartProvider>
-          </AuthModalProvider>
-        </UserProvider>
+        {/* No auth provider: the storefront is fully anonymous, so no page ever
+            issues a Supabase session or profile request. Administrator auth lives
+            entirely inside the /meshek22-control route group. */}
+        <CartProvider>
+          <DeliveryGateProvider>
+            <AccessibilityProvider>
+              <A11yFilter>{children}</A11yFilter>
+              <CartDrawer />
+              <DeliveryGateModal />
+              <AccessibilityWidget />
+            </AccessibilityProvider>
+          </DeliveryGateProvider>
+        </CartProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { UploadCloud, X, Loader2, AlertCircle, ImageIcon } from "lucide-react";
-import { uploadProductImage } from "@/app/admin/products/actions";
+import { uploadProductImage } from "@/app/meshek22-control/(protected)/products/actions";
 
 interface ProductImageUploadProps {
   /** Current value of the image_url form field (empty string = no image). */

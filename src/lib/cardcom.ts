@@ -39,6 +39,8 @@ export async function createCardComSession({
   customerPhone,
   lineItems,
   deliveryFeeAgorot,
+  successUrl: successUrlOverride,
+  failureUrl: failureUrlOverride,
 }: {
   orderId: string;
   orderNumber: string;
@@ -48,6 +50,13 @@ export async function createCardComSession({
   customerPhone: string;
   lineItems: CardComLineItem[];
   deliveryFeeAgorot: number;
+  /**
+   * Where CardCom returns the customer on success. Guest orders pass a URL that
+   * carries the order access token, since there is no session to identify them.
+   */
+  successUrl?: string;
+  /** Where CardCom returns the customer after a failed or cancelled payment. */
+  failureUrl?: string;
 }): Promise<CardComSession> {
   const terminalNumber = process.env.CARDCOM_TERMINAL_NUMBER;
   const apiName = process.env.CARDCOM_API_NAME;
@@ -69,8 +78,8 @@ export async function createCardComSession({
 
   const amountShekels = parseFloat((totalAgorot / 100).toFixed(2));
 
-  const successUrl = `${baseUrl}/checkout/success?order=${orderNumber}`;
-  const errorUrl   = `${baseUrl}/checkout/payment-error?orderId=${orderId}`;
+  const successUrl = successUrlOverride ?? `${baseUrl}/checkout/success?order=${orderNumber}`;
+  const errorUrl   = failureUrlOverride ?? `${baseUrl}/checkout/payment-error?orderId=${orderId}`;
   const webhookUrl = `${baseUrl}/api/cardcom/callback`;
 
   // Build Document.Products — TotalLineCost drives the per-line total (safe for fractional kg quantities)

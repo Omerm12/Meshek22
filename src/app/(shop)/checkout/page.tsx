@@ -2,19 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { ArrowRight, ShoppingCart } from "lucide-react";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
-import { CheckoutLoginGate } from "@/components/checkout/CheckoutLoginGate";
 import { Container } from "@/components/ui/Container";
-import type { Database } from "@/types/database";
 import type { DeliveryZone } from "@/lib/delivery";
 
 export const metadata: Metadata = {
   title: "קופה | משק 22",
 };
-
-type AddressRow = Database["public"]["Tables"]["addresses"]["Row"];
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 export interface CheckoutSettlement {
   name: string;
@@ -50,35 +45,16 @@ const getCachedDeliveryData = unstable_cache(
   { revalidate: 300, tags: ["delivery-zones"] }
 );
 
+/**
+ * Checkout — open to everyone.
+ *
+ * There is no sign-in gate and no auth call of any kind on this page: no
+ * getUser(), no profile query, no saved-address lookup. The customer types their
+ * details into the form, and every number is recalculated server-side by the
+ * createOrder action before an order is written.
+ */
 export default async function CheckoutPage() {
-  const supabase = await createClient();
-
-  // Kick off the (cached) delivery data fetch immediately — it does not depend on
-  // auth, so it runs concurrently with getUser() and saves ~100–300 ms per visit.
-  const deliveryDataPromise = getCachedDeliveryData();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return <CheckoutLoginGate />;
-  }
-
-  // User-specific queries + delivery data all in parallel.
-  const [addrRes, profileRes, { zones: deliveryZones, settlements }] = await Promise.all([
-    supabase
-      .from("addresses")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("is_default", { ascending: false })
-      .order("created_at", { ascending: false }),
-    supabase.from("profiles").select("*").eq("id", user.id).single(),
-    deliveryDataPromise,
-  ]);
-
-  const addresses     = (addrRes.data                     ?? []) as AddressRow[];
-  const profile       = (profileRes.data as ProfileRow | null) ?? null;
+  const { zones: deliveryZones, settlements } = await getCachedDeliveryData();
 
   return (
     <main className="flex-1 py-8 lg:py-12" style={{ backgroundColor: "var(--color-surface)" }}>
@@ -95,13 +71,7 @@ export default async function CheckoutPage() {
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">סיום ותשלום</h1>
 
-        <CheckoutForm
-          addresses={addresses}
-          profile={profile}
-          userEmail={user.email ?? null}
-          deliveryZones={deliveryZones}
-          settlements={settlements}
-        />
+        <CheckoutForm deliveryZones={deliveryZones} settlements={settlements} />
       </Container>
     </main>
   );

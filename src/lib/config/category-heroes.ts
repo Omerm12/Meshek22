@@ -36,11 +36,11 @@ export interface CategoryHeroConfig {
 }
 
 export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
-  products: {
-    title: "כל המוצרים",
+  search: {
+    title: "תוצאות חיפוש",
     subtitle: "ירקות ופירות טריים · קטיף יומי · ישירות מהשדה",
     imageSrc: "/images/heroes/home-all-products.png",
-    imageAlt: "כל המוצרים של משק 22",
+    imageAlt: "מוצרים טריים של משק 22",
     fallbackBg: "bg-stone-900",
     containerBg: "#111810",
     overlayColor: "rgba(10, 20, 8, 0.32)",
@@ -69,9 +69,35 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
     accentClass: "bg-rose-600",
     headingColor: "text-white",
   },
+  // No hero photograph exists yet for these two categories. Rather than point at
+  // a missing file, imageSrc is left empty: CategoryHero then renders the solid
+  // containerBg, which is a deliberate part of the design. Drop an image into
+  // /public/images/heroes/ and set imageSrc here when artwork is supplied.
+  "ice-creams": {
+    title: "גלידות",
+    subtitle: "גלידות, ארטיקים וקינוחים קפואים",
+    imageSrc: "",
+    imageAlt: "גלידות ממשק 22",
+    fallbackBg: "bg-sky-950",
+    containerBg: "#101d33",
+    overlayColor: "rgba(10, 20, 45, 0.28)",
+    accentClass: "bg-sky-600",
+    headingColor: "text-white",
+  },
+  nuts: {
+    title: "פיצוחים",
+    subtitle: "אגוזים, שקדים, גרעינים ופיצוחים",
+    imageSrc: "",
+    imageAlt: "פיצוחים ממשק 22",
+    fallbackBg: "bg-amber-950",
+    containerBg: "#2a1c0c",
+    overlayColor: "rgba(45, 28, 10, 0.28)",
+    accentClass: "bg-amber-600",
+    headingColor: "text-white",
+  },
   sale: {
     title: "מבצעים",
-    subtitle: "חבילות חיסכון, מבצעי השבוע ומוצרי עונה במחיר מיוחד",
+    subtitle: "כל המוצרים שנמצאים כרגע במבצע",
     imageSrc: "/images/heroes/sale.png",
     imageAlt: "מבצעים ממשק 22",
     fallbackBg: "bg-red-950",

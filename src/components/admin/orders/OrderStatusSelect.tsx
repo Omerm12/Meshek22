@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, CheckCircle2, AlertCircle, Save } from "lucide-react";
-import { updateOrderStatuses } from "@/app/admin/orders/actions";
+import { updateOrderStatuses } from "@/app/meshek22-control/(protected)/orders/actions";
 import { ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/utils/order-status";
 
 const selectCls =

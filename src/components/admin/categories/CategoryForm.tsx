@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { categorySchema, type CategoryFormData } from "@/lib/validations/admin-category";
 import { slugify } from "@/lib/utils/slugify";
-import type { ActionResult } from "@/app/admin/categories/actions";
+import type { ActionResult } from "@/app/meshek22-control/(protected)/categories/actions";
 
 interface ParentOption {
   id:   string;

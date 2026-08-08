@@ -19,6 +19,14 @@ export interface MockCategory {
   children?: MockCategory[];
 }
 
+/** The live group promotion a variant belongs to, if any. */
+export interface VariantPromotion {
+  id: string;
+  name: string;
+  requiredQuantity: number;
+  bundlePriceAgorot: number;
+}
+
 export interface MockVariant {
   id: string;
   label: string;
@@ -32,6 +40,8 @@ export interface MockVariant {
   quantityStep: number;
   /** Minimum purchasable quantity. First add initialises cart to this value. */
   minQuantity: number;
+  /** Live mix-and-match promotion this variant participates in, or null. */
+  promotion?: VariantPromotion | null;
 }
 
 export interface MockProduct {

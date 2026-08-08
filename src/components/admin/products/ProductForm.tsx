@@ -8,7 +8,7 @@ import { productFormSchema, type ProductFormData } from "@/lib/validations/admin
 import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
 import { ProductImageUpload } from "@/components/admin/products/ProductImageUpload";
-import type { ActionResult } from "@/app/admin/products/actions";
+import type { ActionResult } from "@/app/meshek22-control/(protected)/products/actions";
 
 export interface CategoryOption {
   id:        string;

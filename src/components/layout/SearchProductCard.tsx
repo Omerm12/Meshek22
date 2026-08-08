@@ -6,7 +6,6 @@ import { Plus, Minus, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice, formatPriceCompact } from "@/lib/utils/money";
 import { useCart, calculateLineTotal } from "@/store/cart";
-import { useUser } from "@/store/user";
 import { useDeliveryGate } from "@/store/delivery-gate";
 import { flyToCart } from "@/lib/utils/fly-to-cart";
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
@@ -29,7 +28,6 @@ function formatQty(qty: number): string {
 
 export function SearchProductCard({ product, onNavigate }: SearchProductCardProps) {
   const { addItem, items, updateQty } = useCart();
-  const { user } = useUser();
   const { requestAdd } = useDeliveryGate();
   const imageRef = useRef<HTMLDivElement>(null);
 
@@ -59,10 +57,11 @@ export function SearchProductCard({ product, onNavigate }: SearchProductCardProp
       dealQuantity:        product.dealQuantity,
       dealPriceAgorot:     product.dealPriceAgorot,
     };
-    if (!user && requestAdd(item)) return;
+    // Every visitor is a guest, so the delivery gate applies to everyone.
+    if (requestAdd(item)) return;
     addItem(item);
     if (imageRef.current) flyToCart(imageRef.current);
-  }, [addItem, requestAdd, user, selectedVariant, product]);
+  }, [addItem, requestAdd, selectedVariant, product]);
 
   if (!selectedVariant) return null;
 

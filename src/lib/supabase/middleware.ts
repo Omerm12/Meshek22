@@ -1,30 +1,39 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
-
-const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+import { ADMIN_BASE_PATH, ADMIN_ROUTES } from "@/lib/admin/routes";
 
 /**
- * Routes that require an authenticated user.
- * getUser() (a network round-trip to Supabase Auth) is ONLY called for these.
- * All public pages (/,  /category/*, /product/*, etc.) skip the auth check
- * entirely — saving ~300-500 ms per request.
+ * Session handling for the administrator portal.
+ *
+ * The storefront is entirely anonymous — guests browse, add to cart and check
+ * out with no account — so no public route touches Supabase Auth here. The only
+ * paths that need a session refresh are the administrator pages, which keeps the
+ * Auth round-trip off the homepage, the category pages and checkout entirely.
+ *
+ * The work done here is intentionally minimal: refresh the session cookie and
+ * bounce anonymous visitors to the login screen. The authoritative role check
+ * lives in requireAdmin() inside the protected layout and inside every mutation
+ * Server Action — middleware is a convenience, never the security boundary.
  */
-function isProtectedRoute(pathname: string): boolean {
-  return (
-    pathname.startsWith("/account") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/checkout")
-  );
+function needsSession(pathname: string): boolean {
+  return pathname.startsWith(ADMIN_BASE_PATH);
 }
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
 
-  // Fast path: public routes don't need a session check at all.
-  if (!isProtectedRoute(request.nextUrl.pathname)) {
-    return supabaseResponse;
+  // Fast path: every public route skips Supabase entirely.
+  if (!needsSession(pathname)) {
+    return NextResponse.next({ request });
   }
+
+  // The login page must stay reachable without a session.
+  if (pathname === ADMIN_ROUTES.login) {
+    return NextResponse.next({ request });
+  }
+
+  let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,73 +56,16 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Run getUser (JWT validation against Supabase Auth) and the profiles
-  // last_login_at query in parallel — same session, both needed on protected routes.
-  // RLS (profiles_own_select: auth.uid() = id) ensures the profiles query returns
-  // only the current user's row without needing an explicit .eq("id", user.id).
-  const [
-    { data: { user } },
-    { data: profile },
-  ] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase
-      .from("profiles")
-      .select("last_login_at")
-      .maybeSingle(),
-  ]);
+  // One call: validates the JWT and refreshes the cookie if needed. The profile
+  // role lookup is NOT repeated here — requireAdmin() does it once per request
+  // and caches it, so duplicating it in middleware would only add latency.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // ── 14-day expiry enforcement (server-authoritative) ────────────────────────
-  //
-  // last_login_at is written exclusively by the recordLogin() Server Action using
-  // the admin client — users cannot update it directly. Only checked when the user
-  // has an authenticated session AND has a recorded last_login_at.
-  //
-  // On expiry:
-  //   1. supabase.auth.signOut() revokes the refresh token server-side via the
-  //      Supabase Auth REST API — the user cannot obtain new access tokens.
-  //   2. sb-* cookies are deleted from the redirect response so the browser
-  //      immediately loses its session.
-  //
-  // Honest limitation: the current access token stays technically valid for up to
-  // 1 hour (its remaining lifetime). However, without a valid refresh token, it
-  // cannot be renewed. On the next access-token expiry the user is fully logged out.
-  if (user && profile?.last_login_at) {
-    const isExpired =
-      Date.now() - new Date(profile.last_login_at).getTime() > FOURTEEN_DAYS_MS;
-
-    if (isExpired) {
-      // Revoke the refresh token server-side
-      await supabase.auth.signOut();
-
-      // Redirect to home and clear all Supabase auth cookies
-      const redirectResponse = NextResponse.redirect(
-        new URL("/", request.url)
-      );
-      request.cookies
-        .getAll()
-        .filter(({ name }) => name.startsWith("sb-"))
-        .forEach(({ name }) => redirectResponse.cookies.delete(name));
-      return redirectResponse;
-    }
+  if (!user) {
+    return NextResponse.redirect(new URL(ADMIN_ROUTES.login, request.url));
   }
-
-  // ── Route protection ────────────────────────────────────────────────────────
-
-  if (request.nextUrl.pathname.startsWith("/admin")) {
-    if (!user) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-    // Admin role check happens in requireAdmin() inside the layout
-  }
-
-  if (request.nextUrl.pathname.startsWith("/account")) {
-    if (!user) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-  }
-
-  // /checkout auth is handled at the page level (shows CheckoutLoginGate instead
-  // of redirecting), so no redirect needed here — but we still refresh the session.
 
   return supabaseResponse;
 }

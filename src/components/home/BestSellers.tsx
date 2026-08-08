@@ -25,10 +25,10 @@ export async function BestSellers() {
             subtitle="המוצרים שכולם אוהבים, טריים כל יום"
           />
           <Link
-            href="/products"
+            href="/promotions"
             className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors shrink-0 pb-1"
           >
-            כל המוצרים
+            למבצעים
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
@@ -37,10 +37,10 @@ export async function BestSellers() {
 
         <div className="mt-6 sm:hidden text-center">
           <Link
-            href="/products"
+            href="/promotions"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700"
           >
-            לכל המוצרים
+            למבצעים
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>

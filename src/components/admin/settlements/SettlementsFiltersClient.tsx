@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 
 interface Zone {
   id: string;
@@ -40,7 +41,7 @@ export function SettlementsFiltersClient({
     if (newQ.trim()) params.set("q", newQ.trim());
     if (newZone) params.set("zone", newZone);
     const qs = params.toString();
-    return `/admin/settlements${qs ? `?${qs}` : ""}`;
+    return `${ADMIN_BASE_PATH}/settlements${qs ? `?${qs}` : ""}`;
   };
 
   const navigate = (newQ: string, newZone: string) => {
@@ -121,7 +122,7 @@ export function SettlementsFiltersClient({
       {/* Clear all filters */}
       {hasFilters && (
         <Link
-          href="/admin/settlements"
+          href={`${ADMIN_BASE_PATH}/settlements`}
           className="h-10 px-4 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5"
         >
           <X className="h-4 w-4" aria-hidden="true" />

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
-import { deleteSettlement } from "@/app/admin/settlements/actions";
+import { deleteSettlement } from "@/app/meshek22-control/(protected)/settlements/actions";
 import { useRouter } from "next/navigation";
 
 interface DeleteSettlementButtonProps {

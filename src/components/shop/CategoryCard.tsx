@@ -1,13 +1,24 @@
 import { cn } from "@/lib/utils/cn";
 import type { MockCategory } from "@/lib/data/mock";
 
-const PARENT_CATEGORY_HREFS: Record<string, string> = {
-  vegetables: "/vegetables",
-  fruits:     "/fruits",
-};
+import { PARENT_CATEGORY_NAV } from "@/lib/config/nav-categories";
 
+/**
+ * Top-level categories have their own landing page; anything else is a
+ * subcategory, reachable through its parent's ?sub= filter. Falling back to the
+ * homepage keeps the card clickable if a category is added to the database
+ * before its page exists.
+ */
 function getCategoryHref(category: MockCategory): string {
-  return PARENT_CATEGORY_HREFS[category.slug] ?? "/products";
+  const topLevel = PARENT_CATEGORY_NAV.find((c) => c.slug === category.slug);
+  if (topLevel) return topLevel.href;
+
+  const parent = PARENT_CATEGORY_NAV.find((c) =>
+    c.children.some((child) => child.slug === category.slug)
+  );
+  if (parent) return `${parent.href}?sub=${category.slug}`;
+
+  return "/";
 }
 
 interface CategoryCardProps {

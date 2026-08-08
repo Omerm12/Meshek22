@@ -39,8 +39,8 @@ export const HERO_SLIDES: HeroSlide[] = [
     badge: "טרי מהשדה",
     headline: "ירקות ופירות טריים\nמהמשק ישירות אליכם",
     subtext: "קטיף יומי · ללא מחסנים · ללא מתווכים · משלוח עד 24 שעות",
-    ctaLabel: "לכל המוצרים",
-    ctaHref: "/products",
+    ctaLabel: "לכל הירקות",
+    ctaHref: "/vegetables",
     imagePath: "/images/heroes/home-all-products.png",
     backgroundGradient:
       "linear-gradient(135deg, #1b5e20 0%, #2e7d32 55%, #388e3c 100%)",

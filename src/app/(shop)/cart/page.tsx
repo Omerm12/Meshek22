@@ -15,15 +15,18 @@ import {
 import { Container } from "@/components/ui/Container";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
+import { formatPromotionProgress } from "@/lib/promotions/engine";
 
 const MIN_FREE_DELIVERY = 15000; // 150 ₪ — center zone threshold
 
 export default function CartPage() {
-  const { items, updateQty, removeItem, clearCart, subtotalAgorot, totalItems } =
+  const { items, updateQty, removeItem, clearCart, subtotalAgorot, totalItems, pricing } =
     useCart();
 
-  const remainingForFree = Math.max(0, MIN_FREE_DELIVERY - subtotalAgorot);
-  const progress = Math.min(100, (subtotalAgorot / MIN_FREE_DELIVERY) * 100);
+  const chargedSubtotal  = pricing.chargedSubtotalAgorot;
+  const remainingForFree = Math.max(0, MIN_FREE_DELIVERY - chargedSubtotal);
+  const progress = Math.min(100, (chargedSubtotal / MIN_FREE_DELIVERY) * 100);
+  const pricingByVariant = new Map(pricing.lines.map((l) => [l.variantId, l]));
 
   // ── Empty state ──────────────────────────────────────────────────────────
   if (items.length === 0) {
@@ -199,9 +202,25 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        <p className="font-bold text-gray-900 text-base">
-                          {formatPrice(item.priceAgorot * item.quantity)}
-                        </p>
+                        {(() => {
+                          const line = pricingByVariant.get(item.variantId);
+                          const normal = line?.normalTotalAgorot ?? Math.round(item.priceAgorot * item.quantity);
+                          const charged = line?.chargedTotalAgorot ?? normal;
+                          return charged < normal ? (
+                            <p className="flex items-baseline gap-2">
+                              <span className="text-sm text-stone-400 line-through">
+                                {formatPrice(normal)}
+                              </span>
+                              <span className="font-bold text-orange-600 text-base">
+                                {formatPrice(charged)}
+                              </span>
+                            </p>
+                          ) : (
+                            <p className="font-bold text-gray-900 text-base">
+                              {formatPrice(normal)}
+                            </p>
+                          );
+                        })()}
                       </div>
                     </div>
                   </li>
@@ -231,6 +250,40 @@ export default function CartPage() {
                 סיכום הזמנה
               </h2>
 
+              {/* Applied promotions */}
+              {pricing.appliedPromotions.length > 0 && (
+                <div className="mb-5 rounded-xl bg-orange-50 border border-orange-100 p-3.5">
+                  <p className="text-xs font-bold text-orange-800 mb-1.5">מבצעים שהופעלו</p>
+                  <ul className="space-y-1">
+                    {pricing.appliedPromotions.map((promo) => (
+                      <li
+                        key={promo.promotionId}
+                        className="flex justify-between gap-2 text-xs text-orange-700"
+                      >
+                        <span>
+                          {promo.name}
+                          {promo.groupsApplied > 1 && ` × ${promo.groupsApplied}`}
+                        </span>
+                        <span className="font-semibold shrink-0">
+                          −{formatPrice(promo.discountAgorot)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Progress toward the next qualifying group */}
+              {pricing.progress.length > 0 && (
+                <div className="mb-5 rounded-xl bg-stone-50 border border-stone-100 p-3.5">
+                  {pricing.progress.slice(0, 3).map((p) => (
+                    <p key={p.promotionId} className="text-xs text-stone-600 leading-relaxed">
+                      {formatPromotionProgress(p)}
+                    </p>
+                  ))}
+                </div>
+              )}
+
               {/* Line items breakdown */}
               <div className="space-y-3 text-sm mb-5">
                 <div className="flex justify-between">
@@ -241,6 +294,14 @@ export default function CartPage() {
                     {formatPrice(subtotalAgorot)}
                   </span>
                 </div>
+                {pricing.discountAgorot > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-orange-600 font-medium">הנחת מבצעים</span>
+                    <span className="font-semibold text-orange-600">
+                      −{formatPrice(pricing.discountAgorot)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-stone-500">דמי משלוח</span>
                   <span className="text-stone-400 text-xs">יחושב בקופה</span>
@@ -252,7 +313,7 @@ export default function CartPage() {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-gray-900">סה&quot;כ</span>
                   <span className="text-2xl font-bold text-brand-700">
-                    {formatPrice(subtotalAgorot)}
+                    {formatPrice(chargedSubtotal)}
                   </span>
                 </div>
                 <p className="text-xs text-stone-400 mt-1">

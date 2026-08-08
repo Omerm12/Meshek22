@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
-import { deleteCategory } from "@/app/admin/categories/actions";
+import { deleteCategory } from "@/app/meshek22-control/(protected)/categories/actions";
 import { useRouter } from "next/navigation";
 
 interface DeleteCategoryButtonProps {

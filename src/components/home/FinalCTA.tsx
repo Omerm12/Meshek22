@@ -37,7 +37,7 @@ export function FinalCTA() {
 
             <div className="flex flex-row flex-nowrap items-center justify-start gap-4">
               <Link
-                href="/products"
+                href="/vegetables"
                 className={[
                   "inline-flex items-center gap-2.5 h-[56px] px-8 rounded-full shrink-0",
                   "bg-brand-600 text-white font-bold text-lg",

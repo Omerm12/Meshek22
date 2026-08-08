@@ -11,11 +11,14 @@ export const metadata: Metadata = {
 export default async function PaymentErrorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orderId?: string }>;
+  searchParams: Promise<{ orderId?: string; t?: string }>;
 }) {
-  // orderId is set by Cardcom's FailedRedirectUrl: /checkout/payment-error?orderId=<uuid>
-  // It is absent when the user arrives via browser back (history navigation).
-  const { orderId } = await searchParams;
+  // orderId + t are set by Cardcom's FailedRedirectUrl:
+  //   /checkout/payment-error?orderId=<uuid>&t=<access token>
+  // Both are absent when the customer arrives via browser back (history
+  // navigation), in which case the retry button degrades to a link to /checkout.
+  // The cart is intentionally still intact — a failed payment never clears it.
+  const { orderId, t: token } = await searchParams;
 
   return (
     <main
@@ -39,11 +42,13 @@ export default async function PaymentErrorPage({
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {/*
               RetryPaymentButton:
-              - With orderId: calls retryPayment server action → new Cardcom session → redirect
-              - Without orderId (browser back): simple link to /checkout
-              Auth is verified inside retryPayment; session is never cleared here.
+              - With orderId + token: calls the retryPayment Server Action, which
+                verifies the token against the stored hash and mints a new Cardcom
+                session for the same order.
+              - Without them (browser back): a plain link to /checkout.
+              The cart is never cleared on this path.
             */}
-            <RetryPaymentButton orderId={orderId} />
+            <RetryPaymentButton orderId={orderId} token={token} />
 
             <Link
               href="/checkout"

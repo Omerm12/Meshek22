@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "generate:image": "npx tsx scripts/generate-product-images.ts",
     "extract:unit-prices": "node scripts/extract-zanzuri-unit-prices.js"
   },
@@ -37,6 +39,7 @@
     "sharp": "^0.34.5",
     "supabase": "^2.92.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

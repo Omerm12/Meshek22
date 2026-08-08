@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, ClipboardList } from "lucide-react";
-import { fetchOrdersPage, type OrderRow, type OrderPageFilters } from "@/app/admin/orders/actions";
+import { ExternalLink, Loader2, ClipboardList, Store, Truck } from "lucide-react";
+import { fetchOrdersPage, type OrderRow, type OrderPageFilters } from "@/app/meshek22-control/(protected)/orders/actions";
 import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from "@/lib/utils/order-status";
+import { fulfillmentMethodLabel, paymentMethodLabel } from "@/lib/checkout/constants";
 import { StatusBadge } from "./StatusBadge";
+import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 
 function formatPrice(agorot: number) {
   return `₪${(agorot / 100).toLocaleString("he-IL", {
@@ -87,6 +89,7 @@ export function OrdersListClient({
                 <th className="text-right px-5 py-3 font-medium text-gray-500 hidden md:table-cell">טלפון</th>
                 <th className="text-right px-5 py-3 font-medium text-gray-500">סה&quot;כ</th>
                 <th className="text-right px-5 py-3 font-medium text-gray-500 hidden sm:table-cell">תשלום</th>
+                <th className="text-right px-5 py-3 font-medium text-gray-500 hidden lg:table-cell">אופן קבלה</th>
                 <th className="text-right px-5 py-3 font-medium text-gray-500">סטטוס</th>
                 <th className="text-right px-5 py-3 font-medium text-gray-500 hidden lg:table-cell">תאריך</th>
                 <th className="px-5 py-3" />
@@ -110,7 +113,28 @@ export function OrdersListClient({
                       {formatPrice(order.total_agorot)}
                     </td>
                     <td className="px-5 py-3.5 hidden sm:table-cell">
-                      <StatusBadge map={PAYMENT_STATUS_MAP} value={order.payment_status} />
+                      <div className="flex flex-col gap-1 items-start">
+                        <StatusBadge map={PAYMENT_STATUS_MAP} value={order.payment_status} />
+                        <span className="text-[11px] text-gray-500 whitespace-nowrap">
+                          {paymentMethodLabel(order.payment_method, true)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 hidden lg:table-cell">
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
+                          order.fulfillment_method === "pickup"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-sky-50 text-sky-700"
+                        }`}
+                      >
+                        {order.fulfillment_method === "pickup" ? (
+                          <Store className="h-3 w-3" aria-hidden="true" />
+                        ) : (
+                          <Truck className="h-3 w-3" aria-hidden="true" />
+                        )}
+                        {fulfillmentMethodLabel(order.fulfillment_method)}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusBadge map={ORDER_STATUS_MAP} value={order.order_status} />
@@ -120,7 +144,7 @@ export function OrdersListClient({
                     </td>
                     <td className="px-5 py-3.5">
                       <Link
-                        href={`/admin/orders/${order.id}`}
+                        href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
                         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-brand-600 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors whitespace-nowrap"
                         aria-label={`צפה בהזמנה ${order.order_number}`}
                       >

@@ -39,10 +39,16 @@ export interface OrderEmailData {
   // ── Totals (all in agorot — 1/100 of a shekel) ─────────────────────────────
   subtotalAgorot: number;
   deliveryFeeAgorot: number;
+  /** Total promotion saving. Omitted or 0 when no promotion applied. */
+  discountAgorot?: number;
   totalAgorot: number;
 
+  // ── Fulfillment ─────────────────────────────────────────────────────────────
+  /** "delivery" or "pickup". Defaults to delivery for legacy orders. */
+  fulfillmentMethod?: string | null;
+
   // ── Payment ─────────────────────────────────────────────────────────────────
-  /** Raw payment method key, e.g. "card_mock" — will be mapped to a Hebrew label */
+  /** Raw payment method key, e.g. "cash" — mapped to a Hebrew label in the template */
   paymentMethod: string | null;
   /** Raw order status key, e.g. "confirmed" */
   orderStatus: string;

@@ -10,11 +10,20 @@
  *   fetchTopLevelCategories()             – categories with no parent
  *   fetchChildCategoriesByParentSlug()    – direct children of a parent
  *   fetchCategoryTree()                   – full parent→children tree
- *   fetchProductsByParentCategorySlug()   – products across all child categories
+ *   fetchProductsByParentCategorySlug()   – products assigned to the parent
+ *                                           itself AND to any child category
+ *   fetchPromotionalProducts()            – the dynamic /promotions collection
  */
 
 import { createPublicClient } from "@/lib/supabase/public";
 import { getCategoryDisplay, getProductDisplay } from "@/lib/product-display";
+import {
+  collectPromotionalVariantIds,
+  fetchLivePromotions,
+  isPromotionalProduct,
+} from "@/lib/data/promotions";
+import { buildVariantPromotionMap } from "@/lib/promotions/engine";
+import type { Promotion } from "@/lib/promotions/types";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
 
 // ─── Internal row types ────────────────────────────────────────────────────────
@@ -121,6 +130,49 @@ const PRODUCT_SELECT = `
   categories ( id, name, slug ),
   product_variants ( id, label, unit, price_agorot, compare_price_agorot, is_default, is_available, sort_order, quantity_pricing_mode, quantity_step, min_quantity )
 `;
+
+// ─── Promotion decoration ──────────────────────────────────────────────────────
+
+/**
+ * Attach the live group promotion (if any) to each variant.
+ *
+ * One extra query per page render, shared by every product on that page.
+ * Callers pass a promise that was started BEFORE the product query so the two
+ * round-trips overlap instead of running back to back — decorating products is
+ * otherwise a pure post-processing step that would needlessly serialise them.
+ */
+async function withPromotions(
+  products: MockProduct[],
+  promotions?: Promotion[] | Promise<Promotion[]>
+): Promise<MockProduct[]> {
+  if (products.length === 0) return products;
+
+  const live = await (promotions ?? fetchLivePromotions());
+  if (live.length === 0) return products;
+
+  const byVariant = buildVariantPromotionMap(live);
+
+  return products.map((product) => ({
+    ...product,
+    variants: product.variants.map((variant) => {
+      const promotion = byVariant.get(variant.id);
+      return promotion
+        ? {
+            ...variant,
+            promotion: {
+              id: promotion.id,
+              name: promotion.name,
+              requiredQuantity: promotion.requiredQuantity,
+              bundlePriceAgorot: promotion.bundlePriceAgorot,
+            },
+          }
+        : variant;
+    }),
+  }));
+}
+
+// The rule for /promotions membership lives in @/lib/data/promotions as a pure,
+// unit-tested function — see isPromotionalProduct().
 
 // ─── Category queries ──────────────────────────────────────────────────────────
 
@@ -275,6 +327,9 @@ export async function fetchProductsByCategory(
 ): Promise<MockProduct[]> {
   const supabase = createPublicClient();
 
+  // Started first so it overlaps the product query.
+  const promotionsPromise = fetchLivePromotions();
+
   const { data, error } = await supabase
     .from("products")
     .select(`
@@ -289,17 +344,27 @@ export async function fetchProductsByCategory(
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
+  return withPromotions(
+    (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0),
+    promotionsPromise
+  );
 }
 
 /**
- * All active products across every child category of a parent.
- * Two round-trips: resolve children IDs, then fetch products.
+ * All active products belonging to a top-level category.
+ *
+ * Covers BOTH placements, so a flat category such as גלידות (which has no
+ * children) works exactly like a nested one such as ירקות:
+ *   • products assigned directly to the parent category, and
+ *   • products assigned to any of its active child categories.
  */
 export async function fetchProductsByParentCategorySlug(
   parentSlug: string
 ): Promise<MockProduct[]> {
   const supabase = createPublicClient();
+
+  // Started first so it overlaps the category and product queries below.
+  const promotionsPromise = fetchLivePromotions();
 
   // 1. Resolve parent slug → id
   const { data: parent, error: parentErr } = await supabase
@@ -311,29 +376,71 @@ export async function fetchProductsByParentCategorySlug(
 
   if (parentErr || !parent) return [];
 
-  // 2. Fetch child category IDs
-  const { data: children, error: childErr } = await supabase
+  // 2. Fetch child category IDs (a top-level category may legitimately have none)
+  const { data: children } = await supabase
     .from("categories")
     .select("id")
     .eq("parent_id", parent.id)
     .eq("is_active", true);
 
-  if (childErr || !children || children.length === 0) return [];
+  // 3. Fetch products in the parent itself and in every child category
+  const categoryIds = [parent.id, ...(children ?? []).map((c) => c.id)];
 
-  const childIds = children.map((c) => c.id);
-
-  // 3. Fetch products in those child categories
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
-    .in("category_id", childIds)
+    .in("category_id", categoryIds)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
+  const products = (data as unknown as ProductRow[])
+    .map(toMockProduct)
+    .filter((p) => p.variants.length > 0);
+
+  return withPromotions(products, promotionsPromise);
+}
+
+/**
+ * The /promotions collection — a dynamic virtual category, not a real
+ * `category_id`. A product stays in its own category (a fruit is still a fruit)
+ * and appears here for as long as at least one of these is true:
+ *
+ *   1. an available variant has a genuine sale price (compare_price_agorot),
+ *   2. the product has an active legacy quantity deal (qty_deal_*), or
+ *   3. an available variant belongs to a live group promotion.
+ *
+ * The moment the last qualifying condition disappears, the product drops out —
+ * nothing has to be un-assigned by hand. Products are deduplicated, so a product
+ * that qualifies through several conditions is still listed once.
+ */
+export async function fetchPromotionalProducts(): Promise<MockProduct[]> {
+  const supabase = createPublicClient();
+
+  const [promotions, { data, error }] = await Promise.all([
+    fetchLivePromotions(),
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (error || !data) return [];
+
+  const liveVariantIds = collectPromotionalVariantIds(promotions);
+
+  const products = (data as unknown as ProductRow[])
+    .map(toMockProduct)
+    // toMockProduct already drops unavailable variants, so anything left here is
+    // purchasable right now.
+    .filter((p) => p.variants.length > 0)
+    .filter((p) => isPromotionalProduct(p, liveVariantIds));
+
+  return withPromotions(products, promotions);
 }
 
 /**
@@ -344,6 +451,9 @@ export async function fetchProductBySlug(
 ): Promise<MockProduct | null> {
   const supabase = createPublicClient();
 
+  // Started first so it overlaps the product query.
+  const promotionsPromise = fetchLivePromotions();
+
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
@@ -353,7 +463,11 @@ export async function fetchProductBySlug(
 
   if (error || !data) return null;
 
-  return toMockProduct(data as unknown as ProductRow);
+  const [product] = await withPromotions(
+    [toMockProduct(data as unknown as ProductRow)],
+    promotionsPromise
+  );
+  return product ?? null;
 }
 
 /**
@@ -363,6 +477,9 @@ export async function fetchFeaturedProducts(
   limit = 8
 ): Promise<MockProduct[]> {
   const supabase = createPublicClient();
+
+  // Started first so it overlaps the product query.
+  const promotionsPromise = fetchLivePromotions();
 
   const { data, error } = await supabase
     .from("products")
@@ -375,14 +492,21 @@ export async function fetchFeaturedProducts(
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
+  return withPromotions(
+    (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0),
+    promotionsPromise
+  );
 }
 
 /**
- * All active products across all categories — for the /products listing page.
+ * Every active product across all categories.
+ * Backs the navbar search catalog and the /search results page.
  */
 export async function fetchAllProducts(): Promise<MockProduct[]> {
   const supabase = createPublicClient();
+
+  // Started first so it overlaps the product query.
+  const promotionsPromise = fetchLivePromotions();
 
   const { data, error } = await supabase
     .from("products")
@@ -393,7 +517,10 @@ export async function fetchAllProducts(): Promise<MockProduct[]> {
 
   if (error || !data) return [];
 
-  return (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0);
+  return withPromotions(
+    (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0),
+    promotionsPromise
+  );
 }
 
 /**

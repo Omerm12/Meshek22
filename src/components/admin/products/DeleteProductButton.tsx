@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { deleteProduct } from "@/app/admin/products/actions";
+import { deleteProduct } from "@/app/meshek22-control/(protected)/products/actions";
 
 interface DeleteProductButtonProps {
   id: string;

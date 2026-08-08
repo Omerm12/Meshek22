@@ -1,15 +1,14 @@
 import { Leaf, Phone, Mail, MapPin } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { FooterAccountLinks } from "@/components/layout/FooterAccountLinks";
 
 const FOOTER_LINKS = {
   shop: [
-    { label: "כל המוצרים",    href: "/products" },
+    { label: "מבצעים",        href: "/promotions" },
     { label: "ירקות",         href: "/vegetables" },
     { label: "פירות",         href: "/fruits" },
-    { label: "ירקות שורש",    href: "/vegetables?sub=root-vegetables" },
+    { label: "גלידות",        href: "/ice-creams" },
+    { label: "פיצוחים",       href: "/nuts" },
     { label: "עשבי תיבול",    href: "/vegetables?sub=herbs" },
-    { label: "פירות הדר",     href: "/fruits?sub=citrus-fruits" },
   ],
   info: [
     { label: "אודות משק 22",    href: "/about" },
@@ -28,7 +27,7 @@ export function Footer() {
       {/* Main footer */}
       <div className="border-b border-stone-800">
         <Container className="py-14">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-8">
             {/* Brand */}
             <div className="sm:col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
@@ -104,13 +103,6 @@ export function Footer() {
               </ul>
             </div>
 
-            {/* Account links — auth-aware: opens login modal when logged out */}
-            <div>
-              <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
-                החשבון שלי
-              </h3>
-              <FooterAccountLinks />
-            </div>
           </div>
         </Container>
       </div>

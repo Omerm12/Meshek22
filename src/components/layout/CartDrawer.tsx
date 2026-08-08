@@ -2,11 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { X, ShoppingCart, Minus, Plus, Trash2, Leaf, ArrowLeft } from "lucide-react";
+import { X, ShoppingCart, Minus, Plus, Trash2, Leaf, ArrowLeft, Tag } from "lucide-react";
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
-import { useCart, calculateLineTotal, type CartLineItem } from "@/store/cart";
+import { useCart, type CartLineItem } from "@/store/cart";
+import { formatPromotionProgress, isLegacyPromotionId } from "@/lib/promotions/engine";
+import type { LinePricing } from "@/lib/promotions/types";
 import { Button } from "@/components/ui/Button";
 
 /** Round to the decimal precision implied by the step size. */
@@ -21,10 +23,11 @@ function formatQty(qty: number): string {
 }
 
 export function CartDrawer() {
-  const { isOpen, closeCart, items, updateQty, removeItem, subtotalAgorot, totalItems } =
+  const { isOpen, closeCart, items, updateQty, removeItem, subtotalAgorot, totalItems, pricing } =
     useCart();
 
   const drawerRef = useRef<HTMLDivElement>(null);
+  const pricingByVariant = new Map(pricing.lines.map((l) => [l.variantId, l]));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -98,6 +101,7 @@ export function CartDrawer() {
                 <CartItem
                   key={item.variantId}
                   item={item}
+                  linePricing={pricingByVariant.get(item.variantId)}
                   onUpdateQty={updateQty}
                   onRemove={removeItem}
                 />
@@ -109,10 +113,35 @@ export function CartDrawer() {
         {/* ── Footer / Checkout ── */}
         {items.length > 0 && (
           <div className="border-t border-stone-100 px-5 py-5 bg-white">
+            {/* Progress nudge toward the next qualifying group */}
+            {pricing.progress.length > 0 && (
+              <div className="mb-4 rounded-xl bg-orange-50 border border-orange-100 px-3 py-2.5">
+                {pricing.progress.slice(0, 2).map((p) => (
+                  <p
+                    key={p.promotionId}
+                    className="flex items-start gap-1.5 text-xs font-medium text-orange-700 leading-relaxed"
+                  >
+                    <Tag className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                    {formatPromotionProgress(p)}
+                  </p>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-1 text-sm">
               <span className="text-stone-500">סה&quot;כ מוצרים</span>
               <span className="font-semibold text-gray-900">{formatPrice(subtotalAgorot)}</span>
             </div>
+
+            {pricing.discountAgorot > 0 && (
+              <div className="flex items-center justify-between mb-1 text-sm">
+                <span className="text-orange-600 font-medium">הנחת מבצעים</span>
+                <span className="font-semibold text-orange-600">
+                  −{formatPrice(pricing.discountAgorot)}
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-4 text-xs text-stone-400">
               <span>דמי משלוח יחושבו בקופה</span>
             </div>
@@ -120,7 +149,7 @@ export function CartDrawer() {
             <div className="flex items-center justify-between mb-4">
               <span className="font-bold text-gray-900">סה&quot;כ לתשלום</span>
               <span className="text-xl font-bold text-brand-700">
-                {formatPrice(subtotalAgorot)}
+                {formatPrice(pricing.chargedSubtotalAgorot)}
               </span>
             </div>
 
@@ -155,10 +184,12 @@ export function CartDrawer() {
 
 function CartItem({
   item,
+  linePricing,
   onUpdateQty,
   onRemove,
 }: {
   item: CartLineItem;
+  linePricing?: LinePricing;
   onUpdateQty: (variantId: string, qty: number) => void;
   onRemove: (variantId: string) => void;
 }) {
@@ -175,7 +206,16 @@ function CartItem({
     onUpdateQty(item.variantId, roundToStep(item.quantity + step, step));
   };
 
-  const lineTotal = calculateLineTotal(item);
+  const normalTotal = linePricing?.normalTotalAgorot ?? Math.round(item.priceAgorot * item.quantity);
+  const lineTotal   = linePricing?.chargedTotalAgorot ?? normalTotal;
+  const isDiscounted = lineTotal < normalTotal;
+
+  const appliedId = linePricing?.appliedPromotionId ?? null;
+  const isLegacyDeal =
+    item.dealEnabled === true &&
+    item.dealQuantity != null &&
+    item.dealPriceAgorot != null &&
+    (appliedId === null || isLegacyPromotionId(appliedId));
 
   return (
     <li className="py-4 flex gap-3">
@@ -213,9 +253,12 @@ function CartItem({
               · {formatPrice(item.priceAgorot)}/ק&quot;ג
             </span>
           )}
-          {item.dealEnabled && item.dealQuantity != null && item.dealPriceAgorot != null && (
+          {/* Only shown for a legacy per-product deal. A group promotion is not
+              labelled per line — it is announced in the footer summary, because
+              it spans several products. */}
+          {isLegacyDeal && (
             <span className="ms-1 text-orange-500 font-medium">
-              · {item.dealQuantity} ב-{formatPrice(item.dealPriceAgorot)}
+              · {item.dealQuantity} ב-{formatPrice(item.dealPriceAgorot!)}
             </span>
           )}
         </p>
@@ -244,8 +287,20 @@ function CartItem({
           </div>
 
           {/* Line price */}
-          <span className="text-sm font-bold text-gray-900 shrink-0">
-            {formatPrice(lineTotal)}
+          <span className="flex items-baseline gap-1.5 shrink-0">
+            {isDiscounted && (
+              <span className="text-xs text-stone-400 line-through">
+                {formatPrice(normalTotal)}
+              </span>
+            )}
+            <span
+              className={cn(
+                "text-sm font-bold",
+                isDiscounted ? "text-orange-600" : "text-gray-900"
+              )}
+            >
+              {formatPrice(lineTotal)}
+            </span>
           </span>
         </div>
       </div>

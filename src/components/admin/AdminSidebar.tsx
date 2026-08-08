@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -11,19 +11,22 @@ import {
   ExternalLink,
   Truck,
   MapPin,
+  Percent,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
-import { useUser } from "@/store/user";
+import { ADMIN_ROUTES } from "@/lib/admin/routes";
+import { adminLogout } from "@/app/meshek22-control/login/actions";
 
 const NAV_ITEMS = [
-  { href: "/admin",                  label: "לוח בקרה",    icon: LayoutDashboard, exact: true },
-  { href: "/admin/orders",           label: "הזמנות",      icon: ClipboardList,   exact: false },
-  { href: "/admin/products",         label: "מוצרים",      icon: ShoppingBag,     exact: false },
-  { href: "/admin/categories",       label: "קטגוריות",    icon: Tag,             exact: false },
-  { href: "/admin/delivery-zones",   label: "אזורי משלוח", icon: Truck,           exact: false },
-  { href: "/admin/settlements",      label: "יישובים",     icon: MapPin,          exact: false },
+  { href: ADMIN_ROUTES.dashboard,     label: "לוח בקרה",    icon: LayoutDashboard, exact: true },
+  { href: ADMIN_ROUTES.orders,        label: "הזמנות",      icon: ClipboardList,   exact: false },
+  { href: ADMIN_ROUTES.products,      label: "מוצרים",      icon: ShoppingBag,     exact: false },
+  { href: ADMIN_ROUTES.categories,    label: "קטגוריות",    icon: Tag,             exact: false },
+  { href: ADMIN_ROUTES.promotions,    label: "מבצעים",      icon: Percent,         exact: false },
+  { href: ADMIN_ROUTES.deliveryZones, label: "אזורי משלוח", icon: Truck,           exact: false },
+  { href: ADMIN_ROUTES.settlements,   label: "יישובים",     icon: MapPin,          exact: false },
 ];
 
 interface AdminSidebarProps {
@@ -35,14 +38,6 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ adminName, adminEmail, isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { signOut } = useUser();
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-    router.refresh();
-  };
 
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
@@ -122,14 +117,18 @@ export function AdminSidebar({ adminName, adminEmail, isOpen, onClose }: AdminSi
           <p className="text-xs text-gray-500 truncate">{adminEmail}</p>
         </div>
 
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-red-900/40 hover:text-red-400 transition-colors cursor-pointer w-full text-start"
-          aria-label="יציאה מהחשבון"
-        >
-          <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-          יציאה
-        </button>
+        {/* Logout is a Server Action, so the session cookie is cleared on the
+            server. A client-side redirect alone would leave the cookie valid. */}
+        <form action={adminLogout}>
+          <button
+            type="submit"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-red-900/40 hover:text-red-400 transition-colors cursor-pointer w-full text-start"
+            aria-label="יציאה מהחשבון"
+          >
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+            יציאה
+          </button>
+        </form>
       </div>
     </aside>
   );

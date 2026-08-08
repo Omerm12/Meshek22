@@ -5,8 +5,8 @@ import Image from "next/image";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice, formatPriceCompact } from "@/lib/utils/money";
-import { useCart, calculateLineTotal } from "@/store/cart";
-import { useUser } from "@/store/user";
+import { useCart, toPricedItem } from "@/store/cart";
+import { calculateCartPricing, formatPromotionBadge } from "@/lib/promotions/engine";
 import { useDeliveryGate } from "@/store/delivery-gate";
 import { flyToCart } from "@/lib/utils/fly-to-cart";
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
@@ -31,8 +31,7 @@ function formatQty(qty: number): string {
 }
 
 export function ProductCard({ product, className, priority = false }: ProductCardProps) {
-  const { addItem, items, updateQty } = useCart();
-  const { user } = useUser();
+  const { addItem, items, updateQty, promotions } = useCart();
   const { requestAdd } = useDeliveryGate();
   const imageRef = useRef<HTMLDivElement>(null);
 
@@ -66,10 +65,12 @@ export function ProductCard({ product, className, priority = false }: ProductCar
       dealQuantity:        product.dealQuantity,
       dealPriceAgorot:     product.dealPriceAgorot,
     };
-    if (!user && requestAdd(item)) return;
+    // Every visitor is a guest now, so the delivery gate applies to everyone:
+    // it confirms the settlement before the first item enters the cart.
+    if (requestAdd(item)) return;
     addItem(item);
     if (imageRef.current) flyToCart(imageRef.current);
-  }, [addItem, requestAdd, user, selectedVariant, product]);
+  }, [addItem, requestAdd, selectedVariant, product]);
 
   // Guard: product has no available variants — render nothing rather than crash.
   if (!selectedVariant) return null;
@@ -89,7 +90,27 @@ export function ProductCard({ product, className, priority = false }: ProductCar
 
   const isPerKg = selectedVariant.quantityPricingMode === "per_kg";
 
-  const hasDeal = product.dealEnabled && product.dealQuantity != null && product.dealPriceAgorot != null;
+  // A group promotion on the selected variant takes precedence over the legacy
+  // per-product deal — exactly as the pricing engine resolves it.
+  const groupPromotion = selectedVariant.promotion ?? null;
+  const hasLegacyDeal =
+    !groupPromotion &&
+    product.dealEnabled &&
+    product.dealQuantity != null &&
+    product.dealPriceAgorot != null;
+  const hasDeal = !!groupPromotion || hasLegacyDeal;
+
+  const dealBadgeLabel = groupPromotion
+    ? formatPromotionBadge(groupPromotion.requiredQuantity, groupPromotion.bundlePriceAgorot)
+    : hasLegacyDeal
+      ? `${product.dealQuantity} ב-${formatPriceCompact(product.dealPriceAgorot!)}`
+      : null;
+
+  // Live line total for this card. Uses the shared engine so the figure on the
+  // card matches the cart, the checkout summary and the amount actually charged.
+  const lineTotalAgorot = cartItem
+    ? calculateCartPricing([toPricedItem(cartItem)], promotions).chargedSubtotalAgorot
+    : 0;
 
   const hasSale = selectedVariant.comparePriceAgorot !== null;
   const discountPct = hasSale
@@ -154,10 +175,10 @@ export function ProductCard({ product, className, priority = false }: ProductCar
         )}
 
         {/* ── Deal badge: compact single-color pill ─────────────────────── */}
-        {hasDeal && !hasSale && (
+        {dealBadgeLabel && !hasSale && (
           <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-orange-500 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(234,88,12,0.45)]">
             <span className="text-[11px] md:text-[12px] font-black text-white leading-none tracking-tight whitespace-nowrap">
-              {product.dealQuantity} ב-{formatPriceCompact(product.dealPriceAgorot!)}
+              {dealBadgeLabel}
             </span>
           </div>
         )}
@@ -237,7 +258,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             {/* Live line total for per_kg or active deal */}
             {isInCart && (isPerKg || hasDeal) && cartItem && (
               <span className="text-xs text-brand-600 font-medium mt-1 leading-none">
-                סה&quot;כ {formatPrice(calculateLineTotal(cartItem))}
+                סה&quot;כ {formatPrice(lineTotalAgorot)}
               </span>
             )}
           </div>

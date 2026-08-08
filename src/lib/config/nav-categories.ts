@@ -57,13 +57,26 @@ export const PARENT_CATEGORY_NAV: NavParentCategory[] = [
       { label: "פירות אורגניים", slug: "organic-fruits", href: "/fruits?sub=organic-fruits", icon: "🌱" },
     ],
   },
+  // Flat top-level categories: products are assigned straight to the parent,
+  // so there is no subcategory dropdown to render.
+  {
+    label: "גלידות",
+    slug: "ice-creams",
+    href: "/ice-creams",
+    icon: "🍦",
+    children: [],
+  },
+  {
+    label: "פיצוחים",
+    slug: "nuts",
+    href: "/nuts",
+    icon: "🥜",
+    children: [],
+  },
 ];
 
-/** "All products" top-level link — rendered before the category dropdowns. */
-export const ALL_PRODUCTS_LINK: NavLink = { label: "כל המוצרים", href: "/products" };
-
 export const SIMPLE_NAV_LINKS: NavLink[] = [
-  // { label: "מבצעים", href: "/promotions" }, // temporarily hidden
+  { label: "מבצעים",      href: "/promotions" },
   { label: "אזורי משלוח", href: "/delivery-areas" },
   { label: "אודות",       href: "/about" },
 ];

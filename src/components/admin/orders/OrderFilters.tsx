@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Loader2 } from "lucide-react";
 import { ORDER_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/utils/order-status";
+import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 
 interface OrderFiltersProps {
   search:        string;
@@ -38,7 +39,7 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
     if (st)       params.set("status",  st);
     if (p)        params.set("payment", p);
     startTransition(() => {
-      router.push(`/admin/orders${params.size ? `?${params}` : ""}`);
+      router.push(`${ADMIN_BASE_PATH}/orders${params.size ? `?${params}` : ""}`);
     });
   };
 
@@ -72,7 +73,7 @@ export function OrderFilters({ search, statusFilter, paymentFilter }: OrderFilte
     setStatusValue("");
     setPaymentValue("");
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    startTransition(() => router.push("/admin/orders"));
+    startTransition(() => router.push(`${ADMIN_BASE_PATH}/orders`));
   };
 
   const hasFilters = !!(searchValue || statusValue || paymentValue);
