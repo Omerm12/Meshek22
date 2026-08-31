@@ -2,12 +2,14 @@ import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/ui/Reveal";
 import { CategoryCard } from "@/components/shop/CategoryCard";
-import { fetchFeaturedCategories } from "@/lib/data/storefront";
+import { fetchHomepageCategories } from "@/lib/data/storefront";
 
 export async function FeaturedCategories() {
-  // Show only featured top-level categories (admin-controlled via is_featured flag).
-  // Falls back to all top-level categories when none are marked featured yet.
-  const categories = await fetchFeaturedCategories();
+  // The three categories this section offers, resolved by slug and carrying the
+  // real number of products on each destination page. The list is fixed — there
+  // is no "show all active categories" fallback, which is what previously filled
+  // this section with eleven cards.
+  const categories = await fetchHomepageCategories();
 
   if (categories.length === 0) return null;
 

@@ -23,6 +23,7 @@ import {
   isPromotionalProduct,
 } from "@/lib/data/promotions";
 import { buildVariantPromotionMap } from "@/lib/promotions/engine";
+import { ICE_CREAMS_AND_NUTS_SLUG } from "@/lib/config/nav-categories";
 import type { Promotion } from "@/lib/promotions/types";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
 
@@ -231,30 +232,133 @@ export async function fetchTopLevelCategories(): Promise<MockCategory[]> {
 }
 
 /**
- * Top-level categories marked as is_featured=true for the homepage.
- * Falls back to ALL top-level categories when none are featured yet,
- * so the homepage never shows an empty "קטגוריות מובילות" section.
+ * The homepage "מה תרצו היום?" section: an explicit, fixed list of three cards.
+ *
+ * Each entry names the category by SLUG — the stable identifier — so nothing
+ * here depends on `is_featured`, on row order, or on partial name matching, and
+ * no category outside this list can ever appear. There is deliberately no
+ * "show everything" fallback: the section previously used one, and because no
+ * row is flagged is_featured it rendered all eleven active top-level categories,
+ * including two different rows both named ירקות (`vegetables` and a stray
+ * `yerakot`) plus seven `cat-*` rows that have no landing page.
+ *
+ * `label` overrides the database name where the two intentionally differ, and
+ * `includesChildren` mirrors how the destination page selects its products, so
+ * a card's number always equals what the customer finds after clicking it:
+ *   • true  → fetchProductsByParentCategorySlug(): the category AND its active
+ *             direct children (what /vegetables and /fruits render)
+ *   • false → fetchProductsByCategory(): that category only (what
+ *             /ice-creams-and-nuts renders)
  */
-export async function fetchFeaturedCategories(): Promise<MockCategory[]> {
+const HOMEPAGE_CARDS: {
+  slug: string;
+  label?: string;
+  includesChildren: boolean;
+}[] = [
+  { slug: "vegetables", includesChildren: true },
+  { slug: "fruits", includesChildren: true },
+  {
+    // Destination and product count both come from the combined
+    // ice-creams-and-nuts category — only the wording on the card differs, as
+    // requested. The slug drives the href, so the whole card opens
+    // /ice-creams-and-nuts.
+    slug: ICE_CREAMS_AND_NUTS_SLUG,
+    label: "ביצים ומוצרי חלב",
+    includesChildren: false,
+  },
+];
+
+/**
+ * The three homepage cards, each carrying the number of products a customer
+ * will actually find on its destination page.
+ *
+ * The count mirrors what the destination page renders, so the two can never
+ * disagree:
+ *   • only active products,
+ *   • only products with at least one AVAILABLE variant — the category pages
+ *     drop the rest via `.filter(p => p.variants.length > 0)`,
+ *   • the category itself, plus its active direct children only when the
+ *     destination page includes them (see includesChildren above),
+ *   • each product counted once: a product has a single category_id, and the
+ *     `!inner` embed returns one row per product however many variants match.
+ *
+ * Two queries in parallel regardless of card count — no per-category round-trip.
+ * Nothing is hardcoded: adding, removing, activating, deactivating or moving a
+ * product changes the number on the next render.
+ */
+export async function fetchHomepageCategories(): Promise<MockCategory[]> {
   const supabase = createPublicClient();
 
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, slug, description, parent_id")
-    .eq("is_active", true)
-    .is("parent_id", null)
-    .eq("is_featured", true)
-    .order("sort_order", { ascending: true });
+  const [categoriesResult, productsResult] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, slug, description, parent_id")
+      .eq("is_active", true),
+    supabase
+      .from("products")
+      .select("id, category_id, product_variants!inner(id)")
+      .eq("is_active", true)
+      .eq("product_variants.is_available", true),
+  ]);
 
-  if (error) return [];
+  const categoryRows = (categoriesResult.data ?? []) as CategoryRow[];
+  const productRows = (productsResult.data ?? []) as unknown as { category_id: string }[];
 
-  // Fallback: if no categories are marked featured yet, show all top-level ones
-  if (!data || data.length === 0) {
-    return fetchTopLevelCategories();
+  // Products per category id.
+  const countByCategory = new Map<string, number>();
+  for (const product of productRows) {
+    countByCategory.set(product.category_id, (countByCategory.get(product.category_id) ?? 0) + 1);
   }
 
-  return (data as CategoryRow[]).map(toMockCategory);
+  // Active direct children per parent id.
+  const childrenByParent = new Map<string, string[]>();
+  for (const category of categoryRows) {
+    if (!category.parent_id) continue;
+    const siblings = childrenByParent.get(category.parent_id) ?? [];
+    siblings.push(category.id);
+    childrenByParent.set(category.parent_id, siblings);
+  }
+
+  const bySlug = new Map(categoryRows.map((c) => [c.slug, c]));
+
+  return HOMEPAGE_CARDS.map(({ slug, label, includesChildren }) => {
+    const row = bySlug.get(slug);
+    const display = getCategoryDisplay(slug);
+
+    // The combined ice-creams-and-nuts category is created by migration
+    // 20260808_001, which has not been applied. Until it runs the row does not
+    // exist, but its page does, so the card is still shown — with a count of 0,
+    // which is exactly what that page renders. The number is never invented.
+    if (!row) {
+      return {
+        id: `missing:${slug}`,
+        name: label ?? slug,
+        slug,
+        description: "",
+        icon: display.icon,
+        color: display.color,
+        textColor: display.textColor,
+        count: 0,
+        parentId: null,
+      };
+    }
+
+    const ids = includesChildren
+      ? [row.id, ...(childrenByParent.get(row.id) ?? [])]
+      : [row.id];
+    const count = ids.reduce((total, id) => total + (countByCategory.get(id) ?? 0), 0);
+
+    return { ...toMockCategory(row), name: label ?? row.name, count };
+  });
 }
+
+// fetchFeaturedCategories() was removed here. It was the homepage section's
+// previous data source and is what produced the eleven-card list: no row is
+// flagged is_featured, so it always fell through to its "show every active
+// top-level category" fallback. fetchHomepageCategories() above replaces it and
+// is the only function the section calls. Leaving the old one in place would
+// have left two plausible-looking paths for the same section, with no way to
+// tell from the file which one the page actually renders.
 
 /**
  * Direct child categories of a parent identified by slug.
