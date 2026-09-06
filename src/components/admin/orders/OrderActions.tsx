@@ -38,9 +38,14 @@ export function OrderActions({
     setError(null);
     setPendingConfirm(null);
     startTransition(async () => {
-      const result = await applyOrderTransition(orderId, action, { cashReceived });
-      if (result.success) router.refresh();
-      else setError(result.error);
+      try {
+        const result = await applyOrderTransition(orderId, action, { cashReceived });
+        if (result.success) router.refresh();
+        else setError(result.error);
+      } catch (err) {
+        console.error("[OrderActions] transition failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
+      }
     });
   };
 

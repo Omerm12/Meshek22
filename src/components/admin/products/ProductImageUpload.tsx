@@ -43,17 +43,22 @@ export function ProductImageUpload({
     const fd = new FormData();
     fd.set("file", file);
 
-    const result = await uploadProductImage(fd);
+    try {
+      const result = await uploadProductImage(fd);
 
-    if ("error" in result) {
-      setUploadError(result.error);
-    } else {
-      onUpload(result.url);
+      if ("error" in result) {
+        setUploadError(result.error);
+      } else {
+        onUpload(result.url);
+      }
+    } catch (err) {
+      console.error("[ProductImageUpload] upload failed", err);
+      setUploadError("אירעה שגיאה בלתי צפויה בהעלאת התמונה. נסו שוב.");
+    } finally {
+      setUploading(false);
+      // Reset so the same file can be re-selected if needed (e.g. after an error)
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-
-    setUploading(false);
-    // Reset so the same file can be re-selected if needed (e.g. after an error)
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleClear = () => {

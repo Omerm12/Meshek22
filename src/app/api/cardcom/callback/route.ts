@@ -42,11 +42,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let params: Record<string, string>;
   if (contentType.includes("application/json")) {
+    let json: unknown;
     try {
-      params = JSON.parse(rawBody);
+      json = JSON.parse(rawBody);
     } catch {
       return NextResponse.json({ error: "invalid json" }, { status: 400 });
     }
+    if (typeof json !== "object" || json === null) {
+      return NextResponse.json({ error: "invalid json" }, { status: 400 });
+    }
+    // Cardcom's JSON webhook body carries TerminalNumber, ResponseCode etc. as
+    // native JSON numbers/booleans, not strings — unlike the form-encoded branch
+    // below, where URLSearchParams always yields strings. Every comparison in
+    // this file assumes a string (this variable's declared type lied about the
+    // JSON branch), so normalize once here. Left unnormalized, `172204100 !==
+    // "172204100"` is always true regardless of the actual terminal number,
+    // which made every real webhook look like a terminal mismatch and return
+    // 200 without ever calling GetLpResult.
+    params = Object.fromEntries(
+      Object.entries(json as Record<string, unknown>).map(([k, v]) => [
+        k,
+        v == null ? "" : String(v),
+      ])
+    );
   } else {
     params = Object.fromEntries(new URLSearchParams(rawBody));
   }

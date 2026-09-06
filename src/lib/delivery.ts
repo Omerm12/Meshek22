@@ -14,6 +14,8 @@ export interface DeliveryZone {
   free_delivery_threshold_agorot: number | null;
   min_order_agorot: number | null;
   estimated_delivery_hours: number | null;
+  /** Recurring Hebrew weekday names (e.g. "ראשון") or specific "YYYY-MM-DD" dates, as configured in the admin panel. */
+  delivery_days?: string[] | null;
 }
 
 export interface DeliveryQuote {
@@ -27,6 +29,41 @@ export interface DeliveryQuote {
   shortfallAgorot: number;
   /** Formatted Hebrew delivery time label derived from estimated_delivery_hours. */
   estimatedLabel: string;
+}
+
+/** Normal week order, Sunday through Saturday — matches DELIVERY_DAYS_OPTIONS in the admin form. */
+const WEEKDAY_ORDER = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] as const;
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "YYYY-MM-DD" → "DD/MM/YYYY" (Israeli date format). */
+function formatIsraeliDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * Human-readable Hebrew list of a zone's delivery days, e.g. "ראשון, שלישי וחמישי".
+ *
+ * Recurring weekday names are sorted into normal week order regardless of the
+ * order they were saved in. Anything else is treated as a specific calendar
+ * date and rendered in Israeli format, kept after the weekdays. Returns null
+ * when there is nothing configured, so callers can omit the line entirely
+ * rather than showing an empty or invented value.
+ */
+export function formatDeliveryDays(days: string[] | null | undefined): string | null {
+  if (!days || days.length === 0) return null;
+
+  const weekdaySet = new Set<string>(days);
+  const weekdays = WEEKDAY_ORDER.filter((d) => weekdaySet.has(d));
+  const other = days
+    .filter((d) => !(WEEKDAY_ORDER as readonly string[]).includes(d))
+    .map((d) => (ISO_DATE_RE.test(d) ? formatIsraeliDate(d) : d));
+
+  const ordered = [...weekdays, ...other];
+  if (ordered.length === 0) return null;
+  if (ordered.length === 1) return ordered[0];
+  return `${ordered.slice(0, -1).join(", ")} ו${ordered[ordered.length - 1]}`;
 }
 
 /** Format delivery hours into a Hebrew display string. */

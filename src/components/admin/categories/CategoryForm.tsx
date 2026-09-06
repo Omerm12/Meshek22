@@ -110,9 +110,14 @@ export function CategoryForm({
     fd.set("parent_id",   data.parent_id ?? "");
 
     startTransition(async () => {
-      const result = await action(fd);
-      if (result && !result.success) {
-        setServerError(result.error);
+      try {
+        const result = await action(fd);
+        if (result && !result.success) {
+          setServerError(result.error);
+        }
+      } catch (err) {
+        console.error("[CategoryForm] submit failed", err);
+        setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
     });
   };

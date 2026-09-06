@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { getGuestOrderStatus } from "@/app/(shop)/checkout/actions";
@@ -22,6 +23,7 @@ export function PaymentStatusPoller({
   orderNumber: string;
   token: string;
 }) {
+  const router = useRouter();
   const [dotCount, setDotCount] = useState(1);
   const [timedOut, setTimedOut] = useState(false);
 
@@ -38,11 +40,17 @@ export function PaymentStatusPoller({
         // Payment confirmed — reload so the server component renders the final
         // success state (which is also what clears the cart).
         window.location.reload();
+      } else if (status?.paymentStatus === "failed") {
+        // CardCom itself reported a decline (not a delay, not a timeout) — send
+        // the customer to the existing failure experience with a retry option.
+        router.replace(
+          `/checkout/payment-error?orderId=${encodeURIComponent(status.orderId)}&t=${encodeURIComponent(token)}`
+        );
       }
     } catch {
       // Ignore transient network errors — the next tick retries.
     }
-  }, [orderNumber, token]);
+  }, [orderNumber, token, router]);
 
   useEffect(() => {
     check(); // Immediate first check in case the webhook already fired.

@@ -11,10 +11,12 @@ import {
 } from "@/lib/admin/order-presentation";
 import {
   actionRequiresCashConfirmation,
+  isCardcomRecheckAction,
   isTransitionAction,
   resolveTransition,
   type TransitionAction,
 } from "@/lib/admin/order-transitions";
+import { recoverPaymentByOrderId } from "@/lib/payment/cardcomFinalize";
 import {
   EXCLUDE_INCOMPLETE_CARDCOM,
   applyBucketRule,
@@ -180,6 +182,40 @@ export async function applyOrderTransition(
     paymentMethod: order.payment_method,
     fulfillmentMethod: order.fulfillment_method,
   };
+
+  // ── CardCom recheck: not a CAS write, delegate to the verified pipeline ────
+  //
+  // Asks CardCom directly via the exact same verifyAndFinalizeCardcomPayment
+  // path the webhook uses (through recoverPaymentByOrderId, which reads the
+  // stored payment_reference). This never marks an order paid on its own
+  // authority — it can only surface what CardCom itself reports, with the same
+  // idempotent CAS guarding the write. Safe to click repeatedly.
+  if (isCardcomRecheckAction(transitionAction)) {
+    if (ctx.paymentMethod !== "credit_card") {
+      return { success: false, error: "בדיקה מול קארדקום זמינה רק להזמנות בתשלום אשראי באתר." };
+    }
+    if (ctx.paymentStatus === "paid") {
+      return { success: false, error: "ההזמנה כבר מסומנת כשולמה." };
+    }
+
+    const result = await recoverPaymentByOrderId(orderId);
+
+    revalidatePath(ADMIN_BASE_PATH);
+    revalidatePath(`${ADMIN_BASE_PATH}/orders`);
+    revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+
+    switch (result.outcome) {
+      case "paid":
+      case "already_paid":
+        return { success: true };
+      case "failed":
+        return { success: false, error: "חברת האשראי דיווחה שהתשלום נדחה." };
+      case "blocked":
+        return { success: false, error: "לא ניתן לאמת את התשלום מול קארדקום כרגע." };
+      case "transient_error":
+        return { success: false, error: "שגיאה זמנית בתקשורת עם קארדקום. נסו שוב בעוד רגע." };
+    }
+  }
 
   const resolved = resolveTransition(transitionAction, ctx);
   if (!resolved.ok) {

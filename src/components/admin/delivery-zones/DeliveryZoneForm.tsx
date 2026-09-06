@@ -122,9 +122,14 @@ export function DeliveryZoneForm({
     fd.set("sort_order",  String(data.sort_order));
 
     startTransition(async () => {
-      const result = await action(fd);
-      if (result && !result.success) {
-        setServerError(result.error);
+      try {
+        const result = await action(fd);
+        if (result && !result.success) {
+          setServerError(result.error);
+        }
+      } catch (err) {
+        console.error("[DeliveryZoneForm] submit failed", err);
+        setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
     });
   };

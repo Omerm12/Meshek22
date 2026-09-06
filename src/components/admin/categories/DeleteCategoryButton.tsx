@@ -19,13 +19,18 @@ export function DeleteCategoryButton({ id, name }: DeleteCategoryButtonProps) {
   const handleDelete = () => {
     setError("");
     startTransition(async () => {
-      const result = await deleteCategory(id);
-      if (!result.success) {
-        setError(result.error);
-        return;
+      try {
+        const result = await deleteCategory(id);
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+        setOpen(false);
+        router.refresh(); // Re-fetch the server component list
+      } catch (err) {
+        console.error("[DeleteCategoryButton] delete failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
-      setOpen(false);
-      router.refresh(); // Re-fetch the server component list
     });
   };
 

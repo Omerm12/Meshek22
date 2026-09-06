@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, ClipboardList, Store, Truck } from "lucide-react";
+import { AlertCircle, ExternalLink, Loader2, ClipboardList, Store, Truck } from "lucide-react";
 import { fetchOrdersPage, type OrderRow, type OrderPageFilters } from "@/app/meshek22-control/(protected)/orders/actions";
 import {
   describeOrderStatus,
@@ -44,13 +44,24 @@ export function OrdersListClient({
   const [orders,     setOrders]     = useState<OrderRow[]>(initialOrders);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [isPending,  startTransition] = useTransition();
+  const [error,      setError]      = useState<string | null>(null);
 
   const loadMore = () => {
     if (!nextCursor || isPending) return;
+    setError(null);
     startTransition(async () => {
-      const result = await fetchOrdersPage(nextCursor, filters);
-      setOrders((prev) => [...prev, ...result.orders]);
-      setNextCursor(result.nextCursor);
+      try {
+        const result = await fetchOrdersPage(nextCursor, filters);
+        if (result.failed) {
+          setError("שגיאה בטעינת הזמנות נוספות. נסו שוב.");
+          return;
+        }
+        setOrders((prev) => [...prev, ...result.orders]);
+        setNextCursor(result.nextCursor);
+      } catch (err) {
+        console.error("[OrdersListClient] loadMore failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
+      }
     });
   };
 
@@ -172,7 +183,7 @@ export function OrdersListClient({
 
       {/* Load more */}
       {nextCursor && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           <button
             onClick={loadMore}
             disabled={isPending}
@@ -183,6 +194,12 @@ export function OrdersListClient({
             ) : null}
             {isPending ? "טוען..." : "טען עוד הזמנות"}
           </button>
+          {error && (
+            <p role="alert" className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
+          )}
         </div>
       )}
     </div>

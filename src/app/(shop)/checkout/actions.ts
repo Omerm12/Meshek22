@@ -18,6 +18,7 @@ import {
   isPlausibleGuestToken,
 } from "@/lib/checkout/guest-token";
 import { sendOrderEmails } from "@/lib/email/order-emails";
+import { verifyAndFinalizeCardcomPayment } from "@/lib/payment/cardcomFinalize";
 
 /**
  * Guest checkout.
@@ -426,10 +427,22 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     return { error: "שגיאה בתחילת תהליך התשלום. נא לנסות שוב או לפנות לתמיכה." };
   }
 
-  await db
+  const { error: referenceError } = await db
     .from("orders")
     .update({ payment_reference: cardComSession.lowProfileId })
     .eq("id", orderId);
+
+  if (referenceError) {
+    // The customer must not be sent to a CardCom session whose LowProfileId was
+    // never durably stored: the webhook's stored-reference cross-check would be
+    // silently skipped, and manual recovery (which looks up payment_reference)
+    // would have nothing to recover with.
+    console.error("[createOrder] payment_reference save failed", {
+      orderId,
+      error: referenceError.message,
+    });
+    return { error: "שגיאה בתחילת תהליך התשלום. נא לנסות שוב או לפנות לתמיכה." };
+  }
 
   // The cart is NOT cleared here. It is cleared only after the webhook confirms
   // payment, so a cancelled or failed payment leaves the basket intact.
@@ -444,6 +457,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
 // ─── Guest order lookup ───────────────────────────────────────────────────────
 
 export interface GuestOrderStatus {
+  orderId: string;
   orderNumber: string;
   paymentStatus: string;
   orderStatus: string;
@@ -456,6 +470,14 @@ export interface GuestOrderStatus {
  * token hash, so knowing (or guessing) an order number achieves nothing. Every
  * failure returns null — the caller cannot distinguish "no such order" from
  * "wrong token".
+ *
+ * The browser landing here is not proof of payment, and neither is a missing
+ * webhook proof of its absence — the webhook may be delayed, or may never
+ * arrive at all. So a still-pending online-card order gets one reconciliation
+ * attempt per poll through the exact same verification path the webhook uses,
+ * using the LowProfileId already stored on the order. This is what lets a
+ * customer who is actually charged, but whose webhook silently failed, see
+ * their order confirm itself instead of staying "pending" forever.
  */
 export async function getGuestOrderStatus(
   orderNumber: string,
@@ -466,14 +488,43 @@ export async function getGuestOrderStatus(
   const db = createAdminClient();
   const { data } = await db
     .from("orders")
-    .select("order_number, payment_status, order_status")
+    .select("id, order_number, payment_status, order_status, payment_method, payment_reference")
     .eq("order_number", orderNumber)
     .eq("guest_access_token_hash", hashGuestAccessToken(token))
     .maybeSingle();
 
   if (!data) return null;
 
+  if (
+    data.payment_status === "pending" &&
+    data.payment_method === "credit_card" &&
+    data.payment_reference
+  ) {
+    const result = await verifyAndFinalizeCardcomPayment(data.id, data.payment_reference, db);
+    if (result.outcome === "paid" || result.outcome === "already_paid") {
+      return {
+        orderId:       data.id,
+        orderNumber:   data.order_number,
+        paymentStatus: "paid",
+        orderStatus:   "confirmed",
+      };
+    }
+    if (result.outcome === "failed") {
+      return {
+        orderId:       data.id,
+        orderNumber:   data.order_number,
+        paymentStatus: "failed",
+        orderStatus:   data.order_status,
+      };
+    }
+    // "blocked" / "transient_error": say nothing new yet. A blocked result can
+    // mean a session that legitimately has not resolved on CardCom's side yet
+    // — falling through to the unchanged DB state below keeps the browser
+    // polling instead of showing a false failure.
+  }
+
   return {
+    orderId:       data.id,
     orderNumber:   data.order_number,
     paymentStatus: data.payment_status,
     orderStatus:   data.order_status,
@@ -581,10 +632,18 @@ export async function retryPayment(orderId: string, token: string): Promise<Retr
     return { error: "שגיאה בתחילת תהליך התשלום. נא לנסות שוב." };
   }
 
-  await db
+  const { error: referenceError } = await db
     .from("orders")
     .update({ payment_reference: cardComSession.lowProfileId })
     .eq("id", orderId);
+
+  if (referenceError) {
+    console.error("[retryPayment] payment_reference save failed", {
+      orderId,
+      error: referenceError.message,
+    });
+    return { error: "שגיאה בתחילת תהליך התשלום. נא לנסות שוב או לפנות לתמיכה." };
+  }
 
   return { paymentUrl: cardComSession.paymentUrl, orderNumber: order.order_number };
 }

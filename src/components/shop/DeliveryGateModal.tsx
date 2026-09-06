@@ -22,7 +22,7 @@ import { useCart } from "@/store/cart";
 import { useDeliveryGate } from "@/store/delivery-gate";
 import { fetchDeliveryGateData } from "@/app/actions/delivery";
 import type { DeliveryGateData } from "@/app/actions/delivery";
-import type { DeliveryZone } from "@/lib/delivery";
+import { formatDeliveryDays, type DeliveryZone } from "@/lib/delivery";
 
 // ─── Delivery check result type ───────────────────────────────────────────────
 
@@ -246,6 +246,7 @@ function FoundResult({
   onConfirm: () => void;
 }) {
   const isFree = zone.delivery_fee_agorot === 0;
+  const deliveryDaysLabel = formatDeliveryDays(zone.delivery_days);
 
   return (
     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
@@ -259,6 +260,11 @@ function FoundResult({
           <p className="text-xs text-emerald-700 mt-0.5">
             משלוח זמין לאזורכם עם התנאים הבאים:
           </p>
+          {deliveryDaysLabel && (
+            <p className="text-xs text-emerald-700 mt-1">
+              <span className="font-semibold">ימי משלוח:</span> {deliveryDaysLabel}
+            </p>
+          )}
         </div>
       </div>
 

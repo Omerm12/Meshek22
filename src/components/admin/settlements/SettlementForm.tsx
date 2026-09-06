@@ -89,9 +89,14 @@ export function SettlementForm({
     fd.set("is_active",        String(data.is_active));
 
     startTransition(async () => {
-      const result = await action(fd);
-      if (result && !result.success) {
-        setServerError(result.error);
+      try {
+        const result = await action(fd);
+        if (result && !result.success) {
+          setServerError(result.error);
+        }
+      } catch (err) {
+        console.error("[SettlementForm] submit failed", err);
+        setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
     });
   };

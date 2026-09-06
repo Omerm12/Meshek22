@@ -156,23 +156,22 @@ export async function updateProduct(
     qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
   };
 
-  // 1. Update product record
-  const { error: productError } = await supabase
-    .from("products")
-    .update(productRecord)
-    .eq("id", id);
+  // 1+2. Update the product record and read its current variants at the same
+  // time — the variant read doesn't depend on the product update's result, so
+  // there is no reason to pay for these round trips one after another.
+  const [{ error: productError }, { data: currentVariants }] = await Promise.all([
+    supabase.from("products").update(productRecord).eq("id", id),
+    supabase
+      .from("product_variants")
+      .select("id, unit, price_agorot, compare_price_agorot")
+      .eq("product_id", id),
+  ]);
 
   if (productError) {
     if (productError.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
     return { success: false, error: "שגיאה בעדכון המוצר" };
   }
-
-  // 2. Fetch current variants (need price + unit for kg→unit price sync)
-  const { data: currentVariants } = await supabase
-    .from("product_variants")
-    .select("id, unit, price_agorot, compare_price_agorot")
-    .eq("product_id", id);
 
   // 3. Unit-price sync: if the 1kg variant price changed, update the 'unit'
   //    variant price proportionally (same percentage change).
@@ -212,24 +211,22 @@ export async function updateProduct(
   const currentIds   = (currentVariants ?? []).map((v) => v.id);
   const idsToDelete  = currentIds.filter((cid) => !submittedIds.includes(cid));
 
-  if (idsToDelete.length > 0) {
-    const { error: deleteError } = await supabase
-      .from("product_variants")
-      .delete()
-      .in("id", idsToDelete);
+  // 4+5. Removing the dropped variants and clearing every default flag touch
+  // disjoint rows/columns, so they run concurrently. Both must finish before
+  // the upsert below, which depends on defaults already being cleared to
+  // avoid the unique-partial-index violation.
+  const [{ error: deleteError }] = await Promise.all([
+    idsToDelete.length > 0
+      ? supabase.from("product_variants").delete().in("id", idsToDelete)
+      : Promise.resolve({ error: null as { code?: string; message?: string } | null }),
+    supabase.from("product_variants").update({ is_default: false }).eq("product_id", id),
+  ]);
 
-    if (deleteError) {
-      if (deleteError.code === "23503")
-        return { success: false, error: "לא ניתן להסיר גרסאות שנמצאות בהזמנות קיימות" };
-      return { success: false, error: "שגיאה במחיקת גרסאות" };
-    }
+  if (deleteError) {
+    if (deleteError.code === "23503")
+      return { success: false, error: "לא ניתן להסיר גרסאות שנמצאות בהזמנות קיימות" };
+    return { success: false, error: "שגיאה במחיקת גרסאות" };
   }
-
-  // 5. Clear defaults first to avoid unique-partial-index violation during upsert
-  await supabase
-    .from("product_variants")
-    .update({ is_default: false })
-    .eq("product_id", id);
 
   // 6. Upsert existing variants (have id)
   const existingVariants = mutableVariants.filter((v) => v.id);

@@ -32,22 +32,33 @@ export function PromotionRowActions({
   const handleToggle = () => {
     setError(null);
     startTransition(async () => {
-      const result = await setPromotionActive(promotionId, !isActive);
-      if (!result.success) setError(result.error);
-      else router.refresh();
+      try {
+        const result = await setPromotionActive(promotionId, !isActive);
+        if (!result.success) setError(result.error);
+        else router.refresh();
+      } catch (err) {
+        console.error("[PromotionRowActions] toggle failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
+      }
     });
   };
 
   const handleDelete = () => {
     setError(null);
     startTransition(async () => {
-      const result = await deletePromotion(promotionId);
-      if (!result.success) {
-        setError(result.error);
+      try {
+        const result = await deletePromotion(promotionId);
+        if (!result.success) {
+          setError(result.error);
+          setConfirming(false);
+        } else {
+          setConfirming(false);
+          router.refresh();
+        }
+      } catch (err) {
+        console.error("[PromotionRowActions] delete failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
         setConfirming(false);
-      } else {
-        setConfirming(false);
-        router.refresh();
       }
     });
   };

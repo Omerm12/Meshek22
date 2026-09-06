@@ -11,6 +11,11 @@ import { describe, expect, it } from "vitest";
  */
 const finalize = readFileSync("src/lib/payment/cardcomFinalize.ts", "utf8");
 const callback = readFileSync("src/app/api/cardcom/callback/route.ts", "utf8");
+const checkoutActions = readFileSync("src/app/(shop)/checkout/actions.ts", "utf8");
+const adminOrderActions = readFileSync(
+  "src/app/meshek22-control/(protected)/orders/actions.ts",
+  "utf8"
+);
 
 // ─── 1. PayPlus webhook removal ───────────────────────────────────────────────
 
@@ -74,8 +79,15 @@ describe("CardCom finalization requires every field", () => {
     expect(finalize).toContain('reason: "amount_missing"');
     expect(finalize).toContain("Number.isFinite(returnedAmount)");
     expect(finalize).toContain('reason: "amount_mismatch"');
-    // The rounding tolerance is preserved.
-    expect(finalize).toContain("> 0.05");
+  });
+
+  it("compares whole agorot, never a floating-point shekel value directly", () => {
+    // A shekel-level tolerance (e.g. comparing to within 0.05) would let an
+    // amount off by several agorot through. CardCom's decimal shekels are
+    // rounded to the nearest agora and compared as integers instead.
+    expect(finalize).toContain("Math.round(returnedAmount * 100)");
+    expect(finalize).toContain("verifiedAgorot !== order.total_agorot");
+    expect(finalize).not.toMatch(/Math\.abs\([^)]*\)\s*>\s*0\.05/);
   });
 
   it("checks the session against both the stored and the returned LowProfileId", () => {
@@ -83,10 +95,19 @@ describe("CardCom finalization requires every field", () => {
     expect(finalize).toContain('reason: "low_profile_id_response_mismatch"');
   });
 
+  it("requires ChargeOnly and a clean, present TranzactionInfo", () => {
+    expect(finalize).toContain('reason: "operation_mismatch"');
+    expect(finalize).toContain('reason: "tranzaction_info_missing"');
+    expect(finalize).toContain('reason: "tranzaction_response_code_mismatch"');
+    expect(finalize).toContain('reason: "tranzaction_id_missing"');
+    expect(finalize).toContain('reason: "coin_id_mismatch"');
+    expect(finalize).toContain('reason: "is_refund"');
+  });
+
   it("never treats a missing field as success", () => {
     // Every guard above returns blocked; none falls through to the CAS.
     const blockedCount = (finalize.match(/outcome: "blocked"/g) ?? []).length;
-    expect(blockedCount).toBeGreaterThanOrEqual(8);
+    expect(blockedCount).toBeGreaterThanOrEqual(15);
   });
 });
 
@@ -146,5 +167,65 @@ describe("email delivery from the webhook", () => {
     // silently dropping `void somePromise()`.
     expect(finalize).not.toContain("void sendOrderEmails");
     expect(finalize).toContain("await sendOrderEmails(orderId, db)");
+  });
+});
+
+// ─── 6. JSON webhook values are normalized before comparison ──────────────────
+
+describe("JSON webhook body parsing", () => {
+  it("stringifies every parsed value instead of trusting the declared type", () => {
+    // CardCom's webhook is Content-Type: application/json, so TerminalNumber
+    // arrives as a JSON number. The route's params variable was declared
+    // Record<string, string> but JSON.parse does not enforce that at runtime —
+    // an unnormalized `172204100 !== "172204100"` is always true regardless of
+    // the actual terminal number, which made every real webhook look like a
+    // mismatch (see route.test.ts for the behavioural proof).
+    expect(callback).toContain("v == null ? \"\" : String(v)");
+  });
+});
+
+// ─── 7. Polling fallback reconciles a missed webhook ──────────────────────────
+
+describe("the success-page poll is not just a Supabase read", () => {
+  it("calls the shared verification function when still pending", () => {
+    const idx = checkoutActions.indexOf("getGuestOrderStatus");
+    expect(idx).toBeGreaterThan(-1);
+    expect(checkoutActions).toContain("verifyAndFinalizeCardcomPayment(data.id, data.payment_reference, db)");
+  });
+
+  it("only reconciles pending online-card orders with a stored session", () => {
+    const idx = checkoutActions.indexOf('data.payment_status === "pending"');
+    expect(idx).toBeGreaterThan(-1);
+    const branch = checkoutActions.slice(idx, idx + 200);
+    expect(branch).toContain('data.payment_method === "credit_card"');
+    expect(branch).toContain("data.payment_reference");
+  });
+});
+
+// ─── 8. Admin manual recovery uses the same verified pipeline ─────────────────
+
+describe("the admin 'recheck with CardCom' action", () => {
+  it("delegates to recoverPaymentByOrderId instead of writing payment_status directly", () => {
+    expect(adminOrderActions).toContain(
+      'import { recoverPaymentByOrderId } from "@/lib/payment/cardcomFinalize"'
+    );
+    const idx = adminOrderActions.indexOf("isCardcomRecheckAction(transitionAction)");
+    expect(idx).toBeGreaterThan(-1);
+    const branch = adminOrderActions.slice(idx, idx + 900);
+    expect(branch).toContain("recoverPaymentByOrderId(orderId)");
+    // Every outcome is mapped explicitly; none silently marks the order paid.
+    expect(branch).toContain('case "paid":');
+    expect(branch).toContain('case "already_paid":');
+    expect(branch).toContain('case "failed":');
+    expect(branch).toContain('case "blocked":');
+    expect(branch).toContain('case "transient_error":');
+  });
+
+  it("runs before the generic CAS-write transition logic", () => {
+    const rechecklndex = adminOrderActions.indexOf("isCardcomRecheckAction(transitionAction)");
+    const resolveIndex = adminOrderActions.indexOf("resolveTransition(transitionAction, ctx)");
+    expect(rechecklndex).toBeGreaterThan(-1);
+    expect(resolveIndex).toBeGreaterThan(-1);
+    expect(rechecklndex).toBeLessThan(resolveIndex);
   });
 });

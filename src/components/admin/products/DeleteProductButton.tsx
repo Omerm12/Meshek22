@@ -19,13 +19,18 @@ export function DeleteProductButton({ id, name }: DeleteProductButtonProps) {
   const handleDelete = () => {
     setError("");
     startTransition(async () => {
-      const result = await deleteProduct(id);
-      if (!result.success) {
-        setError(result.error);
-        return;
+      try {
+        const result = await deleteProduct(id);
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        console.error("[DeleteProductButton] delete failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
-      setOpen(false);
-      router.refresh();
     });
   };
 

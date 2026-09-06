@@ -23,6 +23,7 @@ import {
 
 export const TRANSITION_ACTIONS = [
   "phone_credit_paid",
+  "recheck_cardcom_payment",
   "start_preparing",
   "mark_out_for_delivery",
   "mark_ready_for_pickup",
@@ -32,6 +33,17 @@ export const TRANSITION_ACTIONS = [
 ] as const;
 
 export type TransitionAction = (typeof TRANSITION_ACTIONS)[number];
+
+/**
+ * "recheck_cardcom_payment" does not fit the CAS-write shape every other
+ * action has: it calls out to CardCom and lets the shared finalizer's own
+ * atomic compare-and-set decide the outcome, rather than writing a
+ * pre-decided next status. The Server Action must special-case it before
+ * reaching resolveTransition/the generic update.
+ */
+export function isCardcomRecheckAction(action: TransitionAction): boolean {
+  return action === "recheck_cardcom_payment";
+}
 
 export function isTransitionAction(value: unknown): value is TransitionAction {
   return typeof value === "string" && (TRANSITION_ACTIONS as readonly string[]).includes(value);
@@ -103,6 +115,17 @@ export function getAvailableActions(ctx: OrderPresentationContext): AvailableAct
           tone: "primary",
           requiresCashConfirmation: false,
           confirmMessage: "לאשר שהתשלום התקבל מהלקוח והזמנה תעבור לטיפול?",
+        });
+      }
+      // A card order still waiting on the webhook. This never marks the order
+      // paid by itself — it asks CardCom directly through the same verified
+      // path the webhook uses, in case the webhook was delayed or lost.
+      if (ctx.paymentMethod === "credit_card" && ctx.paymentStatus !== "paid") {
+        actions.push({
+          action: "recheck_cardcom_payment",
+          label: "בדיקת סטטוס מול קארדקום",
+          tone: "primary",
+          requiresCashConfirmation: false,
         });
       }
       break;

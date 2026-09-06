@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Search, CheckCircle2, XCircle, Loader2, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/utils/money";
-import type { DeliveryZone } from "@/lib/delivery";
+import { formatDeliveryDays, type DeliveryZone } from "@/lib/delivery";
 
 interface Settlement {
   name: string;
@@ -133,6 +133,7 @@ function FoundResult({
   onReset: () => void;
 }) {
   const isFree = zone.delivery_fee_agorot === 0;
+  const deliveryDaysLabel = formatDeliveryDays(zone.delivery_days);
 
   return (
     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 mt-6 overflow-hidden">
@@ -142,6 +143,11 @@ function FoundResult({
         <div>
           <p className="text-base font-bold text-emerald-800 leading-snug">מגיעים אליכם!</p>
           <p className="text-sm text-emerald-600 mt-0.5">משלוח זמין לאזורכם עם התנאים הבאים</p>
+          {deliveryDaysLabel && (
+            <p className="text-sm text-emerald-600 mt-1">
+              <span className="font-semibold">ימי משלוח:</span> {deliveryDaysLabel}
+            </p>
+          )}
         </div>
       </div>
 

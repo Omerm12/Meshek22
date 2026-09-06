@@ -186,11 +186,69 @@ export async function verifyAndFinalizeCardcomPayment(
     return { outcome: "blocked", reason: "return_value_mismatch" };
   }
 
+  // ── Operation ────────────────────────────────────────────────────────────
+  // This flow only ever creates ChargeOnly sessions. Any other operation (e.g.
+  // a token save) does not describe a completed charge and must never be
+  // treated as one.
+  if (lp.Operation !== "ChargeOnly") {
+    console.error("[cardcom:finalize]", {
+      event: "operation_mismatch",
+      ...ctx,
+      received: lp.Operation,
+    });
+    return { outcome: "blocked", reason: "operation_mismatch" };
+  }
+
+  // ── TranzactionInfo presence ─────────────────────────────────────────────
+  // ResponseCode === 0 with no transaction detail proves nothing was actually
+  // charged — every field below is read from this object.
+  if (!lp.TranzactionInfo) {
+    console.error("[cardcom:finalize]", { event: "tranzaction_info_missing", ...ctx });
+    return { outcome: "blocked", reason: "tranzaction_info_missing" };
+  }
+  const tranzactionInfo = lp.TranzactionInfo;
+
+  // ── TranzactionInfo.ResponseCode ─────────────────────────────────────────
+  // Distinct from the outer LowProfile ResponseCode: the session can succeed
+  // while the underlying charge attempt itself did not.
+  if (tranzactionInfo.ResponseCode !== 0) {
+    console.error("[cardcom:finalize]", {
+      event: "tranzaction_response_code_mismatch",
+      ...ctx,
+      received: tranzactionInfo.ResponseCode,
+    });
+    return { outcome: "blocked", reason: "tranzaction_response_code_mismatch" };
+  }
+
+  // ── TranzactionId ────────────────────────────────────────────────────────
+  if (tranzactionInfo.TranzactionId == null || tranzactionInfo.TranzactionId === "") {
+    console.error("[cardcom:finalize]", { event: "tranzaction_id_missing", ...ctx });
+    return { outcome: "blocked", reason: "tranzaction_id_missing" };
+  }
+
+  // ── CoinId ───────────────────────────────────────────────────────────────
+  // 1 = ILS. Anything else means the charge was not made in the currency the
+  // order total was computed in.
+  if (tranzactionInfo.CoinId !== 1) {
+    console.error("[cardcom:finalize]", {
+      event: "coin_id_mismatch",
+      ...ctx,
+      received: tranzactionInfo.CoinId,
+    });
+    return { outcome: "blocked", reason: "coin_id_mismatch" };
+  }
+
+  // ── Refund guard ─────────────────────────────────────────────────────────
+  if (tranzactionInfo.IsRefund === true) {
+    console.error("[cardcom:finalize]", { event: "is_refund", ...ctx });
+    return { outcome: "blocked", reason: "is_refund" };
+  }
+
   // ── Amount ───────────────────────────────────────────────────────────────
-  // Must be present and finite. 5 agorot tolerance for floating-point rounding
-  // at the shekel boundary.
-  const storedShekels  = order.total_agorot / 100;
-  const returnedAmount = lp.TranzactionInfo?.Amount;
+  // CardCom returns decimal shekels; Supabase stores integer agorot. Rounding
+  // to the nearest agora and comparing integers avoids ever comparing floats
+  // directly — a mismatch of even one agora blocks the payment.
+  const returnedAmount = tranzactionInfo.Amount;
   if (typeof returnedAmount !== "number" || !Number.isFinite(returnedAmount)) {
     console.error("[cardcom:finalize]", {
       event: "amount_missing",
@@ -199,12 +257,13 @@ export async function verifyAndFinalizeCardcomPayment(
     });
     return { outcome: "blocked", reason: "amount_missing" };
   }
-  if (Math.abs(returnedAmount - storedShekels) > 0.05) {
+  const verifiedAgorot = Math.round(returnedAmount * 100);
+  if (verifiedAgorot !== order.total_agorot) {
     console.error("[cardcom:finalize]", {
       event: "amount_mismatch",
       ...ctx,
-      storedShekels,
-      returnedShekels: returnedAmount,
+      storedAgorot: order.total_agorot,
+      verifiedAgorot,
     });
     return { outcome: "blocked", reason: "amount_mismatch" };
   }
@@ -233,13 +292,13 @@ export async function verifyAndFinalizeCardcomPayment(
   }
 
   // ── All checks passed ────────────────────────────────────────────────────
-  const approvalNumber = lp.TranzactionInfo?.ApprovalNumber ?? null;
+  const approvalNumber = tranzactionInfo.ApprovalNumber ?? null;
 
   console.log("[cardcom:finalize]", {
     event: "payment_verified",
     ...ctx,
     approvalNumber: approvalNumber ?? "n/a",
-    storedShekels,
+    verifiedAgorot,
   });
 
   // ── Atomic CAS: pending/failed → paid ────────────────────────────────────

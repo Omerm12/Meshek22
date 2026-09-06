@@ -19,13 +19,18 @@ export function DeleteSettlementButton({ id, name }: DeleteSettlementButtonProps
   const handleDelete = () => {
     setError("");
     startTransition(async () => {
-      const result = await deleteSettlement(id);
-      if (!result.success) {
-        setError(result.error);
-        return;
+      try {
+        const result = await deleteSettlement(id);
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        console.error("[DeleteSettlementButton] delete failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
-      setOpen(false);
-      router.refresh();
     });
   };
 

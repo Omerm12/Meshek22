@@ -35,8 +35,13 @@ export function ProductCard({ product, className, priority = false }: ProductCar
   const { requestAdd } = useDeliveryGate();
   const imageRef = useRef<HTMLDivElement>(null);
 
+  // A variant genuinely on sale takes priority over "isDefault" — otherwise a
+  // product with a sale price on a non-default variant (e.g. the per-kg option)
+  // would show no discount at all unless the customer happens to switch to it.
   const defaultVariant: MockVariant | undefined =
-    product.variants.find((v) => v.isDefault) ?? product.variants[0];
+    product.variants.find((v) => v.comparePriceAgorot !== null && v.comparePriceAgorot > v.priceAgorot) ??
+    product.variants.find((v) => v.isDefault) ??
+    product.variants[0];
 
   const [selectedVariant, setSelectedVariant] = useState<MockVariant | undefined>(defaultVariant);
 
@@ -183,11 +188,11 @@ export function ProductCard({ product, className, priority = false }: ProductCar
           </div>
         )}
 
-        {/* ── Discount badge: "-20%" ─────────────────────────────────────── */}
+        {/* ── Discount badge: compact "20% הנחה" pill, same weight as the deal badge ── */}
         {hasSale && (
-          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 flex items-center justify-center bg-red-500 rounded-lg min-w-[38px] md:min-w-[44px] px-1.5 md:px-2 py-1 md:py-1.5 shadow-[0_3px_10px_rgba(220,38,38,0.5)]">
-            <span className="text-[14px] md:text-[17px] font-black text-white leading-none tracking-tight tabular-nums">
-              -{discountPct}%
+          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-red-500 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(220,38,38,0.45)]">
+            <span className="text-[11px] md:text-[12px] font-black text-white leading-none tracking-tight whitespace-nowrap">
+              {discountPct}% הנחה
             </span>
           </div>
         )}
@@ -250,7 +255,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
 
             {/* Original price (strikethrough) */}
             {hasSale && (
-              <span className="text-[11px] font-medium text-stone-400 line-through mt-1 leading-none">
+              <span className="text-[13px] md:text-[14px] font-medium text-stone-400 line-through mt-1 leading-none">
                 {formatPrice(selectedVariant.comparePriceAgorot!)}
               </span>
             )}

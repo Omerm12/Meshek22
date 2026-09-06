@@ -62,9 +62,14 @@ describe("CardCom orders cannot be settled by hand", () => {
     paymentMethod: "credit_card",
   });
 
-  it("offers no payment action, only cancellation", () => {
+  it("offers no manual settlement action, only a CardCom recheck and cancellation", () => {
     expect(actionNames(cardPending)).not.toContain("phone_credit_paid");
-    expect(actionNames(cardPending)).toEqual(["cancel"]);
+    expect(actionNames(cardPending)).toEqual(["recheck_cardcom_payment", "cancel"]);
+  });
+
+  it("the recheck action is absent once the order is actually paid", () => {
+    const paid = { ...cardPending, paymentStatus: "paid" };
+    expect(actionNames(paid)).not.toContain("recheck_cardcom_payment");
   });
 
   it("explains that the card company decides", () => {

@@ -24,7 +24,7 @@ export async function fetchDeliveryGateData(): Promise<DeliveryGateData> {
     adminClient
       .from("delivery_zones")
       .select(
-        "id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot, estimated_delivery_hours"
+        "id, name, delivery_fee_agorot, free_delivery_threshold_agorot, min_order_agorot, estimated_delivery_hours, delivery_days"
       )
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),

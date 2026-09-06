@@ -171,9 +171,14 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
     fd.set("variant_ids", JSON.stringify(selected.map((v) => v.variantId)));
 
     startTransition(async () => {
-      const result = await action(fd);
-      // A successful create/update redirects, so reaching here means failure.
-      if (result && !result.success) setError(result.error);
+      try {
+        const result = await action(fd);
+        // A successful create/update redirects, so reaching here means failure.
+        if (result && !result.success) setError(result.error);
+      } catch (err) {
+        console.error("[PromotionForm] submit failed", err);
+        setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
+      }
     });
   };
 

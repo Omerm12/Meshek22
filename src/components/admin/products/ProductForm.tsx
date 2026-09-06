@@ -149,9 +149,14 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
     fd.set("data", JSON.stringify(data));
 
     startTransition(async () => {
-      const result = await action(fd);
-      if (result && !result.success) {
-        setServerError(result.error);
+      try {
+        const result = await action(fd);
+        if (result && !result.success) {
+          setServerError(result.error);
+        }
+      } catch (err) {
+        console.error("[ProductForm] submit failed", err);
+        setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
     });
   };

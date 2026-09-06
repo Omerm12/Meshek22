@@ -17,9 +17,14 @@ export interface LpResult {
   ReturnValue?: string;
   LowProfileId?: string;
   TerminalNumber?: number;
+  Operation?: string;
   TranzactionInfo?: {
+    ResponseCode?: number;
+    TranzactionId?: number | string;
     Amount?: number;
     ApprovalNumber?: string;
+    CoinId?: number;
+    IsRefund?: boolean;
     [key: string]: unknown;
   };
   [key: string]: unknown;
