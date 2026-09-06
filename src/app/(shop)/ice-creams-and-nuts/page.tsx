@@ -1,40 +1,15 @@
-import type { Metadata } from "next";
-import { getCategoryHero } from "@/lib/config/category-heroes";
-import { ICE_CREAMS_AND_NUTS_SLUG } from "@/lib/config/nav-categories";
-import { fetchProductsByCategory } from "@/lib/data/storefront";
-import { ParentCategoryShell } from "@/components/shop/ParentCategoryShell";
-
-export const revalidate = 60;
-
-export const metadata: Metadata = {
-  title: "גלידות ופיצוחים – משק 22",
-  description:
-    "משהו מתוק, משהו מלוח — גלידות, ארטיקים, אגוזים ופיצוחים, הכל בעמוד אחד ובמשלוח אחד.",
-};
+import { permanentRedirect } from "next/navigation";
+import { MERGED_CATEGORY_REDIRECTS } from "@/lib/config/nav-categories";
 
 /**
- * גלידות ופיצוחים — one flat category, one page.
+ * Legacy route.
  *
- * There is exactly one database category (`ice-creams-and-nuts`) and no children,
- * so this page has no subcategory tabs and no `?sub=` filtering. Every product
- * the administrator files under the category appears here once, in the same grid,
- * with the same cards, cart behaviour and promotion pricing as every other
- * category page.
- *
- * fetchProductsByCategory reads by category slug directly, so a product can only
- * be returned once — there is no parent/child union to deduplicate.
+ * גלידות ופיצוחים is no longer a customer-facing page of its own — its
+ * category row was renamed and broadened into עוד מהמשק (more-from-the-farm),
+ * which is where every product previously filed here still lives (same row,
+ * same id, nothing moved). This route issues a permanent (308) redirect so
+ * old bookmarks and search results keep working.
  */
-export default async function IceCreamsAndNutsPage() {
-  const heroConfig = getCategoryHero(ICE_CREAMS_AND_NUTS_SLUG);
-  const products = await fetchProductsByCategory(ICE_CREAMS_AND_NUTS_SLUG);
-
-  return (
-    <ParentCategoryShell
-      heroConfig={heroConfig}
-      parentSlug={ICE_CREAMS_AND_NUTS_SLUG}
-      subcategories={[]}
-      products={products}
-      activeSubSlug={null}
-    />
-  );
+export default function LegacyIceCreamsAndNutsPage(): never {
+  permanentRedirect(MERGED_CATEGORY_REDIRECTS["/ice-creams-and-nuts"]);
 }

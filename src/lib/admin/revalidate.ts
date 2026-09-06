@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { ICE_CREAMS_AND_NUTS_HREF } from "@/lib/config/nav-categories";
+import { MORE_FROM_THE_FARM_HREF } from "@/lib/config/nav-categories";
 
 /**
  * Storefront paths that render catalog or promotion data.
@@ -14,9 +14,10 @@ const STOREFRONT_PATHS = [
   "/promotions",
   "/vegetables",
   "/fruits",
-  // The combined ice-cream + nut page. /ice-creams and /nuts are permanent
-  // redirects with nothing to revalidate.
-  ICE_CREAMS_AND_NUTS_HREF,
+  // עוד מהמשק (formerly the combined ice-cream + nut page). /ice-creams,
+  // /nuts and /ice-creams-and-nuts are permanent redirects with nothing to
+  // revalidate.
+  MORE_FROM_THE_FARM_HREF,
   "/search",
 ] as const;
 

@@ -23,7 +23,7 @@ import {
   isPromotionalProduct,
 } from "@/lib/data/promotions";
 import { buildVariantPromotionMap } from "@/lib/promotions/engine";
-import { ICE_CREAMS_AND_NUTS_SLUG } from "@/lib/config/nav-categories";
+import { MORE_FROM_THE_FARM_SLUG } from "@/lib/config/nav-categories";
 import type { Promotion } from "@/lib/promotions/types";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
 
@@ -246,9 +246,9 @@ export async function fetchTopLevelCategories(): Promise<MockCategory[]> {
  * `includesChildren` mirrors how the destination page selects its products, so
  * a card's number always equals what the customer finds after clicking it:
  *   • true  → fetchProductsByParentCategorySlug(): the category AND its active
- *             direct children (what /vegetables and /fruits render)
- *   • false → fetchProductsByCategory(): that category only (what
- *             /ice-creams-and-nuts renders)
+ *             direct children (what /vegetables, /fruits and
+ *             /more-from-the-farm all render)
+ *   • false → fetchProductsByCategory(): that category only
  */
 const HOMEPAGE_CARDS: {
   slug: string;
@@ -257,15 +257,10 @@ const HOMEPAGE_CARDS: {
 }[] = [
   { slug: "vegetables", includesChildren: true },
   { slug: "fruits", includesChildren: true },
-  {
-    // Destination and product count both come from the combined
-    // ice-creams-and-nuts category — only the wording on the card differs, as
-    // requested. The slug drives the href, so the whole card opens
-    // /ice-creams-and-nuts.
-    slug: ICE_CREAMS_AND_NUTS_SLUG,
-    label: "ביצים ומוצרי חלב",
-    includesChildren: false,
-  },
+  // "עוד מהמשק": the renamed ice-creams-and-nuts parent plus its seven child
+  // categories (some of which start out empty until products are filed under
+  // them) — same includesChildren pattern as vegetables/fruits above.
+  { slug: MORE_FROM_THE_FARM_SLUG, includesChildren: true },
 ];
 
 /**
@@ -325,10 +320,12 @@ export async function fetchHomepageCategories(): Promise<MockCategory[]> {
     const row = bySlug.get(slug);
     const display = getCategoryDisplay(slug);
 
-    // The combined ice-creams-and-nuts category is created by migration
-    // 20260808_001, which has not been applied. Until it runs the row does not
-    // exist, but its page does, so the card is still shown — with a count of 0,
-    // which is exactly what that page renders. The number is never invented.
+    // A homepage card's underlying category row may not exist yet if its
+    // migration has not been applied in this environment — e.g. more-from-the-farm
+    // is created by 20260906_more_from_the_farm_categories.sql. Until it runs the
+    // row does not exist, but its page does, so the card is still shown — with a
+    // count of 0, which is exactly what that page renders. The number is never
+    // invented.
     if (!row) {
       return {
         id: `missing:${slug}`,
@@ -497,8 +494,8 @@ export function collectCategoryIds(
  * A product carries exactly one category_id, so the parent-plus-children query
  * cannot currently return the same product twice. This makes the "listed exactly
  * once" guarantee explicit and testable rather than an implicit consequence of
- * the schema, which matters for the combined גלידות ופיצוחים page where three
- * categories feed one grid.
+ * the schema, which matters for a page like עוד מהמשק where up to eight
+ * categories (the parent plus its seven children) feed one grid.
  */
 export function dedupeProductsById(products: MockProduct[]): MockProduct[] {
   const seen = new Set<string>();
@@ -517,8 +514,9 @@ export function dedupeProductsById(products: MockProduct[]): MockProduct[] {
  *   • products assigned directly to the parent category, and
  *   • products assigned to any of its active child categories.
  *
- * This is what lets גלידות ופיצוחים show products filed under the combined
- * parent, under גלידות, or under פיצוחים — each appearing exactly once.
+ * This is what lets עוד מהמשק show products filed directly under its own
+ * (renamed, formerly combined) parent row alongside products filed under any
+ * of its seven child categories — each appearing exactly once.
  */
 export async function fetchProductsByParentCategorySlug(
   parentSlug: string

@@ -6,7 +6,7 @@ const FOOTER_LINKS = {
     { label: "מבצעים",        href: "/promotions" },
     { label: "ירקות",         href: "/vegetables" },
     { label: "פירות",         href: "/fruits" },
-    { label: "גלידות ופיצוחים", href: "/ice-creams-and-nuts" },
+    { label: "עוד מהמשק",       href: "/more-from-the-farm" },
     { label: "עשבי תיבול",    href: "/vegetables?sub=herbs" },
   ],
   info: [

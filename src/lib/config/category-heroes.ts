@@ -8,7 +8,7 @@
  * optionally decorativeGradient) and be rendered entirely in CSS.
  */
 
-import { ICE_CREAMS_AND_NUTS_SLUG } from "@/lib/config/nav-categories";
+import { MORE_FROM_THE_FARM_SLUG } from "@/lib/config/nav-categories";
 
 export interface CategoryHeroConfig {
   title: string;
@@ -84,12 +84,14 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
     accentClass: "bg-rose-600",
     headingColor: "text-white",
   },
-  // Combined ice-cream + nut category.
+  // "עוד מהמשק" — a broader catch-all category (formerly the combined
+  // ice-cream + nut category, גלידות ופיצוחים).
   //
-  // The photograph is a 2172×724 panorama (≈3:1): ice creams on one side, bowls
-  // of nuts on the other, and a deliberately empty mottled centre that the
-  // heading and subtitle sit in. Everything below is chosen to keep that centre
-  // band on screen at every width.
+  // Reuses the same banner photograph temporarily: a 2172×724 panorama (≈3:1)
+  // with ice creams on one side, bowls of nuts on the other, and a deliberately
+  // empty mottled centre that the heading and subtitle sit in. Everything below
+  // is chosen to keep that centre band on screen at every width, exactly as it
+  // did for the combined category this replaces.
   //
   // Cropping — object-fit: cover with the default centred focal point:
   //   • Mobile (375×250, ≈1.5:1)  the image is far wider than the box, so cover
@@ -113,11 +115,11 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
   //
   // backgroundGradient is retained underneath as the paint shown if the image
   // ever fails to load — it is invisible while the photo is present.
-  [ICE_CREAMS_AND_NUTS_SLUG]: {
-    title: "גלידות ופיצוחים",
-    subtitle: "משהו מתוק, משהו מלוח — כל הפינוקים במקום אחד.",
+  [MORE_FROM_THE_FARM_SLUG]: {
+    title: "עוד מהמשק",
+    subtitle: "מגוון מוצרים נוספים ממשק 22 — תבלינים, ביצים, פיצוחים, שמן זית ועוד.",
     imageSrc: "/images/heroes/8e8052e1-1d80-4837-bd6d-ac93c4394d8a.png",
-    imageAlt: "גלידות, ארטיקים וקערות פיצוחים על שולחן עץ במשק 22",
+    imageAlt: "מגוון מוצרים נוספים ממשק 22",
     imageObjectFit: "cover",
     imageObjectPosition: "center",
     fallbackBg: "bg-slate-900",

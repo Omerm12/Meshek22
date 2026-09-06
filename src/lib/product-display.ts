@@ -40,6 +40,16 @@ export const CATEGORY_DISPLAY: Record<string, CategoryDisplay> = {
   "dried-fruits":           { icon: "🍑", color: "bg-amber-50",   textColor: "text-amber-700" },
   "organic-fruits":         { icon: "🌱", color: "bg-green-50",   textColor: "text-green-700" },
 
+  // ── "עוד מהמשק" parent and its sub-categories ────────────────────────────
+  "more-from-the-farm":     { icon: "🧺", color: "bg-slate-50",   textColor: "text-slate-700" },
+  spices:                   { icon: "🌶️", color: "bg-red-50",     textColor: "text-red-700" },
+  eggs:                     { icon: "🥚", color: "bg-yellow-50",  textColor: "text-yellow-700" },
+  nuts:                     { icon: "🥜", color: "bg-amber-50",   textColor: "text-amber-700" },
+  "olive-oil":              { icon: "🫒", color: "bg-lime-50",    textColor: "text-lime-700" },
+  "crunchy-vegetables":     { icon: "🥕", color: "bg-orange-50",  textColor: "text-orange-700" },
+  "knives-and-peelers":     { icon: "🔪", color: "bg-stone-50",   textColor: "text-stone-700" },
+  "ice-creams":             { icon: "🍦", color: "bg-sky-50",     textColor: "text-sky-700" },
+
   // ── Legacy slugs (backwards compat) ─────────────────────────────────────
   yerakot:                  { icon: "🥬", color: "bg-green-50",   textColor: "text-green-700" },
   perot:                    { icon: "🍎", color: "bg-red-50",     textColor: "text-red-700" },

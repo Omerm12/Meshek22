@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PARENT_CATEGORY_NAV, MERGED_CATEGORY_REDIRECTS, ICE_CREAMS_AND_NUTS_SLUG } from "@/lib/config/nav-categories";
+import { PARENT_CATEGORY_NAV, MERGED_CATEGORY_REDIRECTS, MORE_FROM_THE_FARM_SLUG } from "@/lib/config/nav-categories";
 
 /**
  * The combined-category migration is plain SQL, so it cannot be executed here
@@ -75,22 +75,28 @@ describe("combined category migration", () => {
   });
 });
 
-describe("combined category in the application", () => {
-  it("exposes exactly one navigation entry, with no children", () => {
-    const entries = PARENT_CATEGORY_NAV.filter((c) => c.slug === ICE_CREAMS_AND_NUTS_SLUG);
+describe("combined category in the application (as it stood right after 20260808_001)", () => {
+  // 20260906_more_from_the_farm_categories.sql (see
+  // more-from-the-farm-migration.test.ts) later renamed and reparented this
+  // same row into עוד מהמשק with real children. These assertions describe the
+  // interim state this migration alone produced, and are kept as regression
+  // coverage for that file, which has not changed.
+  it("the row this migration created is the same one עוד מהמשק reuses", () => {
+    const entries = PARENT_CATEGORY_NAV.filter((c) => c.slug === MORE_FROM_THE_FARM_SLUG);
     expect(entries).toHaveLength(1);
-    expect(entries[0].label).toBe("גלידות ופיצוחים");
-    expect(entries[0].children).toEqual([]);
+    expect(entries[0].label).toBe("עוד מהמשק");
+    // Now populated with the seven required children — no longer empty.
+    expect(entries[0].children.length).toBe(7);
   });
 
-  it("offers no separate ice-cream or nut category anywhere in the nav", () => {
-    const slugs = PARENT_CATEGORY_NAV.flatMap((c) => [c.slug, ...c.children.map((ch) => ch.slug)]);
+  it("ice-creams and nuts are not separate top-level categories", () => {
+    const slugs = PARENT_CATEGORY_NAV.map((c) => c.slug);
     expect(slugs).not.toContain("ice-creams");
     expect(slugs).not.toContain("nuts");
   });
 
-  it("keeps both legacy routes redirecting to the combined page", () => {
-    expect(MERGED_CATEGORY_REDIRECTS["/ice-creams"]).toBe("/ice-creams-and-nuts");
-    expect(MERGED_CATEGORY_REDIRECTS["/nuts"]).toBe("/ice-creams-and-nuts");
+  it("routes both legacy slugs to their child tab on the new parent page", () => {
+    expect(MERGED_CATEGORY_REDIRECTS["/ice-creams"]).toBe("/more-from-the-farm?sub=ice-creams");
+    expect(MERGED_CATEGORY_REDIRECTS["/nuts"]).toBe("/more-from-the-farm?sub=nuts");
   });
 });

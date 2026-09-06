@@ -29,25 +29,29 @@ export interface NavLink {
 }
 
 /**
- * The combined ice-cream + nut category.
+ * The broader "עוד מהמשק" parent category (formerly the combined ice-cream +
+ * nut category, גלידות ופיצוחים).
  *
  * Declared as constants because the slug and path are referenced by the nav, the
  * page, the hero config, the revalidation list and the legacy redirects — one
  * definition keeps them from drifting apart.
  */
-export const ICE_CREAMS_AND_NUTS_SLUG = "ice-creams-and-nuts";
-export const ICE_CREAMS_AND_NUTS_HREF = `/${ICE_CREAMS_AND_NUTS_SLUG}`;
+export const MORE_FROM_THE_FARM_SLUG = "more-from-the-farm";
+export const MORE_FROM_THE_FARM_HREF = `/${MORE_FROM_THE_FARM_SLUG}`;
 
 /**
- * Storefront routes that were merged into a combined category page.
+ * Storefront routes that were merged into the "עוד מהמשק" category page.
  *
  * Each key is a retired top-level path; the value is where it now permanently
  * redirects (308). Old bookmarks, printed material and search results keep
- * working, and the child slugs stay valid for admin product assignment.
+ * working. /ice-creams and /nuts land directly on their matching child
+ * subcategory tab (the same `?sub=` pattern the fruits/vegetables pages use),
+ * since both still exist as real, selectable child categories.
  */
 export const MERGED_CATEGORY_REDIRECTS: Record<string, string> = {
-  "/ice-creams": ICE_CREAMS_AND_NUTS_HREF,
-  "/nuts":       ICE_CREAMS_AND_NUTS_HREF,
+  "/ice-creams-and-nuts": MORE_FROM_THE_FARM_HREF,
+  "/ice-creams":          `${MORE_FROM_THE_FARM_HREF}?sub=ice-creams`,
+  "/nuts":                `${MORE_FROM_THE_FARM_HREF}?sub=nuts`,
 };
 
 export const PARENT_CATEGORY_NAV: NavParentCategory[] = [
@@ -79,18 +83,23 @@ export const PARENT_CATEGORY_NAV: NavParentCategory[] = [
       { label: "פירות אורגניים", slug: "organic-fruits", href: "/fruits?sub=organic-fruits", icon: "🌱" },
     ],
   },
-  // גלידות and פיצוחים are one customer-facing category. They still exist as
-  // child categories in the database so the shop owner can file a product as
-  // one or the other, but neither gets its own page or its own nav entry —
-  // `children` is empty here so the header renders a single link with no
-  // dropdown. Customers narrow the combined page down with the on-page filter
-  // tabs, which the shell builds from the database.
+  // A broader catch-all category, built with the same parent/child pattern as
+  // ירקות and פירות above: real child categories the customer can select, and
+  // a page that behaves exactly like the fruits/vegetables pages.
   {
-    label: "גלידות ופיצוחים",
-    slug: ICE_CREAMS_AND_NUTS_SLUG,
-    href: ICE_CREAMS_AND_NUTS_HREF,
-    icon: "🍦",
-    children: [],
+    label: "עוד מהמשק",
+    slug: MORE_FROM_THE_FARM_SLUG,
+    href: MORE_FROM_THE_FARM_HREF,
+    icon: "🧺",
+    children: [
+      { label: "תבלינים",         slug: "spices",              href: `${MORE_FROM_THE_FARM_HREF}?sub=spices`,              icon: "🌶️" },
+      { label: "ביצים",           slug: "eggs",                href: `${MORE_FROM_THE_FARM_HREF}?sub=eggs`,                icon: "🥚" },
+      { label: "פיצוחים",         slug: "nuts",                href: `${MORE_FROM_THE_FARM_HREF}?sub=nuts`,                icon: "🥜" },
+      { label: "שמן זית",         slug: "olive-oil",           href: `${MORE_FROM_THE_FARM_HREF}?sub=olive-oil`,           icon: "🫒" },
+      { label: "ירקות קרנצ'ים",  slug: "crunchy-vegetables",  href: `${MORE_FROM_THE_FARM_HREF}?sub=crunchy-vegetables`,  icon: "🥕" },
+      { label: "סכינים ומקלפים",  slug: "knives-and-peelers", href: `${MORE_FROM_THE_FARM_HREF}?sub=knives-and-peelers`,  icon: "🔪" },
+      { label: "גלידות",          slug: "ice-creams",          href: `${MORE_FROM_THE_FARM_HREF}?sub=ice-creams`,          icon: "🍦" },
+    ],
   },
 ];
 
