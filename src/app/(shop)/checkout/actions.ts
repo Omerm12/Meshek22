@@ -343,7 +343,11 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
   });
 
   if (rpcError || !rpcResult || rpcResult.length === 0) {
+    // A short, non-guessable id the customer can quote to support without the
+    // browser ever seeing the actual (potentially sensitive) database error.
+    const referenceId = crypto.randomUUID().slice(0, 8).toUpperCase();
     console.error("[createOrder] create_guest_order_atomic failed", {
+      referenceId,
       code:    rpcError?.code,
       message: rpcError?.message,
       details: rpcError?.details,
@@ -359,7 +363,9 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       };
     }
 
-    return { error: "שגיאה ביצירת ההזמנה. נא לנסות שוב." };
+    return {
+      error: `אירעה שגיאה ביצירת ההזמנה. נא לנסות שוב בעוד מספר רגעים. אם השגיאה חוזרת, ניתן לפנות אלינו עם מספר האסמכתא ${referenceId}.`,
+    };
   }
 
   const { out_order_id: orderId, out_order_number: orderNumber, out_is_duplicate: isDuplicate } =
@@ -367,8 +373,10 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
 
   const successUrl = buildSuccessUrl(orderNumber, accessToken);
 
-  // ── 7. Offline payment methods: done here, no CardCom involved ────────────
-  if (paymentMethod === "cash" || paymentMethod === "phone_credit") {
+  // ── 7. Cash on delivery: done here, no CardCom involved ────────────────────
+  // "phone_credit" ("נציג יתקשר") was removed from checkout — see
+  // NEW_ORDER_PAYMENT_METHODS — so paymentMethod is never that value here.
+  if (paymentMethod === "cash") {
     // Emails are idempotent at the database level, so an idempotent replay of
     // the same submission does not produce a second message.
     await sendOrderEmails(orderId, db);

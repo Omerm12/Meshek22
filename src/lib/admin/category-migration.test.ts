@@ -10,7 +10,7 @@ import { PARENT_CATEGORY_NAV, MERGED_CATEGORY_REDIRECTS, MORE_FROM_THE_FARM_SLUG
  * file, plus the application-side guarantees around it.
  */
 const migration = readFileSync(
-  join(process.cwd(), "supabase/migrations/20260808_001_ice_cream_nuts_categories.sql"),
+  join(process.cwd(), "supabase/migrations/20260808000100_ice_cream_nuts_categories.sql"),
   "utf8"
 );
 

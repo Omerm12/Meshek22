@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  * that must call them.
  */
 const migration = readFileSync(
-  "supabase/migrations/20260808_006_transactional_integrity.sql",
+  "supabase/migrations/20260808000600_transactional_integrity.sql",
   "utf8"
 );
 const promotionActions = readFileSync(
@@ -151,7 +151,7 @@ describe("stock reservation", () => {
 
 describe("category migration is self-contained", () => {
   const categoryMigration = readFileSync(
-    "supabase/migrations/20260808_001_ice_cream_nuts_categories.sql",
+    "supabase/migrations/20260808000100_ice_cream_nuts_categories.sql",
     "utf8"
   );
 
@@ -180,7 +180,7 @@ describe("category migration is self-contained", () => {
 // ─── Index deduplication ──────────────────────────────────────────────────────
 
 describe("admin performance indexes", () => {
-  const perf = readFileSync("supabase/migrations/20260808_004_admin_performance.sql", "utf8");
+  const perf = readFileSync("supabase/migrations/20260808000400_admin_performance.sql", "utf8");
   const initial = readFileSync("supabase/migrations/001_initial_schema.sql", "utf8");
 
   it("no longer duplicates indexes the initial schema already creates", () => {

@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Loader2,
   Banknote,
-  PhoneCall,
   CreditCard,
   Tag,
 } from "lucide-react";
@@ -22,16 +21,17 @@ import Image from "next/image";
 import { useCart } from "@/store/cart";
 import { formatPrice } from "@/lib/utils/money";
 import supabaseImageLoader from "@/lib/utils/supabase-image-loader";
-import { getDeliveryQuote } from "@/lib/delivery";
+import { getDeliveryQuote, formatDeliveryDays } from "@/lib/delivery";
 import type { DeliveryZone } from "@/lib/delivery";
 import { createOrder } from "@/app/(shop)/checkout/actions";
 import type { CheckoutSettlement } from "@/app/(shop)/checkout/page";
 import { PaymentRedirectOverlay } from "@/components/checkout/PaymentRedirectOverlay";
+import { CardBrandNotice } from "@/components/checkout/CardBrandNotice";
 import { formatPromotionProgress } from "@/lib/promotions/engine";
 import {
   PICKUP_LOCATION,
   type FulfillmentMethod,
-  type PaymentMethod,
+  type NewOrderPaymentMethod,
 } from "@/lib/checkout/constants";
 
 interface CheckoutFormProps {
@@ -122,7 +122,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
 
   // ── Fulfillment + payment ──────────────────────────────────────────────────
   const [fulfillment, setFulfillment] = useState<FulfillmentMethod>("delivery");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit_card");
+  const [paymentMethod, setPaymentMethod] = useState<NewOrderPaymentMethod>("credit_card");
 
   // ── Address state ──────────────────────────────────────────────────────────
   const [city, setCity] = useState("");
@@ -194,7 +194,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
       const d = JSON.parse(raw) as Partial<{
         name: string; phone: string; email: string; notes: string;
         city: string; street: string; houseNumber: string; apartment: string;
-        fulfillment: FulfillmentMethod; paymentMethod: PaymentMethod;
+        fulfillment: FulfillmentMethod; paymentMethod: string;
       }>;
       if (d.name        !== undefined) setName(d.name);
       if (d.phone       !== undefined) setPhone(d.phone);
@@ -205,7 +205,11 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
       if (d.houseNumber !== undefined) setHouseNumber(d.houseNumber);
       if (d.apartment   !== undefined) setApartment(d.apartment);
       if (d.fulfillment === "delivery" || d.fulfillment === "pickup") setFulfillment(d.fulfillment);
-      if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      // A draft saved before "phone_credit" was removed may still carry it —
+      // silently fall back to the default rather than restore a removed option.
+      if (d.paymentMethod === "credit_card" || d.paymentMethod === "cash") {
+        setPaymentMethod(d.paymentMethod);
+      }
     } catch {}
   }, []);
 
@@ -495,6 +499,11 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                         עוד {formatPrice(quote.remainingForFree)} למשלוח חינם
                       </span>
                     )}
+                    <span className="block text-xs text-brand-600 mt-0.5">
+                      ימי משלוח:{" "}
+                      {formatDeliveryDays(selectedZone?.delivery_days) ??
+                        "ימי המשלוח יתואמו לאחר ביצוע ההזמנה."}
+                    </span>
                   </div>
                 </div>
               ) : (
@@ -587,15 +596,18 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
 
             <fieldset className="flex flex-col gap-3">
               <legend className="sr-only">בחירת אמצעי תשלום</legend>
-              <ChoiceCard
-                name="payment_method"
-                value="credit_card"
-                checked={paymentMethod === "credit_card"}
-                onSelect={() => setPaymentMethod("credit_card")}
-                icon={<ShieldCheck className="h-4 w-4" />}
-                title="תשלום מאובטח באשראי באתר"
-                description="מעבר לעמוד תשלום מאובטח"
-              />
+              <div>
+                <ChoiceCard
+                  name="payment_method"
+                  value="credit_card"
+                  checked={paymentMethod === "credit_card"}
+                  onSelect={() => setPaymentMethod("credit_card")}
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                  title="תשלום מאובטח באשראי באתר"
+                  description="מעבר לעמוד תשלום מאובטח"
+                />
+                {paymentMethod === "credit_card" && <CardBrandNotice />}
+              </div>
               <ChoiceCard
                 name="payment_method"
                 value="cash"
@@ -608,15 +620,6 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                     ? "התשלום נגבה בעת מסירת המשלוח"
                     : "התשלום נגבה בעת האיסוף במשק"
                 }
-              />
-              <ChoiceCard
-                name="payment_method"
-                value="phone_credit"
-                checked={paymentMethod === "phone_credit"}
-                onSelect={() => setPaymentMethod("phone_credit")}
-                icon={<PhoneCall className="h-4 w-4" />}
-                title="נציג יתקשר לקבלת פרטי אשראי"
-                description="לא נבקש פרטי אשראי באתר"
               />
             </fieldset>
           </div>
@@ -805,10 +808,8 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
                   תשלום מאובטח · Bit · כרטיס אשראי
                 </>
-              ) : paymentMethod === "cash" ? (
-                <span>התשלום יבוצע במזומן בעת קבלת ההזמנה</span>
               ) : (
-                <span>נציג יצור אתכם קשר לקבלת פרטי האשראי</span>
+                <span>התשלום יבוצע במזומן בעת קבלת ההזמנה</span>
               )}
             </div>
           </div>

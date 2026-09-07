@@ -135,7 +135,7 @@ describe("cash and phone-credit orders", () => {
     expect(sendAdmin).toHaveBeenCalledTimes(1);
   });
 
-  it("emails both for a phone-credit order", async () => {
+  it("emails both for a historical phone-credit order (legacy method, no longer offered at checkout)", async () => {
     const db = makeDb(makeOrder({ payment_method: "phone_credit" }));
     await sendOrderEmails("order-1", asClient(db));
 
@@ -229,9 +229,10 @@ describe("failure handling", () => {
 
 describe("unverified CardCom attempts send no operational email", () => {
   it("is never triggered by order creation for the online-card path", async () => {
-    // Guard against a regression in the checkout Server Action: only the cash and
-    // phone-credit branches may email at creation time. A CardCom order is
-    // emailed by cardcomFinalize AFTER the webhook verifies the payment.
+    // Guard against a regression in the checkout Server Action: only the cash
+    // branch may email at creation time (phone_credit is a historical payment
+    // method, no longer offered at checkout). A CardCom order is emailed by
+    // cardcomFinalize AFTER the webhook verifies the payment.
     const source = await import("node:fs").then((fs) =>
       fs.readFileSync("src/app/(shop)/checkout/actions.ts", "utf8")
     );
@@ -239,8 +240,8 @@ describe("unverified CardCom attempts send no operational email", () => {
     const callIndex = source.indexOf("sendOrderEmails(");
     expect(callIndex).toBeGreaterThan(-1);
 
-    // The only call site sits inside the offline-payment branch.
-    const branchIndex = source.indexOf('paymentMethod === "cash" || paymentMethod === "phone_credit"');
+    // The only call site sits inside the cash-payment branch.
+    const branchIndex = source.indexOf('paymentMethod === "cash"');
     expect(branchIndex).toBeGreaterThan(-1);
     expect(branchIndex).toBeLessThan(callIndex);
 

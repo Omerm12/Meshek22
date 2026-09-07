@@ -80,7 +80,7 @@ describe("checkout validation", () => {
 
   it("accepts every fulfillment and payment combination", () => {
     for (const fulfillmentMethod of ["delivery", "pickup"]) {
-      for (const paymentMethod of ["credit_card", "cash", "phone_credit"]) {
+      for (const paymentMethod of ["credit_card", "cash"]) {
         const input =
           fulfillmentMethod === "pickup"
             ? baseInput({
@@ -105,6 +105,17 @@ describe("checkout validation", () => {
   it("rejects an unknown fulfillment or payment method", () => {
     expect(checkoutSchema.safeParse(baseInput({ fulfillmentMethod: "teleport" })).success).toBe(false);
     expect(checkoutSchema.safeParse(baseInput({ paymentMethod: "bitcoin" })).success).toBe(false);
+  });
+
+  it("rejects the removed phone_credit payment method with a clear Hebrew message", () => {
+    // "נציג יתקשר לקבלת פרטי אשראי" was removed from checkout. A cached old
+    // client that still submits it must be safely rejected server-side.
+    const result = checkoutSchema.safeParse(baseInput({ paymentMethod: "phone_credit" }));
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues.find((i) => i.path.includes("paymentMethod"));
+    expect(issue?.message).toBe(
+      "אמצעי התשלום שנבחר אינו זמין יותר. נא לבחור אמצעי תשלום אחר ולנסות שוב."
+    );
   });
 
   it("rejects an empty cart", () => {
@@ -153,7 +164,7 @@ describe("checkout validation", () => {
   it("has no credit-card fields at all", () => {
     const result = checkoutSchema.safeParse(
       baseInput({
-        paymentMethod: "phone_credit",
+        paymentMethod: "cash",
         cardNumber: "4580000000000000",
         cvv: "123",
         cardExpiry: "12/30",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FULFILLMENT_METHODS, PAYMENT_METHODS } from "@/lib/checkout/constants";
+import { FULFILLMENT_METHODS, NEW_ORDER_PAYMENT_METHODS } from "@/lib/checkout/constants";
 
 /**
  * Server-side checkout validation.
@@ -10,8 +10,12 @@ import { FULFILLMENT_METHODS, PAYMENT_METHODS } from "@/lib/checkout/constants";
  * catalog, so a tampered payload cannot change what is charged.
  *
  * There are also no credit-card fields anywhere in this schema. Card data is
- * only ever entered on CardCom's hosted page; the "נציג יתקשר" option records
- * nothing more than the customer's request to be called.
+ * only ever entered on CardCom's hosted page.
+ *
+ * paymentMethod only accepts NEW_ORDER_PAYMENT_METHODS (credit_card, cash) —
+ * the historical "נציג יתקשר לקבלת פרטי אשראי" (phone_credit) option was
+ * removed from checkout, so an old cached client that still submits it is
+ * rejected here with a clear message rather than reaching the database.
  */
 
 const UUID = z.string().uuid("מזהה לא תקין");
@@ -37,7 +41,12 @@ export const checkoutSchema = z
     idempotencyKey: z.string().uuid("מפתח ייחודיות לא תקין"),
 
     fulfillmentMethod: z.enum(FULFILLMENT_METHODS),
-    paymentMethod: z.enum(PAYMENT_METHODS),
+    // "phone_credit" ("נציג יתקשר לקבלת פרטי אשראי") was removed from checkout.
+    // A cached/old client that still submits it gets a clear rejection here
+    // instead of reaching the database.
+    paymentMethod: z.enum(NEW_ORDER_PAYMENT_METHODS, {
+      message: "אמצעי התשלום שנבחר אינו זמין יותר. נא לבחור אמצעי תשלום אחר ולנסות שוב.",
+    }),
 
     customerName: z.string().trim().min(2, "נא להזין שם מלא").max(80, "השם ארוך מדי"),
     customerPhone: phoneSchema,

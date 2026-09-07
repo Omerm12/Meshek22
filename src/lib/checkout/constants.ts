@@ -9,8 +9,27 @@
 export const FULFILLMENT_METHODS = ["delivery", "pickup"] as const;
 export type FulfillmentMethod = (typeof FULFILLMENT_METHODS)[number];
 
+/**
+ * Every payment-method value that can exist on an order, past or present.
+ * "phone_credit" is no longer offered at checkout (see NEW_ORDER_PAYMENT_METHODS
+ * below) but is kept here so historical orders keep reading, labelling and
+ * transitioning correctly in the admin portal — removing it from this list
+ * would also have to be reflected in the DB CHECK constraint, which would then
+ * reject any UPDATE (e.g. cancelling, marking delivered) to an old
+ * phone_credit order.
+ */
 export const PAYMENT_METHODS = ["credit_card", "cash", "phone_credit"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/**
+ * Payment methods a NEW order may be created with. The "נציג יתקשר לקבלת פרטי
+ * אשראי" (phone_credit) option was removed from checkout — the storefront no
+ * longer offers it and the server rejects it on new submissions — but it is
+ * intentionally absent from this narrower list rather than from
+ * PAYMENT_METHODS itself. Used by checkoutSchema to validate new orders.
+ */
+export const NEW_ORDER_PAYMENT_METHODS = ["credit_card", "cash"] as const;
+export type NewOrderPaymentMethod = (typeof NEW_ORDER_PAYMENT_METHODS)[number];
 
 export const FULFILLMENT_LABELS: Record<FulfillmentMethod, string> = {
   delivery: "משלוח",
