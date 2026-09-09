@@ -87,20 +87,47 @@ export async function createCardComSession({
   const errorUrl   = failureUrlOverride ?? `${baseUrl}/checkout/payment-error?orderId=${orderId}`;
   const webhookUrl = `${baseUrl}/api/cardcom/callback`;
 
-  // Build Document.Products — TotalLineCost drives the per-line total (safe for fractional kg quantities)
+  // Belt-and-braces, checked in integer agorot (never floats) before anything is
+  // sent: no separate discount line is ever built below, so a quantity-promotion
+  // discount only reaches CardCom by already being baked into the affected
+  // line's totalPriceAgorot (see pricing.lines[].chargedTotalAgorot in the
+  // checkout Server Action). If a caller ever passes lines that don't add up
+  // with the delivery fee to the order total, that is a pricing bug upstream —
+  // fail loudly here rather than ask CardCom to charge the wrong amount.
+  const lineItemsAgorot = lineItems.reduce((sum, item) => sum + item.totalPriceAgorot, 0);
+  if (lineItemsAgorot + deliveryFeeAgorot !== totalAgorot) {
+    throw new Error(
+      `CardCom line items do not sum to the order total: lines=${lineItemsAgorot} + delivery=${deliveryFeeAgorot} !== total=${totalAgorot}`
+    );
+  }
+
+  // Build Document.Products. No standalone "הנחת מבצעים" / discount row is ever
+  // sent — a quantity promotion's saving is already folded into the discounted
+  // line's TotalLineCost by the caller. UnitCost is derived FROM TotalLineCost
+  // (not the undiscounted catalog price), so Quantity × UnitCost equals
+  // TotalLineCost for every row, including one a promotion discounted. Two
+  // numbers on the same line that describe its price differently is exactly
+  // what CardCom rejects the whole document for.
   const products: Array<{
     ProductID?: string;
     Description: string;
     Quantity: number;
     UnitCost: number;
     TotalLineCost: number;
-  }> = lineItems.map((item) => ({
-    ProductID:     item.productId,
-    Description:   item.description,
-    Quantity:      item.quantity,
-    UnitCost:      parseFloat((item.unitPriceAgorot / 100).toFixed(2)),
-    TotalLineCost: parseFloat((item.totalPriceAgorot / 100).toFixed(2)),
-  }));
+  }> = lineItems.map((item) => {
+    const totalLineCost = parseFloat((item.totalPriceAgorot / 100).toFixed(2));
+    const unitCost =
+      item.quantity > 0
+        ? parseFloat((item.totalPriceAgorot / item.quantity / 100).toFixed(2))
+        : totalLineCost;
+    return {
+      ProductID:     item.productId,
+      Description:   item.description,
+      Quantity:      item.quantity,
+      UnitCost:      unitCost,
+      TotalLineCost: totalLineCost,
+    };
+  });
 
   if (deliveryFeeAgorot > 0) {
     const deliveryShekels = parseFloat((deliveryFeeAgorot / 100).toFixed(2));

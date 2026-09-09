@@ -729,14 +729,12 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                 <span>סכום מוצרים</span>
                 <span>{formatPrice(subtotalAgorot)}</span>
               </div>
-              {pricing.discountAgorot > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-orange-600 font-medium">הנחת מבצעים</span>
-                  <span className="text-orange-600 font-semibold">
-                    −{formatPrice(pricing.discountAgorot)}
-                  </span>
-                </div>
-              )}
+              {/* No separate "הנחת מבצעים" discount row here — it duplicated the
+                  "מבצעים שהופעלו" block above and confused the mapping to the
+                  CardCom invoice, which (correctly) never carries a standalone
+                  discount line either. The saving is still visible per item
+                  above, in the applied-promotions block, and in the final
+                  total below — never lost, just not double-counted here. */}
               <div className="flex justify-between text-stone-600">
                 <span>{isDelivery ? "דמי משלוח" : "איסוף עצמי"}</span>
                 <span>
