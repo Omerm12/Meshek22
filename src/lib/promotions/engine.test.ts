@@ -345,3 +345,49 @@ describe("buildVariantPromotionMap", () => {
     expect(map.size).toBe(0);
   });
 });
+
+// ─── Regression: cart/checkout UI "products subtotal" bug report ──────────────
+//
+// The customer-facing UI (cart drawer, cart page, checkout, header pill) used
+// to display pricing.subtotalAgorot (undiscounted) as the products subtotal.
+// This pins the exact numbers from the bug report so a future regression in
+// either the engine or the UI wiring shows up immediately: chargedSubtotalAgorot
+// — not subtotalAgorot — is what every customer-facing total must be built from.
+describe("regression: banana + coriander 4-for-10 (products-subtotal display bug)", () => {
+  it("banana (no promo) + coriander (4-for-10) charged subtotal is 13.40 ₪, not the 15.40 ₪ undiscounted figure", () => {
+    const items: PricedItem[] = [
+      makeItem({ variantId: "banana", quantity: 2, priceAgorot: 170 }), // 2 × 1.70 = 3.40 ₪, no promo
+      makeItem({ variantId: "coriander", quantity: 4, priceAgorot: 300 }), // 4 × 3.00 = 12.00 ₪ normally
+    ];
+    const promotions = [
+      makePromotion({ id: "coriander-4-for-10", eligibleVariantIds: ["coriander"] }),
+    ];
+
+    const result = calculateCartPricing(items, promotions, NOW);
+
+    expect(result.subtotalAgorot).toBe(1540); // 15.40 ₪ — the undiscounted figure that must NOT be shown as "the" total
+    expect(result.discountAgorot).toBe(200); // 12.00 - 10.00 = 2.00 ₪
+    expect(result.chargedSubtotalAgorot).toBe(1340); // 13.40 ₪ — what every customer-facing total must show
+  });
+
+  // The Navbar cart pill (Header.tsx) specifically: two independent quantity
+  // promotions, each on a different product, both "4 for 10 ₪".
+  it("כוסברה 4-for-10 + שמיר 4-for-10: charged subtotal is 20.00 ₪, not the 24.00 ₪ undiscounted figure", () => {
+    const items: PricedItem[] = [
+      makeItem({ variantId: "coriander", quantity: 4, priceAgorot: 300 }), // 4 × 3.00 = 12.00 ₪ normally
+      makeItem({ variantId: "dill", quantity: 4, priceAgorot: 300 }), // 4 × 3.00 = 12.00 ₪ normally
+    ];
+    const promotions = [
+      makePromotion({ id: "coriander-4-for-10", eligibleVariantIds: ["coriander"] }),
+      makePromotion({ id: "dill-4-for-10", eligibleVariantIds: ["dill"] }),
+    ];
+
+    const result = calculateCartPricing(items, promotions, NOW);
+
+    // All money here stays in integer agorot end to end — no floating-point
+    // division anywhere in the engine or in this assertion.
+    expect(result.subtotalAgorot).toBe(2400); // 24.00 ₪ — must never be the displayed total
+    expect(result.discountAgorot).toBe(400); // (12.00-10.00) + (12.00-10.00) = 4.00 ₪
+    expect(result.chargedSubtotalAgorot).toBe(2000); // 20.00 ₪ — what the Navbar pill must show
+  });
+});

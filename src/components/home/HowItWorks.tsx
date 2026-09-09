@@ -85,6 +85,9 @@ export function HowItWorks() {
             <p className="text-lg lg:text-xl font-semibold leading-relaxed opacity-90">
               הזמנות שהתקבלו לאחר השעה 12:00 — יסופקו ביום העסקים הבא
             </p>
+            <p className="text-sm lg:text-base font-normal leading-relaxed opacity-75 mt-4 max-w-2xl mx-auto">
+              ימי המשלוח משתנים בהתאם לאזור החלוקה. לאחר בחירת יישוב בעמוד התשלום יוצגו ימי המשלוח ודמי המשלוח הרלוונטיים. מועד האספקה הסופי כפוף לאישור ההזמנה ולזמינות המלאי.
+            </p>
           </div>
         </Reveal>
       </Container>

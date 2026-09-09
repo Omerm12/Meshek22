@@ -99,3 +99,48 @@ describe("delivery days in the address summary", () => {
     expect(cityEffectIdx).toBeGreaterThan(-1);
   });
 });
+
+// ─── "מבצעים שהופעלו" breakdown is hidden from customers ──────────────────────
+
+describe("applied-promotions breakdown", () => {
+  it("is no longer rendered as a visible block", () => {
+    expect(form).not.toContain("מבצעים שהופעלו");
+    expect(form).not.toContain("pricing.appliedPromotions.length > 0");
+    expect(form).not.toContain("pricing.appliedPromotions.map(");
+  });
+
+  it("keeps the promotion-progress nudge block (a different, still-wanted UI element)", () => {
+    expect(form).toContain("pricing.progress.length > 0");
+    expect(form).toContain("formatPromotionProgress(p)");
+  });
+
+  it("still prices every item with the discount applied, per line and in the final total", () => {
+    // Per-item discounted price (orange when a promotion lowered it).
+    expect(form).toContain("charged < normal ? \"text-orange-600\" : \"text-gray-900\"");
+    // Final total still comes from the same totalAgorot the pricing engine
+    // computed (goodsTotal = pricing.chargedSubtotalAgorot + delivery fee) —
+    // unchanged by hiding the breakdown block.
+    expect(form).toContain("const totalAgorot = goodsTotal + deliveryFeeAgorot");
+    expect(form).toContain("const goodsTotal = pricing.chargedSubtotalAgorot");
+  });
+
+  it("does not introduce any new standalone discount row", () => {
+    expect(form).not.toContain("הנחת מבצעים");
+  });
+});
+
+// ─── "סכום מוצרים" shows the discounted total, not the raw subtotal ──────────
+
+describe("products-subtotal row", () => {
+  it("no longer reads the undiscounted subtotalAgorot from useCart()", () => {
+    expect(form).not.toMatch(/\bsubtotalAgorot\b/);
+  });
+
+  it("displays pricing.chargedSubtotalAgorot right under the 'סכום מוצרים' label", () => {
+    const labelIdx = form.indexOf("<span>סכום מוצרים</span>");
+    expect(labelIdx).toBeGreaterThan(-1);
+    expect(form.slice(labelIdx, labelIdx + 400)).toContain(
+      "formatPrice(pricing.chargedSubtotalAgorot)"
+    );
+  });
+});

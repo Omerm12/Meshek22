@@ -227,21 +227,15 @@ export default async function CheckoutSuccessPage({
                 </span>
               </div>
 
+              {/* The discounted total — a promotion's saving is baked in here
+                  rather than shown as a separate row, matching the cart and
+                  checkout summary the customer already saw. */}
               <div className="flex justify-between gap-3">
                 <span className="text-stone-500">סכום מוצרים</span>
                 <span className="font-medium text-gray-900">
-                  {formatPrice(order.subtotal_agorot)}
+                  {formatPrice(order.subtotal_agorot - order.discount_agorot)}
                 </span>
               </div>
-
-              {order.discount_agorot > 0 && (
-                <div className="flex justify-between gap-3">
-                  <span className="text-orange-600">הנחת מבצעים</span>
-                  <span className="font-medium text-orange-600">
-                    −{formatPrice(order.discount_agorot)}
-                  </span>
-                </div>
-              )}
 
               <div className="flex justify-between gap-3">
                 <span className="text-stone-500">

@@ -23,7 +23,7 @@ function formatQty(qty: number): string {
 }
 
 export function CartDrawer() {
-  const { isOpen, closeCart, items, updateQty, removeItem, subtotalAgorot, totalItems, pricing } =
+  const { isOpen, closeCart, items, updateQty, removeItem, totalItems, pricing } =
     useCart();
 
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -128,19 +128,15 @@ export function CartDrawer() {
               </div>
             )}
 
+            {/* Discounted total — a promotion's saving is baked in here rather
+                than broken out as its own row, so there is nothing for the
+                customer to reconcile. */}
             <div className="flex items-center justify-between mb-1 text-sm">
               <span className="text-stone-500">סה&quot;כ מוצרים</span>
-              <span className="font-semibold text-gray-900">{formatPrice(subtotalAgorot)}</span>
+              <span className="font-semibold text-gray-900">
+                {formatPrice(pricing.chargedSubtotalAgorot)}
+              </span>
             </div>
-
-            {pricing.discountAgorot > 0 && (
-              <div className="flex items-center justify-between mb-1 text-sm">
-                <span className="text-orange-600 font-medium">הנחת מבצעים</span>
-                <span className="font-semibold text-orange-600">
-                  −{formatPrice(pricing.discountAgorot)}
-                </span>
-              </div>
-            )}
 
             <div className="flex items-center justify-between mb-4 text-xs text-stone-400">
               <span>דמי משלוח יחושבו בקופה</span>

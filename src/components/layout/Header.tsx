@@ -13,7 +13,7 @@ import { PARENT_CATEGORY_NAV, SIMPLE_NAV_LINKS } from "@/lib/config/nav-categori
 import { NavbarSearch } from "@/components/layout/NavbarSearch";
 
 export function Header() {
-  const { totalItems, subtotalAgorot, openCart } = useCart();
+  const { totalItems, pricing, openCart } = useCart();
   const pathname = usePathname();
 
   const [scrolled, setScrolled]             = useState(false);
@@ -193,7 +193,7 @@ export function Header() {
                 {totalItems > 0 && (
                   <>
                     <span className="text-sm font-semibold">
-                      {formatPrice(subtotalAgorot)}
+                      {formatPrice(pricing.chargedSubtotalAgorot)}
                     </span>
                     <span className="absolute -top-1 -end-1 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                       {totalItems > 9 ? "9+" : totalItems}

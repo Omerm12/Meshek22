@@ -118,7 +118,7 @@ function ChoiceCard({
 
 export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) {
   const router = useRouter();
-  const { items, subtotalAgorot, isHydrated, pricing } = useCart();
+  const { items, isHydrated, pricing } = useCart();
 
   // ── Fulfillment + payment ──────────────────────────────────────────────────
   const [fulfillment, setFulfillment] = useState<FulfillmentMethod>("delivery");
@@ -695,23 +695,12 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
               })}
             </ul>
 
-            {/* Applied promotions */}
-            {pricing.appliedPromotions.length > 0 && (
-              <div className="mb-4 rounded-xl bg-orange-50 border border-orange-100 p-3">
-                <p className="text-xs font-bold text-orange-800 mb-1.5">מבצעים שהופעלו</p>
-                <ul className="space-y-1">
-                  {pricing.appliedPromotions.map((promo) => (
-                    <li key={promo.promotionId} className="flex justify-between gap-2 text-xs text-orange-700">
-                      <span>
-                        {promo.name}
-                        {promo.groupsApplied > 1 && ` × ${promo.groupsApplied}`}
-                      </span>
-                      <span className="font-semibold shrink-0">−{formatPrice(promo.discountAgorot)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* The applied-promotions breakdown (which promotions fired, with
+                amounts) is intentionally not rendered here anymore — the
+                discount still applies fully to every price below (per item,
+                and the final total); only that separate itemised list is
+                hidden. Promotion logic, discount calculation and the CardCom
+                payload are unaffected. */}
 
             {pricing.progress.length > 0 && (
               <div className="mb-4 rounded-xl bg-stone-50 border border-stone-100 p-3">
@@ -727,14 +716,16 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
             <div className="border-t border-stone-100 pt-4 space-y-2 text-sm mb-4">
               <div className="flex justify-between text-stone-600">
                 <span>סכום מוצרים</span>
-                <span>{formatPrice(subtotalAgorot)}</span>
+                {/* The discounted total — a promotion's saving is baked in here
+                    rather than shown as a separate line, so the customer never
+                    has to reconcile an original price against a discount. */}
+                <span>{formatPrice(pricing.chargedSubtotalAgorot)}</span>
               </div>
-              {/* No separate "הנחת מבצעים" discount row here — it duplicated the
-                  "מבצעים שהופעלו" block above and confused the mapping to the
-                  CardCom invoice, which (correctly) never carries a standalone
+              {/* No separate discount-total row here — it mirrors the CardCom
+                  invoice, which (correctly) never carries a standalone
                   discount line either. The saving is still visible per item
-                  above, in the applied-promotions block, and in the final
-                  total below — never lost, just not double-counted here. */}
+                  above and in the final total below — never lost, just not
+                  broken out as its own line. */}
               <div className="flex justify-between text-stone-600">
                 <span>{isDelivery ? "דמי משלוח" : "איסוף עצמי"}</span>
                 <span>

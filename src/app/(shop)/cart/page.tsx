@@ -20,7 +20,7 @@ import { formatPromotionProgress } from "@/lib/promotions/engine";
 const MIN_FREE_DELIVERY = 15000; // 150 ₪ — center zone threshold
 
 export default function CartPage() {
-  const { items, updateQty, removeItem, clearCart, subtotalAgorot, totalItems, pricing } =
+  const { items, updateQty, removeItem, clearCart, totalItems, pricing } =
     useCart();
 
   const chargedSubtotal  = pricing.chargedSubtotalAgorot;
@@ -250,28 +250,10 @@ export default function CartPage() {
                 סיכום הזמנה
               </h2>
 
-              {/* Applied promotions */}
-              {pricing.appliedPromotions.length > 0 && (
-                <div className="mb-5 rounded-xl bg-orange-50 border border-orange-100 p-3.5">
-                  <p className="text-xs font-bold text-orange-800 mb-1.5">מבצעים שהופעלו</p>
-                  <ul className="space-y-1">
-                    {pricing.appliedPromotions.map((promo) => (
-                      <li
-                        key={promo.promotionId}
-                        className="flex justify-between gap-2 text-xs text-orange-700"
-                      >
-                        <span>
-                          {promo.name}
-                          {promo.groupsApplied > 1 && ` × ${promo.groupsApplied}`}
-                        </span>
-                        <span className="font-semibold shrink-0">
-                          −{formatPrice(promo.discountAgorot)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* The applied-promotions breakdown (which promotions fired, with
+                  amounts) is intentionally not rendered here — the discount
+                  is still fully reflected in the line prices below and in the
+                  products subtotal and total. */}
 
               {/* Progress toward the next qualifying group */}
               {pricing.progress.length > 0 && (
@@ -284,24 +266,17 @@ export default function CartPage() {
                 </div>
               )}
 
-              {/* Line items breakdown */}
+              {/* Line items breakdown — the discounted total, with nothing for
+                  the customer to reconcile against a separate discount row. */}
               <div className="space-y-3 text-sm mb-5">
                 <div className="flex justify-between">
                   <span className="text-stone-500">
                     מוצרים ({totalItems} פריטים)
                   </span>
                   <span className="font-medium text-gray-900">
-                    {formatPrice(subtotalAgorot)}
+                    {formatPrice(chargedSubtotal)}
                   </span>
                 </div>
-                {pricing.discountAgorot > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-orange-600 font-medium">הנחת מבצעים</span>
-                    <span className="font-semibold text-orange-600">
-                      −{formatPrice(pricing.discountAgorot)}
-                    </span>
-                  </div>
-                )}
                 <div className="flex justify-between">
                   <span className="text-stone-500">דמי משלוח</span>
                   <span className="text-stone-400 text-xs">יחושב בקופה</span>
