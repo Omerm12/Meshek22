@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { MORE_FROM_THE_FARM_HREF } from "@/lib/config/nav-categories";
 
 /**
@@ -29,4 +29,15 @@ export function revalidateStorefront(): void {
   // The cart reads live promotions through this route handler.
   revalidatePath("/api/promotions/active");
   revalidatePath("/api/products/catalog");
+
+  // The parent category pages (fruits/vegetables/more-from-the-farm) cache
+  // their categories/products/promotions lookups with unstable_cache — see
+  // fetchParentCategoryPageData() in src/lib/data/storefront.ts. revalidatePath
+  // above covers the page shell, but these tags are what actually bust those
+  // cached query results immediately instead of waiting out the 60s window.
+  // updateTag() (not revalidateTag()) because this always runs inside a
+  // Server Action, where it takes effect immediately instead of on next visit.
+  updateTag("categories");
+  updateTag("products");
+  updateTag("promotions");
 }

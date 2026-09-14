@@ -8,6 +8,7 @@
  * a caller passes rows fetched through the service-role client.
  */
 
+import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isPromotionLive } from "@/lib/promotions/engine";
 import type { Promotion } from "@/lib/promotions/types";
@@ -48,12 +49,7 @@ export function toPromotion(row: PromotionRow): Promotion {
   };
 }
 
-/**
- * Every promotion that is enabled and inside its date window right now.
- * Returns an empty array on any error so the storefront degrades to normal
- * pricing rather than failing to render.
- */
-export async function fetchLivePromotions(): Promise<Promotion[]> {
+async function fetchLivePromotionsUncached(): Promise<Promotion[]> {
   const supabase = createPublicClient();
 
   const { data, error } = await supabase
@@ -69,6 +65,23 @@ export async function fetchLivePromotions(): Promise<Promotion[]> {
     .map(toPromotion)
     .filter((p) => isPromotionLive(p, now));
 }
+
+/**
+ * Every promotion that is enabled and inside its date window right now.
+ * Returns an empty array on any error so the storefront degrades to normal
+ * pricing rather than failing to render.
+ *
+ * Cached for 60s (the same staleness window the homepage and /promotions page
+ * already accept for this exact data). fetchLivePromotions() is called from
+ * nearly every product-fetching function in storefront.ts, so a single request
+ * for a category page previously queried /rest/v1/promotions on its own —
+ * caching it here means every caller shares one result instead of re-querying.
+ */
+export const fetchLivePromotions = unstable_cache(
+  fetchLivePromotionsUncached,
+  ["live-promotions"],
+  { revalidate: 60, tags: ["promotions"] }
+);
 
 /** Flat set of every variant id that currently belongs to a live promotion. */
 export function collectPromotionalVariantIds(promotions: Promotion[]): Set<string> {

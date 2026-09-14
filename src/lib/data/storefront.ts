@@ -8,13 +8,18 @@
  *
  * Hierarchical category helpers:
  *   fetchTopLevelCategories()             – categories with no parent
- *   fetchChildCategoriesByParentSlug()    – direct children of a parent
  *   fetchCategoryTree()                   – full parent→children tree
- *   fetchProductsByParentCategorySlug()   – products assigned to the parent
- *                                           itself AND to any child category
+ *   fetchParentCategoryPageData()         – everything a parent category page
+ *                                           (fruits/vegetables/more-from-the-farm)
+ *                                           needs: subcategories, the validated
+ *                                           ?sub= slug, and products assigned to
+ *                                           the parent itself AND to any child
+ *                                           category — one cached categories
+ *                                           lookup shared by every caller
  *   fetchPromotionalProducts()            – the dynamic /promotions collection
  */
 
+import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { getCategoryDisplay, getProductDisplay } from "@/lib/product-display";
 import {
@@ -144,12 +149,6 @@ const PRODUCT_SELECT = `
   categories ( id, name, slug )
 `;
 
-/** Same columns, but with an inner join so a category-slug filter can be applied. */
-const PRODUCT_SELECT_BY_CATEGORY = `
-  ${PRODUCT_COLUMNS},
-  categories!inner ( id, name, slug )
-`;
-
 // ─── Promotion decoration ──────────────────────────────────────────────────────
 
 /**
@@ -245,10 +244,9 @@ export async function fetchTopLevelCategories(): Promise<MockCategory[]> {
  * `label` overrides the database name where the two intentionally differ, and
  * `includesChildren` mirrors how the destination page selects its products, so
  * a card's number always equals what the customer finds after clicking it:
- *   • true  → fetchProductsByParentCategorySlug(): the category AND its active
- *             direct children (what /vegetables, /fruits and
- *             /more-from-the-farm all render)
- *   • false → fetchProductsByCategory(): that category only
+ *   • true  → the category AND its active direct children (what /vegetables,
+ *             /fruits and /more-from-the-farm all render on their "הכל" tab)
+ *   • false → that category only
  */
 const HOMEPAGE_CARDS: {
   slug: string;
@@ -358,37 +356,6 @@ export async function fetchHomepageCategories(): Promise<MockCategory[]> {
 // tell from the file which one the page actually renders.
 
 /**
- * Direct child categories of a parent identified by slug.
- */
-export async function fetchChildCategoriesByParentSlug(
-  parentSlug: string
-): Promise<MockCategory[]> {
-  const supabase = createPublicClient();
-
-  // 1. Resolve parent slug → id
-  const { data: parent, error: parentErr } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("slug", parentSlug)
-    .eq("is_active", true)
-    .single();
-
-  if (parentErr || !parent) return [];
-
-  // 2. Fetch children
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, slug, description, parent_id")
-    .eq("parent_id", parent.id)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-
-  if (error || !data) return [];
-
-  return (data as CategoryRow[]).map(toMockCategory);
-}
-
-/**
  * Full category tree: each top-level category contains a `children` array.
  */
 export async function fetchCategoryTree(): Promise<MockCategory[]> {
@@ -438,34 +405,6 @@ export async function fetchAllCategorySlugs(): Promise<string[]> {
 // ─── Product queries ───────────────────────────────────────────────────────────
 
 /**
- * All active products for a given leaf category slug.
- * Uses !inner join so unmatched category rows are excluded.
- */
-export async function fetchProductsByCategory(
-  categorySlug: string
-): Promise<MockProduct[]> {
-  const supabase = createPublicClient();
-
-  // Started first so it overlaps the product query.
-  const promotionsPromise = fetchLivePromotions();
-
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT_BY_CATEGORY)
-    .eq("categories.slug", categorySlug)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error || !data) return [];
-
-  return withPromotions(
-    (data as unknown as ProductRow[]).map(toMockProduct).filter((p) => p.variants.length > 0),
-    promotionsPromise
-  );
-}
-
-/**
  * Every category whose products belong on a parent category's page: the parent
  * itself, followed by each of its active children.
  *
@@ -507,62 +446,135 @@ export function dedupeProductsById(products: MockProduct[]): MockProduct[] {
 }
 
 /**
- * All active products belonging to a top-level category.
+ * Resolve a parent category (by slug) and its active children in a single
+ * Supabase round trip: one query for every active category row, filtered and
+ * grouped in JS, instead of a "parent by slug" query followed by a separate
+ * "children by parent_id" query.
  *
- * Covers BOTH placements, so a category whose products sit directly on the
- * parent works exactly like a nested one such as ירקות:
- *   • products assigned directly to the parent category, and
- *   • products assigned to any of its active child categories.
- *
- * This is what lets עוד מהמשק show products filed directly under its own
- * (renamed, formerly combined) parent row alongside products filed under any
- * of its seven child categories — each appearing exactly once.
+ * Cached for 60s — the categories table changes only when an admin edits it,
+ * and every parent-category page (fruits, vegetables, more-from-the-farm)
+ * needs this same lookup on every request. This is the fix for the "categories
+ * fetched 3 times for one page view" bug: previously each page resolved the
+ * parent slug twice (once to validate ?sub=, once more inside the product
+ * query), each resolution itself split into two sequential round trips, all
+ * uncached. Wrapping the one query that replaces all of that means a page view
+ * costs at most one /rest/v1/categories round trip, and most requests within
+ * the cache window cost none at all.
  */
-export async function fetchProductsByParentCategorySlug(
-  parentSlug: string
-): Promise<MockProduct[]> {
-  const supabase = createPublicClient();
+const getCachedParentCategoryTree = unstable_cache(
+  async (
+    parentSlug: string
+  ): Promise<{ parent: CategoryRow | null; children: CategoryRow[] }> => {
+    const supabase = createPublicClient();
 
-  // Started first so it overlaps the category and product queries below.
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name, slug, description, parent_id")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to load categories: ${error.message}`);
+    }
+
+    const rows = (data ?? []) as CategoryRow[];
+    const parent = rows.find((r) => r.slug === parentSlug) ?? null;
+    const children = parent ? rows.filter((r) => r.parent_id === parent.id) : [];
+
+    return { parent, children };
+  },
+  ["parent-category-tree"],
+  { revalidate: 60, tags: ["categories"] }
+);
+
+/**
+ * Products for a specific set of category ids (a parent-plus-children query,
+ * or a single validated child when a ?sub= tab is active).
+ *
+ * Cached for 60s per distinct set of ids — the same window the homepage and
+ * /promotions already use for catalog data — so repeat visits to the same
+ * category/tab don't re-query Supabase at all.
+ */
+const getCachedCategoryProducts = unstable_cache(
+  async (categoryIds: string[]): Promise<MockProduct[]> => {
+    const supabase = createPublicClient();
+
+    const { data, error } = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .in("category_id", categoryIds)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to load products: ${error.message}`);
+    }
+
+    return dedupeProductsById(
+      (data as unknown as ProductRow[])
+        .map(toMockProduct)
+        .filter((p) => p.variants.length > 0)
+    );
+  },
+  ["category-products-by-ids"],
+  { revalidate: 60, tags: ["products"] }
+);
+
+export interface ParentCategoryPageData {
+  subcategories: MockCategory[];
+  /** The requested ?sub= slug, or null if absent/unrecognised. */
+  activeSubSlug: string | null;
+  products: MockProduct[];
+}
+
+/**
+ * Everything a parent category page (/fruits, /vegetables,
+ * /more-from-the-farm) needs, resolved in the minimum number of Supabase
+ * round trips: one cached categories lookup (shared across every visitor and
+ * every ?sub= tab), then one products query and one promotions query running
+ * in parallel.
+ *
+ * A genuine Supabase error is thrown rather than swallowed into an empty
+ * array. Swallowing it was the cause of the false "אין מוצרים" empty state:
+ * a transient failure and a legitimately empty category both rendered
+ * identically. Throwing here lets the nearest error boundary
+ * (src/app/(shop)/error.tsx) handle real failures, so "no products" is only
+ * ever shown after a load that actually succeeded.
+ */
+export async function fetchParentCategoryPageData(
+  parentSlug: string,
+  requestedSubSlug: string | null
+): Promise<ParentCategoryPageData> {
+  const { parent, children } = await getCachedParentCategoryTree(parentSlug);
+
+  const subcategories = children.map(toMockCategory);
+  const activeSubSlug =
+    requestedSubSlug && subcategories.some((c) => c.slug === requestedSubSlug)
+      ? requestedSubSlug
+      : null;
+
+  if (!parent) {
+    return { subcategories, activeSubSlug, products: [] };
+  }
+
+  // Started first so it overlaps the product query.
   const promotionsPromise = fetchLivePromotions();
 
-  // 1. Resolve parent slug → id
-  const { data: parent, error: parentErr } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("slug", parentSlug)
-    .eq("is_active", true)
-    .single();
+  const activeChild = activeSubSlug
+    ? children.find((c) => c.slug === activeSubSlug)
+    : undefined;
+  const categoryIds = activeChild
+    ? [activeChild.id]
+    : collectCategoryIds(parent.id, children);
 
-  if (parentErr || !parent) return [];
+  const products = await getCachedCategoryProducts(categoryIds);
 
-  // 2. Fetch child category IDs (a top-level category may legitimately have none)
-  const { data: children } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("parent_id", parent.id)
-    .eq("is_active", true);
-
-  // 3. Fetch products in the parent itself and in every child category
-  const categoryIds = collectCategoryIds(parent.id, children);
-
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .in("category_id", categoryIds)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error || !data) return [];
-
-  const products = dedupeProductsById(
-    (data as unknown as ProductRow[])
-      .map(toMockProduct)
-      .filter((p) => p.variants.length > 0)
-  );
-
-  return withPromotions(products, promotionsPromise);
+  return {
+    subcategories,
+    activeSubSlug,
+    products: await withPromotions(products, promotionsPromise),
+  };
 }
 
 /**
