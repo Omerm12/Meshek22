@@ -14,7 +14,7 @@ export function AdminShell({ adminName, adminEmail, children }: AdminShellProps)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-100" dir="rtl">
+    <div className="flex min-h-screen bg-gray-100 print:bg-white" dir="rtl">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -24,16 +24,21 @@ export function AdminShell({ adminName, adminEmail, children }: AdminShellProps)
         />
       )}
 
-      <AdminSidebar
-        adminName={adminName}
-        adminEmail={adminEmail}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      {/* Sidebar and header are chrome, not content — hidden for any page
+          that prints (e.g. the order picking sheet), so only that page's own
+          print-only markup ends up on paper. */}
+      <div className="print:hidden contents">
+        <AdminSidebar
+          adminName={adminName}
+          adminEmail={adminEmail}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center px-4 lg:px-6 shrink-0 gap-3">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center px-4 lg:px-6 shrink-0 gap-3 print:hidden">
           {/* Mobile hamburger */}
           <button
             type="button"

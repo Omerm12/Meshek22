@@ -15,6 +15,8 @@ import {
 } from "@/lib/admin/order-presentation";
 import { ordersTable, selectOrderDetailWithFallback } from "@/lib/admin/orders-data";
 import { OrderActions } from "@/components/admin/orders/OrderActions";
+import { PrintPickingSheetButton } from "@/components/admin/orders/PrintPickingSheetButton";
+import { PickingSheet, type PickingSheetItem } from "@/components/admin/orders/PickingSheet";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
 
 export const metadata: Metadata = { title: "פרטי הזמנה" };
@@ -124,8 +126,28 @@ export default async function OrderDetailPage({
   // promotion itself is edited or deleted.
   const appliedPromotions = order.discount_breakdown;
 
+  // ── Picking sheet data — warehouse-facing, so it carries none of the
+  // pricing/payment/promotion detail the rest of this page shows. ──────────────
+  const fullDeliveryAddress = [
+    [address?.street, address?.house_number].filter(Boolean).join(" "),
+    address?.apartment ? `דירה ${address.apartment}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const pickingSheetItems: PickingSheetItem[] = items.map((item) => {
+    const snap = item.product_snapshot as ProductSnapshot | null;
+    return {
+      id: item.id,
+      productName: snap?.product_name ?? "מוצר לא ידוע",
+      variantLabel: snap?.variant_label ?? "—",
+      quantity: item.quantity,
+    };
+  });
+
   return (
-    <div className="space-y-5">
+    <>
+      <div className="space-y-5 print:hidden">
       {/* Back + breadcrumb */}
       <div className="flex items-center gap-3">
         <Link
@@ -265,7 +287,12 @@ export default async function OrderDetailPage({
           {/* Workflow actions — only the step that is valid right now. The
               server re-validates every transition, so this is not the control. */}
           <SectionCard title="מה עושים עכשיו" icon={CreditCard}>
-            <OrderActions orderId={order.id} context={orderContext} />
+            <div className="space-y-4">
+              <OrderActions orderId={order.id} context={orderContext} />
+              <div className="pt-3 border-t border-gray-100">
+                <PrintPickingSheetButton />
+              </div>
+            </div>
           </SectionCard>
         </div>
 
@@ -339,5 +366,29 @@ export default async function OrderDetailPage({
         </div>
       </div>
     </div>
+
+    <PickingSheet
+      orderNumber={order.order_number}
+      orderDate={formatDate(order.created_at)}
+      customerName={customer?.name}
+      customerPhone={customer?.phone}
+      isPickup={isPickup}
+      pickupLocationName={PICKUP_LOCATION.name}
+      city={address?.city}
+      fullAddress={fullDeliveryAddress}
+      deliveryNotes={order.delivery_notes}
+      requestedDeliveryDate={
+        order.requested_delivery_date
+          ? new Date(order.requested_delivery_date).toLocaleDateString("he-IL")
+          : null
+      }
+      confirmedDeliveryDate={
+        order.confirmed_delivery_date
+          ? new Date(order.confirmed_delivery_date).toLocaleDateString("he-IL")
+          : null
+      }
+      items={pickingSheetItems}
+    />
+    </>
   );
 }
