@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -92,10 +93,14 @@ function parseFormData(formData: FormData): ProductFormData | null {
 // ─── Create ───────────────────────────────────────────────────────────────────
 
 export async function createProduct(formData: FormData): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const parsed = parseFormData(formData);
-  if (!parsed) return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
+  if (!parsed) {
+    logMutationTiming("product-create", start, { outcome: "validation-error" });
+    return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
+  }
 
   const supabase = await createAdminClient();
   const { variants, qty_deal_price, ...productFields } = parsed;
@@ -115,6 +120,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
     .single();
 
   if (productError) {
+    logMutationTiming("product-create", start, { outcome: "error" });
     if (productError.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
     return { success: false, error: "שגיאה ביצירת המוצר" };
@@ -126,11 +132,13 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
 
   if (variantsError) {
     await supabase.from("products").delete().eq("id", product.id);
+    logMutationTiming("product-create", start, { outcome: "error" });
     return { success: false, error: "שגיאה ביצירת הגרסאות. המוצר לא נשמר." };
   }
 
   revalidatePath(`${ADMIN_BASE_PATH}/products`);
   revalidateStorefront();
+  logMutationTiming("product-create", start, { outcome: "success", variantCount: variants.length });
   redirect(`${ADMIN_BASE_PATH}/products`);
 }
 
@@ -140,10 +148,16 @@ export async function updateProduct(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
+  const start = performance.now();
+  const authStart = start;
   await requireAdmin();
+  const authMs = Math.round(performance.now() - authStart);
 
   const parsed = parseFormData(formData);
-  if (!parsed) return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
+  if (!parsed) {
+    logMutationTiming("product-update", start, { authMs, outcome: "validation-error" });
+    return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
+  }
 
   const supabase = await createAdminClient();
   const { variants, qty_deal_price, ...productFields } = parsed;
@@ -168,6 +182,7 @@ export async function updateProduct(
   ]);
 
   if (productError) {
+    logMutationTiming("product-update", start, { authMs, outcome: "error" });
     if (productError.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
     return { success: false, error: "שגיאה בעדכון המוצר" };
@@ -223,44 +238,61 @@ export async function updateProduct(
   ]);
 
   if (deleteError) {
+    logMutationTiming("product-update", start, { authMs, outcome: "error" });
     if (deleteError.code === "23503")
       return { success: false, error: "לא ניתן להסיר גרסאות שנמצאות בהזמנות קיימות" };
     return { success: false, error: "שגיאה במחיקת גרסאות" };
   }
 
-  // 6. Upsert existing variants (have id)
+  // 6+7. Upsert existing variants (have id) and insert new ones (no id) — two
+  // disjoint sets of rows, so they run concurrently instead of one after the
+  // other. Both still wait on step 4+5 above, which clears the defaults these
+  // writes are about to re-set.
   const existingVariants = mutableVariants.filter((v) => v.id);
-  if (existingVariants.length > 0) {
-    const { error } = await supabase
-      .from("product_variants")
-      .upsert(existingVariants.map((v) => toDbVariant(v, id)), { onConflict: "id" });
-    if (error) return { success: false, error: "שגיאה בעדכון גרסאות" };
-  }
-
-  // 7. Insert new variants (no id)
   const newVariants = mutableVariants.filter((v) => !v.id);
-  if (newVariants.length > 0) {
-    const { error } = await supabase
-      .from("product_variants")
-      .insert(newVariants.map((v) => toDbVariant(v, id)));
-    if (error) return { success: false, error: "שגיאה ביצירת גרסאות חדשות" };
+
+  const [upsertResult, insertResult] = await Promise.all([
+    existingVariants.length > 0
+      ? supabase
+          .from("product_variants")
+          .upsert(existingVariants.map((v) => toDbVariant(v, id)), { onConflict: "id" })
+      : Promise.resolve({ error: null as { message?: string } | null }),
+    newVariants.length > 0
+      ? supabase.from("product_variants").insert(newVariants.map((v) => toDbVariant(v, id)))
+      : Promise.resolve({ error: null as { message?: string } | null }),
+  ]);
+
+  if (upsertResult.error) {
+    logMutationTiming("product-update", start, { authMs, outcome: "error" });
+    return { success: false, error: "שגיאה בעדכון גרסאות" };
+  }
+  if (insertResult.error) {
+    logMutationTiming("product-update", start, { authMs, outcome: "error" });
+    return { success: false, error: "שגיאה ביצירת גרסאות חדשות" };
   }
 
   revalidatePath(`${ADMIN_BASE_PATH}/products`);
   revalidateStorefront();
   revalidatePath(`/product/${parsed.slug}`);
+  logMutationTiming("product-update", start, {
+    authMs,
+    outcome: "success",
+    variantCount: mutableVariants.length,
+  });
   redirect(`${ADMIN_BASE_PATH}/products`);
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
   const supabase = await createAdminClient();
 
   const { error } = await supabase.from("products").delete().eq("id", id);
 
   if (error) {
+    logMutationTiming("product-delete", start, { outcome: "error" });
     if (error.code === "23503")
       return { success: false, error: "לא ניתן למחוק מוצר שנמצא בהזמנות קיימות" };
     return { success: false, error: "שגיאה במחיקת המוצר" };
@@ -268,5 +300,6 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 
   revalidatePath(`${ADMIN_BASE_PATH}/products`);
   revalidateStorefront();
+  logMutationTiming("product-delete", start, { outcome: "success" });
   return { success: true };
 }

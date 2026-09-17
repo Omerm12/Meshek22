@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { categorySchema } from "@/lib/validations/admin-category";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result types ───────────────────────────────────────────────────────
 
@@ -35,10 +36,12 @@ function parseForm(formData: FormData) {
 export async function createCategory(
   formData: FormData
 ): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("category-create", start, { outcome: "validation-error" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
@@ -57,6 +60,7 @@ export async function createCategory(
   });
 
   if (error) {
+    logMutationTiming("category-create", start, { outcome: "error" });
     if (error.code === "23505") {
       return { success: false, error: "קיימת כבר קטגוריה עם slug זה. בחרו slug אחר." };
     }
@@ -66,6 +70,7 @@ export async function createCategory(
   revalidatePath(`${ADMIN_BASE_PATH}/categories`);
   revalidateStorefront();
 
+  logMutationTiming("category-create", start, { outcome: "success" });
   redirect(`${ADMIN_BASE_PATH}/categories`);
 }
 
@@ -75,20 +80,26 @@ export async function updateCategory(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
+  const start = performance.now();
+  const authStart = start;
   await requireAdmin();
+  const authMs = Math.round(performance.now() - authStart);
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("category-update", start, { authMs, outcome: "validation-error" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
   // Prevent self-parenting
   const parentId = parsed.data.parent_id || null;
   if (parentId === id) {
+    logMutationTiming("category-update", start, { authMs, outcome: "rejected" });
     return { success: false, error: "קטגוריה לא יכולה להיות קטגוריית האב של עצמה." };
   }
 
   const supabase = await createAdminClient();
+  const dbStart = performance.now();
   const { error } = await supabase
     .from("categories")
     .update({
@@ -102,8 +113,10 @@ export async function updateCategory(
       parent_id:   parentId,
     })
     .eq("id", id);
+  const dbMs = Math.round(performance.now() - dbStart);
 
   if (error) {
+    logMutationTiming("category-update", start, { authMs, dbMs, outcome: "error" });
     if (error.code === "23505") {
       return { success: false, error: "קיימת כבר קטגוריה עם slug זה. בחרו slug אחר." };
     }
@@ -113,12 +126,14 @@ export async function updateCategory(
   revalidatePath(`${ADMIN_BASE_PATH}/categories`);
   revalidateStorefront();
 
+  logMutationTiming("category-update", start, { authMs, dbMs, outcome: "success" });
   redirect(`${ADMIN_BASE_PATH}/categories`);
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const supabase = await createAdminClient();
@@ -130,6 +145,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     .eq("parent_id", id);
 
   if (childCount && childCount > 0) {
+    logMutationTiming("category-delete", start, { outcome: "rejected" });
     return {
       success: false,
       error:
@@ -140,6 +156,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("categories").delete().eq("id", id);
 
   if (error) {
+    logMutationTiming("category-delete", start, { outcome: "error" });
     if (error.code === "23503") {
       return {
         success: false,
@@ -153,5 +170,6 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   revalidatePath(`${ADMIN_BASE_PATH}/categories`);
   revalidateStorefront();
 
+  logMutationTiming("category-delete", start, { outcome: "success" });
   return { success: true };
 }

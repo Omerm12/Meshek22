@@ -8,14 +8,12 @@ import {
   fulfillmentMethodLabel,
   paymentMethodLabel,
 } from "@/lib/checkout/constants";
-import {
-  describeOrderStatus,
-  describePaymentState,
-  isPickupOrder,
-} from "@/lib/admin/order-presentation";
+import { isPickupOrder } from "@/lib/admin/order-presentation";
 import { ordersTable, selectOrderDetailWithFallback } from "@/lib/admin/orders-data";
 import { withAdminTiming } from "@/lib/admin/instrumentation";
 import { OrderActions } from "@/components/admin/orders/OrderActions";
+import { OrderStatusBadges } from "@/components/admin/orders/OrderStatusBadges";
+import { OrderStatusProvider } from "@/components/admin/orders/OrderStatusContext";
 import { PrintPickingSheetButton } from "@/components/admin/orders/PrintPickingSheetButton";
 import { PickingSheet, type PickingSheetItem } from "@/components/admin/orders/PickingSheet";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
@@ -125,8 +123,6 @@ export default async function OrderDetailPage({
   };
 
   const isPickup = isPickupOrder(orderContext);
-  const statusPresentation  = describeOrderStatus(orderContext);
-  const paymentPresentation = describePaymentState(orderContext);
 
   // Promotion snapshot recorded at purchase time — stays readable even after the
   // promotion itself is edited or deleted.
@@ -153,6 +149,7 @@ export default async function OrderDetailPage({
 
   return (
     <>
+      <OrderStatusProvider orderId={order.id} initialContext={orderContext}>
       <div className="space-y-5 print:hidden">
       {/* Back + breadcrumb */}
       <div className="flex items-center gap-3">
@@ -192,12 +189,7 @@ export default async function OrderDetailPage({
           <span className="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
             {paymentMethodLabel(order.payment_method, true)}
           </span>
-          <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold border whitespace-nowrap ${paymentPresentation.cls}`}>
-            {paymentPresentation.label}
-          </span>
-          <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold border whitespace-nowrap ${statusPresentation.cls}`}>
-            {statusPresentation.label}
-          </span>
+          <OrderStatusBadges />
         </div>
       </div>
 
@@ -294,7 +286,7 @@ export default async function OrderDetailPage({
               server re-validates every transition, so this is not the control. */}
           <SectionCard title="מה עושים עכשיו" icon={CreditCard}>
             <div className="space-y-4">
-              <OrderActions orderId={order.id} context={orderContext} />
+              <OrderActions />
               <div className="pt-3 border-t border-gray-100">
                 <PrintPickingSheetButton />
               </div>
@@ -372,6 +364,7 @@ export default async function OrderDetailPage({
         </div>
       </div>
     </div>
+      </OrderStatusProvider>
 
     <PickingSheet
       orderNumber={order.order_number}

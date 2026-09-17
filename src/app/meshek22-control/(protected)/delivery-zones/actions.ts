@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { deliveryZoneSchema } from "@/lib/validations/admin-delivery-zone";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -50,10 +51,12 @@ function revalidate() {
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export async function createDeliveryZone(formData: FormData): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("delivery-zone-create", start, { outcome: "validation-error" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -79,6 +82,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
   });
 
   if (error) {
+    logMutationTiming("delivery-zone-create", start, { outcome: "error" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -89,6 +93,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
   }
 
   revalidate();
+  logMutationTiming("delivery-zone-create", start, { outcome: "success" });
   redirect(`${ADMIN_BASE_PATH}/delivery-zones`);
 }
 
@@ -98,10 +103,14 @@ export async function updateDeliveryZone(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
+  const start = performance.now();
+  const authStart = start;
   await requireAdmin();
+  const authMs = Math.round(performance.now() - authStart);
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("delivery-zone-update", start, { authMs, outcome: "validation-error" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -111,6 +120,7 @@ export async function updateDeliveryZone(
   const d = parsed.data;
   const supabase = await createAdminClient();
 
+  const dbStart = performance.now();
   const { error } = await supabase
     .from("delivery_zones")
     .update({
@@ -129,8 +139,10 @@ export async function updateDeliveryZone(
       updated_at:                       new Date().toISOString(),
     })
     .eq("id", id);
+  const dbMs = Math.round(performance.now() - dbStart);
 
   if (error) {
+    logMutationTiming("delivery-zone-update", start, { authMs, dbMs, outcome: "error" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -141,12 +153,14 @@ export async function updateDeliveryZone(
   }
 
   revalidate();
+  logMutationTiming("delivery-zone-update", start, { authMs, dbMs, outcome: "success" });
   redirect(`${ADMIN_BASE_PATH}/delivery-zones`);
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const supabase = await createAdminClient();
@@ -160,6 +174,7 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
     .eq("delivery_zone_id", id);
 
   if (count && count > 0) {
+    logMutationTiming("delivery-zone-delete", start, { outcome: "rejected" });
     return {
       success: false,
       error: `לא ניתן למחוק אזור משלוח זה כי ${count} יישובים משויכים אליו. שנו את אזור המשלוח של היישובים האלה תחילה, או בטלו את השיוך שלהם.`,
@@ -172,6 +187,7 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
     .eq("id", id);
 
   if (error) {
+    logMutationTiming("delivery-zone-delete", start, { outcome: "error" });
     if (error.code === "23503") {
       return {
         success: false,
@@ -183,5 +199,6 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
   }
 
   revalidate();
+  logMutationTiming("delivery-zone-delete", start, { outcome: "success" });
   return { success: true };
 }

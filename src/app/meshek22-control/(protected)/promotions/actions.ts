@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { promotionSchema } from "@/lib/validations/admin-promotion";
+import { logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -89,20 +90,26 @@ function translateDbError(message: string | undefined): string {
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export async function createPromotion(formData: FormData): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("promotion-create", start, { outcome: "validation-error" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
   const db = createAdminClient();
 
   const perKgError = await rejectPerKgVariants(db, parsed.data.variant_ids);
-  if (perKgError) return { success: false, error: perKgError };
+  if (perKgError) {
+    logMutationTiming("promotion-create", start, { outcome: "rejected" });
+    return { success: false, error: perKgError };
+  }
 
   // One transaction: the promotion and its membership are written together, so a
   // rejected variant can no longer leave an active promotion with no products.
+  const rpcStart = performance.now();
   const { error } = await db.rpc("save_promotion", {
     p_promotion_id:        null,
     p_name:                parsed.data.name,
@@ -115,36 +122,47 @@ export async function createPromotion(formData: FormData): Promise<ActionResult>
     p_sort_order:          parsed.data.sort_order,
     p_variant_ids:         parsed.data.variant_ids,
   });
+  const rpcMs = Math.round(performance.now() - rpcStart);
 
   if (error) {
+    logMutationTiming("promotion-create", start, { rpcMs, outcome: "error" });
     return { success: false, error: translateDbError(error.message) };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
   revalidateStorefront();
 
+  logMutationTiming("promotion-create", start, { rpcMs, outcome: "success" });
   redirect(ADMIN_ROUTES.promotions);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
 
 export async function updatePromotion(id: string, formData: FormData): Promise<ActionResult> {
+  const start = performance.now();
+  const authStart = start;
   await requireAdmin();
+  const authMs = Math.round(performance.now() - authStart);
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("promotion-update", start, { authMs, outcome: "validation-error" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
   const db = createAdminClient();
 
   const perKgError = await rejectPerKgVariants(db, parsed.data.variant_ids);
-  if (perKgError) return { success: false, error: perKgError };
+  if (perKgError) {
+    logMutationTiming("promotion-update", start, { authMs, outcome: "rejected" });
+    return { success: false, error: perKgError };
+  }
 
   // One transaction. The RPC deactivates the promotion, swaps its membership and
   // only then applies the requested dates and active flag, so the activation
   // guard judges the FINAL set — and any rejection rolls the whole edit back
   // instead of leaving the promotion with its products deleted.
+  const rpcStart = performance.now();
   const { error } = await db.rpc("save_promotion", {
     p_promotion_id:        id,
     p_name:                parsed.data.name,
@@ -157,37 +175,44 @@ export async function updatePromotion(id: string, formData: FormData): Promise<A
     p_sort_order:          parsed.data.sort_order,
     p_variant_ids:         parsed.data.variant_ids,
   });
+  const rpcMs = Math.round(performance.now() - rpcStart);
 
   if (error) {
+    logMutationTiming("promotion-update", start, { authMs, rpcMs, outcome: "error" });
     return { success: false, error: translateDbError(error.message) };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
   revalidateStorefront();
 
+  logMutationTiming("promotion-update", start, { authMs, rpcMs, outcome: "success" });
   redirect(ADMIN_ROUTES.promotions);
 }
 
 // ── Enable / disable ──────────────────────────────────────────────────────────
 
 export async function setPromotionActive(id: string, isActive: boolean): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const db = createAdminClient();
   const { error } = await db.from("promotions").update({ is_active: isActive }).eq("id", id);
 
   if (error) {
+    logMutationTiming("promotion-toggle-active", start, { outcome: "error" });
     return { success: false, error: translateDbError(error.message) };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
   revalidateStorefront();
+  logMutationTiming("promotion-toggle-active", start, { outcome: "success" });
   return { success: true };
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deletePromotion(id: string): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const db = createAdminClient();
@@ -197,11 +222,13 @@ export async function deletePromotion(id: string): Promise<ActionResult> {
   const { error } = await db.from("promotions").delete().eq("id", id);
 
   if (error) {
+    logMutationTiming("promotion-delete", start, { outcome: "error" });
     return { success: false, error: "שגיאה במחיקת המבצע. נסו שוב." };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
   revalidateStorefront();
+  logMutationTiming("promotion-delete", start, { outcome: "success" });
   return { success: true };
 }
 

@@ -10,7 +10,7 @@ import {
   type AvailableAction,
   type TransitionAction,
 } from "@/lib/admin/order-transitions";
-import type { OrderPresentationContext } from "@/lib/admin/order-presentation";
+import { useOrderStatus } from "@/components/admin/orders/OrderStatusContext";
 
 /**
  * The order workflow, as buttons.
@@ -18,15 +18,17 @@ import type { OrderPresentationContext } from "@/lib/admin/order-presentation";
  * Only the action that makes sense right now is offered, so there is no way to
  * pick an invalid combination of order and payment status. The server re-derives
  * the same decision, so hiding a button is convenience, not the control.
+ *
+ * On success the badges and the available actions update from the Server
+ * Action's own return value (shared via OrderStatusProvider), not from
+ * `router.refresh()`. A refresh would re-run the protected layout — a second,
+ * fresh `requireAdmin()` — and re-read the order, on top of the round trips
+ * the mutation itself already paid for; the action already knows the new
+ * status for free, since it had to compute it to decide the write.
  */
-export function OrderActions({
-  orderId,
-  context,
-}: {
-  orderId: string;
-  context: OrderPresentationContext;
-}) {
+export function OrderActions() {
   const router = useRouter();
+  const { orderId, context, applyTransition } = useOrderStatus();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<AvailableAction | null>(null);
@@ -40,8 +42,18 @@ export function OrderActions({
     startTransition(async () => {
       try {
         const result = await applyOrderTransition(orderId, action, { cashReceived });
-        if (result.success) router.refresh();
-        else setError(result.error);
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+        if (result.orderStatus && result.paymentStatus) {
+          // Common path: the action already knows the new state.
+          applyTransition({ orderStatus: result.orderStatus, paymentStatus: result.paymentStatus });
+        } else {
+          // CardCom recheck: the outcome is known but not the resulting status
+          // fields cheaply, so fall back to a real refresh for this one action.
+          router.refresh();
+        }
       } catch (err) {
         console.error("[OrderActions] transition failed", err);
         setError("אירעה שגיאה בלתי צפויה. נסו שוב.");

@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { settlementSchema } from "@/lib/validations/admin-settlement";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -32,10 +33,12 @@ function revalidate() {
 // ── Create ────────────────────────────────────────────────────────────────────
 
 export async function createSettlement(formData: FormData): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("settlement-create", start, { outcome: "validation-error" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -52,6 +55,7 @@ export async function createSettlement(formData: FormData): Promise<ActionResult
   });
 
   if (error) {
+    logMutationTiming("settlement-create", start, { outcome: "error" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -62,6 +66,7 @@ export async function createSettlement(formData: FormData): Promise<ActionResult
   }
 
   revalidate();
+  logMutationTiming("settlement-create", start, { outcome: "success" });
   redirect(`${ADMIN_BASE_PATH}/settlements`);
 }
 
@@ -71,10 +76,14 @@ export async function updateSettlement(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
+  const start = performance.now();
+  const authStart = start;
   await requireAdmin();
+  const authMs = Math.round(performance.now() - authStart);
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
+    logMutationTiming("settlement-update", start, { authMs, outcome: "validation-error" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -84,6 +93,7 @@ export async function updateSettlement(
   const d = parsed.data;
   const supabase = await createAdminClient();
 
+  const dbStart = performance.now();
   const { error } = await supabase
     .from("settlements")
     .update({
@@ -92,8 +102,10 @@ export async function updateSettlement(
       is_active:        d.is_active,
     })
     .eq("id", id);
+  const dbMs = Math.round(performance.now() - dbStart);
 
   if (error) {
+    logMutationTiming("settlement-update", start, { authMs, dbMs, outcome: "error" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -104,18 +116,21 @@ export async function updateSettlement(
   }
 
   revalidate();
+  logMutationTiming("settlement-update", start, { authMs, dbMs, outcome: "success" });
   redirect(`${ADMIN_BASE_PATH}/settlements`);
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deleteSettlement(id: string): Promise<ActionResult> {
+  const start = performance.now();
   await requireAdmin();
 
   const supabase = await createAdminClient();
   const { error } = await supabase.from("settlements").delete().eq("id", id);
 
   if (error) {
+    logMutationTiming("settlement-delete", start, { outcome: "error" });
     if (error.code === "23503") {
       return {
         success: false,
@@ -127,5 +142,6 @@ export async function deleteSettlement(id: string): Promise<ActionResult> {
   }
 
   revalidate();
+  logMutationTiming("settlement-delete", start, { outcome: "success" });
   return { success: true };
 }

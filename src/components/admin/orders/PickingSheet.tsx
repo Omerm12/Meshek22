@@ -55,7 +55,7 @@ export function PickingSheet({
   items,
 }: PickingSheetProps) {
   return (
-    <div className="hidden print:block text-black bg-white p-8" dir="rtl">
+    <div className="picking-sheet hidden print:block text-black bg-white p-6" dir="rtl">
       <header className="mb-6 border-b-2 border-black pb-4">
         <p className="text-lg font-bold">משק 22</p>
         <h1 className="text-2xl font-bold mt-1">דף ליקוט להזמנה</h1>
@@ -88,24 +88,30 @@ export function PickingSheet({
         {confirmedDeliveryDate && <Field label="תאריך מאושר" value={confirmedDeliveryDate} />}
       </section>
 
-      <table className="w-full text-sm border-collapse">
+      <table className="picking-sheet-table text-sm">
+        <colgroup>
+          <col className="picking-sheet-col-check" />
+          <col className="picking-sheet-col-product" />
+          <col className="picking-sheet-col-unit" />
+          <col className="picking-sheet-col-qty" />
+        </colgroup>
         <thead>
           <tr className="border-b-2 border-black">
-            <th className="text-start py-2 w-10" />
-            <th className="text-start py-2">מוצר</th>
-            <th className="text-start py-2">יחידה</th>
-            <th className="text-start py-2">כמות</th>
+            <th className="text-start" />
+            <th className="text-start">מוצר</th>
+            <th className="text-start">יחידה</th>
+            <th className="text-center">כמות</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
             <tr key={item.id} className="border-b border-gray-400">
-              <td className="py-2.5">
+              <td>
                 <span className="inline-block h-4 w-4 border-2 border-black" aria-hidden="true" />
               </td>
-              <td className="py-2.5">{item.productName}</td>
-              <td className="py-2.5">{item.variantLabel}</td>
-              <td className="py-2.5 font-semibold">{item.quantity}</td>
+              <td>{item.productName}</td>
+              <td>{item.variantLabel}</td>
+              <td className="picking-sheet-qty">{item.quantity}</td>
             </tr>
           ))}
         </tbody>

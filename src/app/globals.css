@@ -165,3 +165,116 @@ html[data-a11y-spacing="relaxed"] h3 {
   transform: translateY(0);
   transition: opacity 0.65s var(--ease-out-expo), transform 0.65s var(--ease-out-expo);
 }
+
+/* ── Print: admin order picking sheet ────────────────────────────────────────
+ *
+ * Root cause of the left-shifted, clipped print: there was no `@page` rule at
+ * all, so the printer's own default margins applied to a document with no
+ * explicit print-time width reset. The admin shell's outer row
+ * (AdminShell.tsx) stayed `display:flex` during print, and its sidebar
+ * (AdminSidebar.tsx) is only repositioned out of mobile-nav mode
+ * (`fixed inset-y-0 right-0 ... translate-x-full`) above the `lg` breakpoint —
+ * a print viewport (~210mm ≈ 794px at 96dpi for A4) is narrower than that, so
+ * the sidebar's own layout classes never stopped applying just because a
+ * `print:hidden` utility was also present. In an RTL document, that leftover
+ * width shows up as the LAST table column — quantity, here — being pushed
+ * past the left edge and clipped, since RTL overflow spills toward the end
+ * (visually left), not the start.
+ *
+ * Fix: an explicit `@page` box, an unconditional (not utility-cascade-order
+ * dependent) reset of the admin shell's chrome via the `data-admin-*` hooks in
+ * AdminShell.tsx, and a fixed-layout table with real column widths for the
+ * one thing that is ever actually printed — `.picking-sheet`.
+ */
+@page {
+  size: A4 portrait;
+  margin: 12mm 14mm;
+}
+
+@media print {
+  html, body {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    background: #fff;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Unconditional — not relying on which of `.contents` / `.print\:hidden`
+     wins the cascade, and not relying on AdminSidebar's own `lg:` overrides
+     applying at a print viewport width. */
+  [data-admin-chrome] {
+    display: none !important;
+  }
+
+  [data-admin-shell] {
+    display: block !important;
+    min-height: 0 !important;
+  }
+
+  [data-admin-main] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+}
+
+.picking-sheet {
+  width: 100%;
+  max-width: 100%;
+}
+
+.picking-sheet-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+/* Explicit RTL-safe column widths: the narrow columns are pinned so the wide
+   one (product name) absorbs whatever is left — the same technique that
+   keeps the quantity column a safe distance from the physical page edge
+   instead of the browser dividing space some other way. */
+.picking-sheet-table col.picking-sheet-col-check   { width: 12mm; }
+.picking-sheet-table col.picking-sheet-col-product { width: auto; }
+.picking-sheet-table col.picking-sheet-col-unit    { width: 24mm; }
+.picking-sheet-table col.picking-sheet-col-qty     { width: 22mm; }
+
+.picking-sheet-table th,
+.picking-sheet-table td {
+  padding: 6px 8px;
+  overflow-wrap: break-word;
+}
+
+/* Whole quantities, decimals (0.5) and mixed Hebrew/number content must all
+   read left-to-right and never wrap, regardless of the page's RTL direction. */
+.picking-sheet-qty {
+  text-align: center;
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+@media print {
+  /* Browsers already do this for <thead> by default; stated explicitly so a
+     future reset cannot silently drop it. */
+  .picking-sheet thead {
+    display: table-header-group;
+  }
+
+  /* Prevents a single order line from splitting across a page break. The
+     legacy property is kept alongside the modern one for print-engine
+     compatibility. */
+  .picking-sheet tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

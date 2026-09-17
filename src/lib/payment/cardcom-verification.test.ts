@@ -211,7 +211,9 @@ describe("the admin 'recheck with CardCom' action", () => {
     );
     const idx = adminOrderActions.indexOf("isCardcomRecheckAction(transitionAction)");
     expect(idx).toBeGreaterThan(-1);
-    const branch = adminOrderActions.slice(idx, idx + 900);
+    // Wide enough to comfortably include the whole recheck branch (it also
+    // carries per-stage timing instrumentation) up to the next section.
+    const branch = adminOrderActions.slice(idx, idx + 1400);
     expect(branch).toContain("recoverPaymentByOrderId(orderId)");
     // Every outcome is mapped explicitly; none silently marks the order paid.
     expect(branch).toContain('case "paid":');
