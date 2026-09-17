@@ -240,7 +240,16 @@ export async function searchPromotionVariants(query: string): Promise<PromotionV
   }
 
   const { data, error } = await request;
-  if (error || !data) return [];
+  // A genuine query failure must not look like "no products match" — the shop
+  // owner would otherwise conclude the product simply doesn't exist.
+  if (error) {
+    console.error("[admin:promotions] variant search failed", {
+      code: error.code,
+      message: error.message,
+    });
+    throw new Error("שגיאה בחיפוש מוצרים. נסו שוב.");
+  }
+  if (!data) return [];
 
   type Row = {
     id: string;

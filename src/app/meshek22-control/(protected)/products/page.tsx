@@ -6,6 +6,7 @@ import { DeleteProductButton } from "@/components/admin/products/DeleteProductBu
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { withAdminTiming } from "@/lib/admin/instrumentation";
 
 export const metadata: Metadata = { title: "מוצרים" };
 export const dynamic = "force-dynamic";
@@ -42,7 +43,16 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
   if (q) dataQ = dataQ.ilike("name", `%${q}%`);
   dataQ = dataQ.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
-  const [{ count }, { data: products, error }] = await Promise.all([countQ, dataQ]);
+  const [{ count }, { data: products, error }] = await withAdminTiming(
+    "admin:products:list",
+    () => Promise.all([countQ, dataQ]),
+    ([countResult, dataResult]) => ({
+      resultCount: dataResult.data?.length ?? 0,
+      totalCount: countResult.count ?? 0,
+      hasSearch: !!q,
+      failed: !!dataResult.error,
+    })
+  );
 
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));

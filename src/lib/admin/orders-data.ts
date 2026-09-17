@@ -181,6 +181,36 @@ export const EXCLUDE_INCOMPLETE_CARDCOM =
   "payment_method.is.null,payment_method.neq.credit_card,payment_status.eq.paid";
 
 /**
+ * Escape a value for embedding inside a PostgREST `or()`/`filter()` string.
+ *
+ * Comma, period, colon and parentheses are structural in that grammar — a
+ * search term containing one could otherwise inject an extra filter clause.
+ * Wrapping the value in double quotes makes PostgREST treat it as a literal;
+ * the two characters that are special *inside* a quoted value (`\` and `"`)
+ * are backslash-escaped first.
+ */
+function escapeFilterValue(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/**
+ * Build the `or()` filter that runs a search term against the order list
+ * inside Postgres, instead of downloading every matching row and filtering in
+ * application memory (which does not scale as the orders table grows).
+ *
+ * Matches order number, customer name and customer phone — the same fields
+ * the admin search box has always claimed to search.
+ */
+export function buildOrderSearchFilter(term: string): string {
+  const pattern = escapeFilterValue(`%${term}%`);
+  return [
+    `order_number.ilike.${pattern}`,
+    `customer_snapshot->>name.ilike.${pattern}`,
+    `customer_snapshot->>phone.ilike.${pattern}`,
+  ].join(",");
+}
+
+/**
  * Apply a bucket rule to a query.
  *
  * Order status and the payment constraints are pushed into the database.

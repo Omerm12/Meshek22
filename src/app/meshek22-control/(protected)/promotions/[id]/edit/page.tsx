@@ -27,21 +27,20 @@ export default async function EditPromotionPage({
   const { id } = await params;
   const db = createAdminClient();
 
-  const { data: promotion } = await db
-    .from("promotions")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  // Both reads depend only on the route's id, not on each other's result, so
+  // they are issued together instead of one after the other.
+  const [{ data: promotion }, { data: items }] = await Promise.all([
+    db.from("promotions").select("*").eq("id", id).maybeSingle(),
+    // Load the currently selected variants with enough detail to render the chips.
+    db
+      .from("promotion_items")
+      .select(
+        "product_variant_id, product_variants!inner(id, label, price_agorot, quantity_pricing_mode, products!inner(id, name))"
+      )
+      .eq("promotion_id", id),
+  ]);
 
   if (!promotion) notFound();
-
-  // Load the currently selected variants with enough detail to render the chips.
-  const { data: items } = await db
-    .from("promotion_items")
-    .select(
-      "product_variant_id, product_variants!inner(id, label, price_agorot, quantity_pricing_mode, products!inner(id, name))"
-    )
-    .eq("promotion_id", id);
 
   type ItemRow = {
     product_variants: {

@@ -71,6 +71,7 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PromotionVariantOption[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -84,9 +85,17 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
     const id = setTimeout(async () => {
       try {
         const found = await searchPromotionVariants(query);
-        if (!cancelled) setResults(found);
-      } catch {
-        if (!cancelled) setResults([]);
+        if (!cancelled) {
+          setResults(found);
+          setSearchError(null);
+        }
+      } catch (err) {
+        // A failed search must not look like "no products match" — that would
+        // send the shop owner hunting for a product that in fact exists.
+        if (!cancelled) {
+          setResults([]);
+          setSearchError(err instanceof Error ? err.message : "שגיאה בחיפוש מוצרים. נסו שוב.");
+        }
       } finally {
         if (!cancelled) setIsSearching(false);
       }
@@ -331,7 +340,9 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
 
         {/* Search results */}
         <div className="max-h-64 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 mb-5">
-          {results.length === 0 ? (
+          {searchError ? (
+            <p className="px-4 py-6 text-sm text-red-600 text-center">{searchError}</p>
+          ) : results.length === 0 ? (
             <p className="px-4 py-6 text-sm text-gray-400 text-center">
               {isSearching ? "מחפש..." : "לא נמצאו מוצרים"}
             </p>

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Percent, Plus } from "lucide-react";
+import { AlertTriangle, Percent, Plus } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
 import { formatPrice } from "@/lib/utils/money";
 import { isPromotionLive } from "@/lib/promotions/engine";
 import { toPromotion } from "@/lib/data/promotions";
+import { isMissingObjectError } from "@/lib/admin/postgrest-errors";
 import { PromotionRowActions } from "@/components/admin/promotions/PromotionRowActions";
 
 export const metadata: Metadata = { title: "מבצעים" };
@@ -27,7 +28,7 @@ export default async function AdminPromotionsPage() {
   // requireAdmin() for this request — no need to repeat it on the page.
   const db = createAdminClient();
 
-  const { data } = await db
+  const { data, error } = await db
     .from("promotions")
     .select(
       "id, name, description, promotion_type, required_quantity, bundle_price_agorot, " +
@@ -35,6 +36,44 @@ export default async function AdminPromotionsPage() {
     )
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
+
+  // A missing `promotions` table (migration 20260808_002 not yet applied) is an
+  // expected, temporary state — not a real error, and must not look like an
+  // empty catalogue either. A genuine query error must not be swallowed into
+  // "no promotions yet" — the shop owner would otherwise believe the feature is
+  // simply unused instead of broken.
+  if (error) {
+    if (isMissingObjectError(error)) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">מבצעים</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              מבצעי כמות מעורבים — כל N פריטים מתוך הקבוצה במחיר אחד
+            </p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <h2 className="font-bold text-amber-900 mb-2">מודול המבצעים טרם הופעל</h2>
+                <p className="text-sm text-amber-800 leading-relaxed">
+                  נראה שעדכון מסד הנתונים האחרון טרם הוחל. יש להריץ את קובצי המיגרציה
+                  בתיקיית <span className="font-mono text-xs">supabase/migrations</span> ואז לרענן את הדף.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 text-sm">
+        שגיאה בטעינת המבצעים. נסו לרענן את הדף.
+      </div>
+    );
+  }
 
   const promotions = (data ?? []).map((row) =>
     toPromotion(row as unknown as Parameters<typeof toPromotion>[0])

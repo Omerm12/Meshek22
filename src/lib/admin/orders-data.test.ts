@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EXCLUDE_INCOMPLETE_CARDCOM,
+  buildOrderSearchFilter,
   filterRows,
   normalizeOrderRow,
   type AdminOrderRow,
@@ -111,6 +112,33 @@ describe("bucket filtering", () => {
     // This is the default "הכול" list.
     expect(filterRows(rows).some((r) => r.id === "card")).toBe(false);
     expect(filterRows(rows)).toHaveLength(rows.length - 1);
+  });
+});
+
+describe("buildOrderSearchFilter", () => {
+  it("searches order number, customer name and customer phone", () => {
+    const filter = buildOrderSearchFilter("dan");
+    expect(filter).toBe(
+      'order_number.ilike."%dan%",customer_snapshot->>name.ilike."%dan%",customer_snapshot->>phone.ilike."%dan%"'
+    );
+  });
+
+  it("escapes characters that are structural in PostgREST's or() grammar", () => {
+    // A raw comma or parenthesis in the search term would otherwise close the
+    // current clause and let the rest of the string be parsed as new filters.
+    const filter = buildOrderSearchFilter("a,b(c)");
+    expect(filter).toBe(
+      'order_number.ilike."%a,b(c)%",customer_snapshot->>name.ilike."%a,b(c)%",customer_snapshot->>phone.ilike."%a,b(c)%"'
+    );
+    // Quoting is what neutralises them, so every clause must actually be quoted.
+    for (const clause of filter.split(",customer_snapshot")) {
+      expect(clause).toContain('."%');
+    }
+  });
+
+  it("escapes a literal double quote and backslash in the search term", () => {
+    const filter = buildOrderSearchFilter('a"b\\c');
+    expect(filter).toContain('%a\\"b\\\\c%');
   });
 });
 

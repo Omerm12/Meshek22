@@ -20,11 +20,13 @@ import { recoverPaymentByOrderId } from "@/lib/payment/cardcomFinalize";
 import {
   EXCLUDE_INCOMPLETE_CARDCOM,
   applyBucketRule,
+  buildOrderSearchFilter,
   filterRows,
   ordersTable,
   selectOrdersWithFallback,
   type AdminOrderRow,
 } from "@/lib/admin/orders-data";
+import { withAdminTiming } from "@/lib/admin/instrumentation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +46,9 @@ export interface OrderPageResult {
   failed: boolean;
 }
 
-const PAGE_SIZE = 15;
+// 20–30 is the recommended range for the admin order list; 20 keeps the
+// common case (no filters) to one round-trip per screen of results.
+const PAGE_SIZE = 20;
 
 // ─── fetchOrdersPage ──────────────────────────────────────────────────────────
 
@@ -55,69 +59,64 @@ export async function fetchOrdersPage(
   await requireAdmin();
 
   const supabase = createAdminClient();
-  const term = filters.search?.trim().toLowerCase() ?? "";
-
-  // Text search is applied in the application, so cursor pagination is disabled
-  // while searching to avoid paging over a partially-filtered set.
-  const usingTextSearch = !!term;
-
+  const term = filters.search?.trim() ?? "";
   const bucket = filters.status && isOperationalBucket(filters.status) ? filters.status : null;
 
-  const { rows, error } = await selectOrdersWithFallback((columns) => {
-    let query = ordersTable(supabase)
-      .select(columns)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false });
+  // Every constraint — including the search term — is pushed into Postgres and
+  // the result is capped with .limit(), so a search never downloads more than
+  // one page's worth of rows, no matter how large the orders table grows.
+  const { rows, error } = await withAdminTiming(
+    "admin:orders:list",
+    () =>
+      selectOrdersWithFallback((columns) => {
+        let query = ordersTable(supabase)
+          .select(columns)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(PAGE_SIZE + 1);
 
-    if (!usingTextSearch) query = query.limit(PAGE_SIZE + 1);
+        // Incomplete online-card attempts are never part of the employee
+        // workflow, including in the default "הכול" view and in search results.
+        query = query.or(EXCLUDE_INCOMPLETE_CARDCOM);
 
-    // Incomplete online-card attempts are never part of the employee workflow,
-    // including in the default "הכול" view and in search results.
-    query = query.or(EXCLUDE_INCOMPLETE_CARDCOM);
+        // Status + payment constraints go to the database; the fulfillment half
+        // of a bucket rule is applied in memory (see filterRows) because the
+        // column may not exist yet.
+        if (bucket) query = applyBucketRule(query, BUCKET_RULES[bucket]);
 
-    // Status + payment constraints go to the database; the fulfillment half of
-    // a bucket rule is applied in memory (see filterRows) because the column may
-    // not exist yet.
-    if (bucket) query = applyBucketRule(query, BUCKET_RULES[bucket]);
+        if (filters.payment && isPaymentStatus(filters.payment)) {
+          query = query.eq("payment_status", filters.payment);
+        }
 
-    if (filters.payment && isPaymentStatus(filters.payment)) {
-      query = query.eq("payment_status", filters.payment);
-    }
+        if (term) query = query.or(buildOrderSearchFilter(term));
 
-    if (!usingTextSearch && cursor) {
-      const [cursorDate, cursorId] = cursor.split("|");
-      if (cursorDate && cursorId) {
-        query = query.or(
-          `created_at.lt.${cursorDate},and(created_at.eq.${cursorDate},id.lt.${cursorId})`
-        );
-      }
-    }
+        if (cursor) {
+          const [cursorDate, cursorId] = cursor.split("|");
+          if (cursorDate && cursorId) {
+            query = query.or(
+              `created_at.lt.${cursorDate},and(created_at.eq.${cursorDate},id.lt.${cursorId})`
+            );
+          }
+        }
 
-    return query;
-  });
+        return query;
+      }),
+    ({ rows, error }) => ({
+      resultCount: rows.length,
+      hasSearch: !!term,
+      bucket: bucket ?? "all",
+      hasCursor: !!cursor,
+      failed: !!error,
+    })
+  );
 
   if (error) return { orders: [], nextCursor: null, failed: true };
 
   // Second pass: enforce the whole rule, including the parts SQL could not.
   const visible = filterRows(rows, { bucket });
 
-  const filtered = term
-    ? visible.filter((o) => {
-        const c = o.customer_snapshot as { name?: string; phone?: string } | null;
-        return (
-          o.order_number.toLowerCase().includes(term) ||
-          c?.name?.toLowerCase().includes(term) ||
-          (c?.phone ?? "").includes(term)
-        );
-      })
-    : visible;
-
-  if (usingTextSearch) {
-    return { orders: filtered, nextCursor: null, failed: false };
-  }
-
-  const hasMore = filtered.length > PAGE_SIZE;
-  const orders = hasMore ? filtered.slice(0, PAGE_SIZE) : filtered;
+  const hasMore = visible.length > PAGE_SIZE;
+  const orders = hasMore ? visible.slice(0, PAGE_SIZE) : visible;
   const last = orders[orders.length - 1];
 
   return {

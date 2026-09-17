@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
+import { withAdminTiming } from "@/lib/admin/instrumentation";
 import { loadDashboardCounts } from "@/lib/admin/dashboard-counts";
 import {
   EXCLUDE_INCOMPLETE_CARDCOM,
@@ -173,14 +174,23 @@ export default async function AdminDashboardPage() {
   // Counts and recent orders are independent: a failure in one must not blank
   // the other, so they are awaited together rather than sequentially.
   const [counts, recent] = await Promise.all([
-    loadDashboardCounts(supabase),
-    selectOrdersWithFallback((columns) =>
-      ordersTable(supabase)
-        .select(columns)
-        .or(EXCLUDE_INCOMPLETE_CARDCOM)
-        .order("created_at", { ascending: false })
-        // Over-fetch a little: filterRows drops anything the query could not.
-        .limit(RECENT_ORDERS_LIMIT * 2)
+    withAdminTiming(
+      "admin:dashboard:counts",
+      () => loadDashboardCounts(supabase),
+      (result) => ({ source: result.source, hasErrors: result.hasErrors })
+    ),
+    withAdminTiming(
+      "admin:dashboard:recent-orders",
+      () =>
+        selectOrdersWithFallback((columns) =>
+          ordersTable(supabase)
+            .select(columns)
+            .or(EXCLUDE_INCOMPLETE_CARDCOM)
+            .order("created_at", { ascending: false })
+            // Over-fetch a little: filterRows drops anything the query could not.
+            .limit(RECENT_ORDERS_LIMIT * 2)
+        ),
+      (result) => ({ resultCount: result.rows.length, failed: !!result.error })
     ),
   ]);
 

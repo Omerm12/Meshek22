@@ -14,6 +14,7 @@ import {
   isPickupOrder,
 } from "@/lib/admin/order-presentation";
 import { ordersTable, selectOrderDetailWithFallback } from "@/lib/admin/orders-data";
+import { withAdminTiming } from "@/lib/admin/instrumentation";
 import { OrderActions } from "@/components/admin/orders/OrderActions";
 import { PrintPickingSheetButton } from "@/components/admin/orders/PrintPickingSheetButton";
 import { PickingSheet, type PickingSheetItem } from "@/components/admin/orders/PickingSheet";
@@ -101,8 +102,13 @@ export default async function OrderDetailPage({
 
   // Degrades to the legacy column set when the 20260808 migrations have not been
   // applied, so the page renders instead of 404-ing on a missing column.
-  const order = await selectOrderDetailWithFallback((columns) =>
-    ordersTable(supabase).select(columns).eq("id", id).maybeSingle()
+  const order = await withAdminTiming(
+    "admin:orders:detail",
+    () =>
+      selectOrderDetailWithFallback((columns) =>
+        ordersTable(supabase).select(columns).eq("id", id).maybeSingle()
+      ),
+    (result) => ({ found: !!result, itemCount: result?.order_items.length ?? 0 })
   );
 
   if (!order) notFound();
