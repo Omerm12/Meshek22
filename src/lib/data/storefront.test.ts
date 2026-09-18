@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectCategoryIds, dedupeProductsById } from "@/lib/data/storefront";
+import { collectCategoryIds, dedupeProductsById, toMockProduct } from "@/lib/data/storefront";
 import type { MockProduct } from "@/lib/data/mock";
 
 /**
@@ -106,3 +106,127 @@ describe("dedupeProductsById", () => {
     ]);
   });
 });
+
+// ─── toMockProduct: initial variant selection ─────────────────────────────────
+//
+// A product offering a kilogram option must always open on it, no matter
+// which variant the admin flagged is_default in the database, and no matter
+// what order the rows come back in. This is the row→MockProduct mapping every
+// storefront surface (product cards, category/search/promotions pages, the
+// product page) is fed from — fixing it here fixes all of them at once.
+
+type TestVariantRow = {
+  id: string;
+  label: string;
+  unit: string;
+  price_agorot: number;
+  compare_price_agorot: number | null;
+  is_default: boolean;
+  is_available: boolean;
+  sort_order: number;
+  quantity_pricing_mode: "per_kg" | "fixed";
+  quantity_step: number;
+  min_quantity: number;
+};
+
+function variantRow(overrides: Partial<TestVariantRow> = {}): TestVariantRow {
+  return {
+    id: "variant-1",
+    label: "יחידה",
+    unit: "unit",
+    price_agorot: 500,
+    compare_price_agorot: null,
+    is_default: false,
+    is_available: true,
+    sort_order: 0,
+    quantity_pricing_mode: "fixed",
+    quantity_step: 1,
+    min_quantity: 1,
+    ...overrides,
+  };
+}
+
+function productRow(variants: TestVariantRow[]) {
+  return {
+    id: "product-1",
+    name: "עגבניות",
+    slug: "tomatoes",
+    description: null,
+    image_url: null,
+    is_featured: false,
+    sort_order: 0,
+    created_at: "2026-01-01T00:00:00Z",
+    qty_deal_enabled: false,
+    qty_deal_quantity: null,
+    qty_deal_price_agorot: null,
+    categories: null,
+    product_variants: variants,
+  };
+}
+
+describe("toMockProduct: kilogram-first initial selection", () => {
+  it("selects 1kg when it and יחידה both exist, even though יחידה is flagged is_default", () => {
+    const row = productRow([
+      variantRow({ id: "unit", unit: "unit", label: "יחידה", is_default: true, sort_order: 0 }),
+      variantRow({ id: "kg", unit: "1kg", label: '1 ק"ג', is_default: false, sort_order: 1, price_agorot: 1290 }),
+    ]);
+
+    const product = toMockProduct(row);
+    const selected = product.variants.find((v) => v.isDefault);
+    expect(selected?.id).toBe("kg");
+    // Only one variant may end up flagged default.
+    expect(product.variants.filter((v) => v.isDefault)).toHaveLength(1);
+  });
+
+  it("still selects 1kg when it appears first in the database order (order must not matter)", () => {
+    const row = productRow([
+      variantRow({ id: "kg", unit: "1kg", label: '1 ק"ג', is_default: false, sort_order: 0 }),
+      variantRow({ id: "unit", unit: "unit", label: "יחידה", is_default: true, sort_order: 1 }),
+    ]);
+
+    expect(selectedVariantId(row)).toBe("kg");
+  });
+
+  it("selects יחידה when it is the only option", () => {
+    const row = productRow([
+      variantRow({ id: "unit", unit: "unit", label: "יחידה", is_default: true }),
+    ]);
+
+    expect(selectedVariantId(row)).toBe("unit");
+  });
+
+  it("ignores an inactive (is_available: false) kilogram variant", () => {
+    const row = productRow([
+      variantRow({ id: "unit", unit: "unit", label: "יחידה", is_default: true, sort_order: 0 }),
+      variantRow({
+        id: "kg",
+        unit: "1kg",
+        label: '1 ק"ג',
+        is_default: false,
+        is_available: false,
+        sort_order: 1,
+      }),
+    ]);
+
+    const product = toMockProduct(row);
+    // The inactive kg variant is dropped entirely, same as any other
+    // unavailable variant — never shown, never selectable.
+    expect(product.variants.map((v) => v.id)).toEqual(["unit"]);
+    expect(selectedVariantId(row)).toBe("unit");
+  });
+
+  it("the selected kilogram variant carries its own price and label", () => {
+    const row = productRow([
+      variantRow({ id: "unit", unit: "unit", label: "יחידה", is_default: true, price_agorot: 500 }),
+      variantRow({ id: "kg", unit: "1kg", label: '1 ק"ג', is_default: false, price_agorot: 1290, sort_order: 1 }),
+    ]);
+
+    const product = toMockProduct(row);
+    const selected = product.variants.find((v) => v.isDefault);
+    expect(selected).toMatchObject({ id: "kg", label: '1 ק"ג', priceAgorot: 1290 });
+  });
+});
+
+function selectedVariantId(row: ReturnType<typeof productRow>): string | undefined {
+  return toMockProduct(row).variants.find((v) => v.isDefault)?.id;
+}

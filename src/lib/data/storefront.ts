@@ -29,6 +29,7 @@ import {
 } from "@/lib/data/promotions";
 import { buildVariantPromotionMap } from "@/lib/promotions/engine";
 import { MORE_FROM_THE_FARM_SLUG } from "@/lib/config/nav-categories";
+import { pickInitialVariant } from "@/lib/data/variant-selection";
 import type { Promotion } from "@/lib/promotions/types";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
 
@@ -89,11 +90,11 @@ function toMockCategory(row: CategoryRow): MockCategory {
   };
 }
 
-function toMockProduct(row: ProductRow): MockProduct {
+export function toMockProduct(row: ProductRow): MockProduct {
   const catSlug = row.categories?.slug ?? "vegetables";
   const display = getProductDisplay(row.slug);
 
-  const variants: MockVariant[] = row.product_variants
+  const availableVariants: MockVariant[] = row.product_variants
     .filter((v) => v.is_available)
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((v) => ({
@@ -108,9 +109,17 @@ function toMockProduct(row: ProductRow): MockProduct {
       minQuantity: v.min_quantity,
     }));
 
-  if (variants.length > 0 && !variants.some((v) => v.isDefault)) {
-    variants[0] = { ...variants[0], isDefault: true };
-  }
+  // A kilogram variant always opens selected, regardless of which variant an
+  // admin flagged is_default — see pickInitialVariant() for the full rule.
+  // Recomputing isDefault here (rather than only patching in a missing one)
+  // means every consumer that already trusts `variants.find(v => v.isDefault)`
+  // — every product card, the product page, search results, category and
+  // promotions pages — gets the fix for free, with no component changes.
+  const initial = pickInitialVariant(availableVariants);
+  const variants: MockVariant[] = availableVariants.map((v) => ({
+    ...v,
+    isDefault: v.id === initial?.id,
+  }));
 
   return {
     id: row.id,
