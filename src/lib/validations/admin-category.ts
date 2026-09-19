@@ -31,6 +31,19 @@ export const categorySchema = z.object({
   is_active: z.boolean(),
   /** Show this category in the homepage "קטגוריות מובילות" section. */
   is_featured: z.boolean(),
+  /**
+   * Show this category in the top navbar. Independent of is_active: an
+   * inactive category never appears in the navbar regardless of this flag,
+   * but an active category with this off remains reachable via its parent
+   * page / direct URL — it's just absent from the menu.
+   */
+  show_in_navbar: z.boolean(),
+  /**
+   * Promotes a CHILD category to ALSO appear as its own top-level nav
+   * heading, alongside remaining in its parent's submenu. Independent of
+   * show_in_navbar — either can be on without the other.
+   */
+  show_as_top_level_nav: z.boolean(),
   /** UUID of the parent category. Empty string treated as null (no parent). */
   parent_id: z.string().uuid("מזהה קטגוריית אב אינו תקין").optional().or(z.literal("")),
 });

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { AlertCircle, Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils/money";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
@@ -182,9 +183,15 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
     startTransition(async () => {
       try {
         const result = await action(fd);
-        // A successful create/update redirects, so reaching here means failure.
+        // A successful create/update redirects server-side — which crosses
+        // this call as a thrown NEXT_REDIRECT below, not a resolved value — so
+        // reaching this line with a value at all already means no redirect
+        // happened.
         if (result && !result.success) setError(result.error);
       } catch (err) {
+        // See CategoryForm.tsx: let the NEXT_REDIRECT signal keep propagating
+        // instead of misreporting a successful save as a failure.
+        unstable_rethrow(err);
         console.error("[PromotionForm] submit failed", err);
         setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }

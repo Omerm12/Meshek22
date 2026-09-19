@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -11,6 +12,7 @@ import type { ActionResult } from "@/app/meshek22-control/(protected)/categories
 interface ParentOption {
   id:   string;
   name: string;
+  slug: string;
 }
 
 interface CategoryFormProps {
@@ -85,6 +87,8 @@ export function CategoryForm({
       sort_order:  defaultValues?.sort_order  ?? 0,
       is_active:   defaultValues?.is_active   ?? true,
       is_featured: defaultValues?.is_featured ?? false,
+      show_in_navbar: defaultValues?.show_in_navbar ?? false,
+      show_as_top_level_nav: defaultValues?.show_as_top_level_nav ?? false,
       parent_id:   defaultValues?.parent_id   ?? "",
     },
   });
@@ -107,6 +111,8 @@ export function CategoryForm({
     fd.set("sort_order",  String(data.sort_order));
     fd.set("is_active",   String(data.is_active));
     fd.set("is_featured", String(data.is_featured));
+    fd.set("show_in_navbar", String(data.show_in_navbar));
+    fd.set("show_as_top_level_nav", String(data.show_as_top_level_nav));
     fd.set("parent_id",   data.parent_id ?? "");
 
     startTransition(async () => {
@@ -116,6 +122,14 @@ export function CategoryForm({
           setServerError(result.error);
         }
       } catch (err) {
+        // A successful create/update ends with redirect() on the server,
+        // which crosses this Server Action call as a thrown "NEXT_REDIRECT"
+        // signal, not a return value — awaiting the action directly (rather
+        // than via a native <form action>) means that signal lands right
+        // here. unstable_rethrow lets it continue propagating so the
+        // framework still performs the navigation; anything else is a real
+        // failure and falls through to the message below.
+        unstable_rethrow(err);
         console.error("[CategoryForm] submit failed", err);
         setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }
@@ -128,7 +142,7 @@ export function CategoryForm({
       <Field
         label="קטגוריה ראשית (אב)"
         id="parent_id"
-        hint="השאירו ריק כדי ליצור קטגוריה ראשית. בחרו קטגוריה אב כדי ליצור תת-קטגוריה."
+        hint="השאירו ריק כדי ליצור קטגוריה ראשית. בחרו קטגוריה אב כדי ליצור תת-קטגוריה. ה-slug מוצג בסוגריים כי ייתכנו שתי קטגוריות בשם זהה (למשל שתי קטגוריות 'ירקות') — ודאו שאתם בוחרים ב-slug הנכון."
         error={errors.parent_id?.message}
       >
         <select
@@ -139,7 +153,7 @@ export function CategoryForm({
           <option value="">— קטגוריה ראשית (ללא אב) —</option>
           {parentCategories.map((cat) => (
             <option key={cat.id} value={cat.id}>
-              {cat.name}
+              {cat.name} ({cat.slug})
             </option>
           ))}
         </select>
@@ -209,7 +223,7 @@ export function CategoryForm({
       </Field>
 
       {/* Sort order + Is active + Is featured */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Field label="סדר מיון" id="sort_order" required error={errors.sort_order?.message}>
           <input
             id="sort_order"
@@ -249,6 +263,49 @@ export function CategoryForm({
             />
             <label htmlFor="is_featured" className="text-sm text-gray-700 cursor-pointer select-none">
               מובילת
+            </label>
+          </div>
+        </Field>
+
+      </div>
+
+      {/* Navbar visibility — two independent controls: submenu placement
+          (show_in_navbar) and top-level promotion (show_as_top_level_nav).
+          Grouped together since both govern navbar display, but neither
+          setting affects the other. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field
+          label="בתפריט העליון"
+          id="show_in_navbar"
+          hint="נפרד מ'פעילה' — קטגוריה פעילה נשארת זמינה גם אם זה כבוי"
+        >
+          <div className="flex items-center gap-3 h-10">
+            <input
+              id="show_in_navbar"
+              type="checkbox"
+              {...register("show_in_navbar")}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+            />
+            <label htmlFor="show_in_navbar" className="text-sm text-gray-700 cursor-pointer select-none">
+              הצג בתפריט העליון
+            </label>
+          </div>
+        </Field>
+
+        <Field
+          label="כותרת ראשית בתפריט"
+          id="show_as_top_level_nav"
+          hint="הקטגוריה תישאר תחת קטגוריית האב ותופיע בנוסף כקישור ראשי בתפריט."
+        >
+          <div className="flex items-center gap-3 h-10">
+            <input
+              id="show_as_top_level_nav"
+              type="checkbox"
+              {...register("show_as_top_level_nav")}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+            />
+            <label htmlFor="show_as_top_level_nav" className="text-sm text-gray-700 cursor-pointer select-none">
+              הצג גם ככותרת ראשית בתפריט העליון
             </label>
           </div>
         </Field>

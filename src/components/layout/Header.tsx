@@ -9,10 +9,23 @@ import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/money";
 import { useCart } from "@/store/cart";
 import { Button } from "@/components/ui/Button";
-import { PARENT_CATEGORY_NAV, SIMPLE_NAV_LINKS } from "@/lib/config/nav-categories";
+import { SIMPLE_NAV_LINKS } from "@/lib/config/nav-categories";
 import { NavbarSearch } from "@/components/layout/NavbarSearch";
+import type { NavCategoryNode } from "@/lib/data/storefront";
 
-export function Header() {
+interface HeaderProps {
+  /**
+   * The navbar's category tree, fetched once per request by the server
+   * component that renders Header (the (shop) layout, or the homepage) and
+   * passed down here — see fetchNavbarCategoryTree() in
+   * src/lib/data/storefront.ts. Desktop and mobile below both render from
+   * this same prop, so there is only ever one Supabase round trip behind a
+   * page's navbar, not one per menu variant.
+   */
+  categoryTree: NavCategoryNode[];
+}
+
+export function Header({ categoryTree }: HeaderProps) {
   const { totalItems, pricing, openCart } = useCart();
   const pathname = usePathname();
 
@@ -94,7 +107,7 @@ export function Header() {
               aria-label="ניווט ראשי"
             >
               {/* Parent category nav — click navigates directly, hover shows subcategory dropdown */}
-              {PARENT_CATEGORY_NAV.map((cat) => (
+              {categoryTree.map((cat) => (
                 <div
                   key={cat.slug}
                   ref={(el) => { if (el) dropdownRefs.current.set(cat.slug, el); }}
@@ -113,7 +126,7 @@ export function Header() {
                     )}
                     aria-current={isCatActive(cat.href) ? "page" : undefined}
                   >
-                    {cat.label}
+                    {cat.name}
                   </Link>
 
                   {/* Subcategory dropdown — centered under the parent button.
@@ -126,7 +139,7 @@ export function Header() {
                       <div
                         className="animate-dropdown-in bg-white rounded-2xl border border-stone-100/80 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12),0_2px_8px_-2px_rgba(0,0,0,0.06)] py-2 overflow-hidden"
                         role="menu"
-                        aria-label={`תת-קטגוריות ${cat.label}`}
+                        aria-label={`תת-קטגוריות ${cat.name}`}
                       >
                         {cat.children.map((child) => (
                           <Link
@@ -136,7 +149,7 @@ export function Header() {
                             className="block px-4 py-3 text-sm font-medium text-stone-600 hover:text-brand-700 hover:bg-brand-50/70 transition-colors duration-150"
                             role="menuitem"
                           >
-                            {child.label}
+                            {child.name}
                           </Link>
                         ))}
                       </div>
@@ -251,7 +264,7 @@ export function Header() {
         <nav className="px-4 py-3 flex flex-col gap-0.5">
 
           {/* Parent categories — split: link navigates, chevron expands subcategories */}
-          {PARENT_CATEGORY_NAV.map((cat) => (
+          {categoryTree.map((cat) => (
             <div key={cat.slug}>
               <div className="flex items-stretch">
                 <Link
@@ -265,7 +278,7 @@ export function Header() {
                   )}
                   aria-current={isCatActive(cat.href) ? "page" : undefined}
                 >
-                  {cat.label}
+                  {cat.name}
                 </Link>
                 {cat.children.length > 0 && (
                   <button
@@ -277,7 +290,7 @@ export function Header() {
                       mobileExpanded === cat.slug && "bg-brand-50 text-brand-700",
                     )}
                     aria-expanded={mobileExpanded === cat.slug}
-                    aria-label={`הצג תת-קטגוריות של ${cat.label}`}
+                    aria-label={`הצג תת-קטגוריות של ${cat.name}`}
                   >
                     <ChevronDown
                       className={cn(
@@ -299,7 +312,7 @@ export function Header() {
                       onClick={() => setMobileOpen(false)}
                       className="block px-4 py-2.5 rounded-xl text-sm text-stone-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
                     >
-                      {child.label}
+                      {child.name}
                     </Link>
                   ))}
                 </div>

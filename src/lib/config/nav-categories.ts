@@ -1,11 +1,18 @@
 /**
  * Navigation structure for the storefront header.
  *
- * Top-level categories with optional child menus are defined here.
- * This decouples the header from DB round-trips on every render.
- * Update this file when adding new top-level categories to navigation.
+ * The header's category tree (parents + children) is now fetched from
+ * Supabase at request time — see fetchNavbarCategoryTree() in
+ * src/lib/data/storefront.ts, driven by each category's `is_active` and
+ * `show_in_navbar` columns. Adding, hiding, or reordering a category in the
+ * navbar is an admin action, not a code change.
  *
- * Slugs must match actual DB slugs.
+ * PARENT_CATEGORY_NAV below is NOT read by the header any more. It remains
+ * as the href-resolution table for src/components/shop/CategoryCard.tsx
+ * (homepage category cards, which only ever render the three fixed
+ * top-level cards from fetchHomepageCategories()) and as reference data
+ * for hero/redirect config elsewhere in this file. Slugs must match actual
+ * DB slugs.
  */
 
 export interface NavChild {
@@ -108,3 +115,24 @@ export const SIMPLE_NAV_LINKS: NavLink[] = [
   { label: "אזורי משלוח", href: "/delivery-areas" },
   { label: "אודות",       href: "/about" },
 ];
+
+/**
+ * Where a top-level category's landing page lives.
+ *
+ * ירקות, פירות and עוד מהמשק predate the dynamic navbar and keep their
+ * existing, SEO-indexed routes so no current URL ever changes. Any other
+ * active top-level category — created entirely through the admin, with no
+ * code change — falls back to the generic /category/[slug] page: the same
+ * ParentCategoryShell and fetchParentCategoryPageData() every dedicated page
+ * already uses, just resolved by slug at request time instead of hardcoded
+ * per route.
+ */
+export const DEDICATED_PARENT_ROUTES: Record<string, string> = {
+  vegetables: "/vegetables",
+  fruits: "/fruits",
+  [MORE_FROM_THE_FARM_SLUG]: MORE_FROM_THE_FARM_HREF,
+};
+
+export function resolveParentCategoryHref(slug: string): string {
+  return DEDICATED_PARENT_ROUTES[slug] ?? `/category/${slug}`;
+}

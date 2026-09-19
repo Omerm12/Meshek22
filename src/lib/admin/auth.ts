@@ -70,6 +70,12 @@ export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
  */
 export async function requireAdmin(): Promise<AdminUser> {
   const admin = await getAdminUser();
-  if (!admin) redirect(ADMIN_ROUTES.login);
+  if (!admin) {
+    // The single chokepoint every action and the protected layout call, so
+    // one log line here covers auth_failed for all of them — see
+    // src/lib/admin/instrumentation.ts for the full mutation-stage vocabulary.
+    console.log("[admin:timing]", { scope: "auth", stage: "auth_failed" });
+    redirect(ADMIN_ROUTES.login);
+  }
   return admin;
 }

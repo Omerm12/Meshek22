@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 /**
  * Minimal request-scoped timing for the admin panel's data loaders.
  *
@@ -30,6 +32,74 @@ export function logMutationTiming(
     totalMs: Math.round(performance.now() - startedAt),
     ...extra,
   });
+}
+
+/**
+ * Distinguishes exactly what happened to an admin mutation, for the log line
+ * only — never shown to the admin, never derived from form contents. Every
+ * create/update action's control flow maps onto one of these:
+ *
+ *   auth_failed       requireAdmin() rejected the request (see requireAdmin()
+ *                      in src/lib/admin/auth.ts, the single chokepoint every
+ *                      action calls — logged there, not per-action).
+ *   validation_failed  the submitted data failed schema validation; nothing
+ *                      was written.
+ *   write_failed       the database write itself returned an error.
+ *   write_succeeded    the database write committed.
+ *   post_write_failed  the write committed, but the best-effort cache
+ *                      invalidation that follows threw. The row is still
+ *                      saved — this is never reported to the admin as a
+ *                      failed save.
+ *   redirect_success   about to call redirect() back to the list — the
+ *                      terminal step of a successful mutation.
+ */
+export type MutationStage =
+  | "auth_failed"
+  | "validation_failed"
+  | "write_failed"
+  | "write_succeeded"
+  | "post_write_failed"
+  | "redirect_success";
+
+/**
+ * The common, safe tail of every admin create/update action: the database
+ * write has already succeeded by the time this is called, so a failure in
+ * `invalidate` (revalidatePath/revalidateStorefront — Next.js cache-marking
+ * calls that do not perform I/O and essentially never throw, but are not
+ * guaranteed not to) is logged as `post_write_failed`, distinct from
+ * `write_failed`, and never turns into a false "the save failed" — the admin
+ * is still redirected to the list, which self-corrects within the existing
+ * 60s cache window regardless.
+ *
+ * Always throws via redirect() — callers should not expect this to return.
+ * The thrown NEXT_REDIRECT is intentionally not caught here or anywhere else
+ * server-side; see CategoryForm.tsx (and its siblings) for how the client
+ * lets that same signal keep propagating instead of misreading it as failure.
+ */
+export function completeMutation(
+  scope: string,
+  start: number,
+  redirectTo: string,
+  invalidate: () => void,
+  writeSucceededExtra: Record<string, unknown> = {}
+): never {
+  logMutationTiming(scope, start, {
+    ...writeSucceededExtra,
+    outcome: "success",
+    stage: "write_succeeded" satisfies MutationStage,
+  });
+
+  try {
+    invalidate();
+  } catch (cacheErr) {
+    logMutationTiming(scope, start, {
+      stage: "post_write_failed" satisfies MutationStage,
+      error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+    });
+  }
+
+  logMutationTiming(scope, start, { stage: "redirect_success" satisfies MutationStage });
+  redirect(redirectTo);
 }
 
 export async function withAdminTiming<T>(

@@ -22,11 +22,19 @@ const reconcileMigration = readFileSync(
 const checkoutActions = readFileSync("src/app/(shop)/checkout/actions.ts", "utf8");
 
 describe("cash-checkout constraint fix", () => {
-  it("is timestamped after every existing migration, per the required naming convention", () => {
+  it("is timestamped after every migration that existed before it, per the required naming convention", () => {
+    // Pinned against migrations up to and including this one rather than
+    // "the last file in the directory": later migrations (e.g.
+    // 20260919120000_category_navbar_visibility.sql) are expected to sort
+    // after it, and should not make this regress.
     const files = readdirSync("supabase/migrations")
       .filter((f) => f.endsWith(".sql") && /^\d{14}_/.test(f))
       .sort();
-    expect(files[files.length - 1]).toBe("20260907220000_fix_cash_checkout_constraint.sql");
+    expect(files).toContain("20260907220000_fix_cash_checkout_constraint.sql");
+    const priorMigrations = files.filter((f) => f <= "20260907220000_fix_cash_checkout_constraint.sql");
+    expect(priorMigrations[priorMigrations.length - 1]).toBe(
+      "20260907220000_fix_cash_checkout_constraint.sql"
+    );
   });
 
   it("is transactional", () => {

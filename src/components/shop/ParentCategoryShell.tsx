@@ -17,6 +17,14 @@ type SortOption = "default" | "price-asc" | "price-desc" | "name";
 interface ParentCategoryShellProps {
   heroConfig:     CategoryHeroConfig;
   parentSlug:     string;
+  /**
+   * The page's own URL path, if it differs from `/${parentSlug}`. The three
+   * dedicated pages (vegetables/fruits/more-from-the-farm) omit this — their
+   * route segment already equals the slug. The generic /category/[slug]
+   * route passes `/category/${slug}` here so subcategory tabs and the
+   * breadcrumb link back to the correct URL instead of a bare `/${slug}`.
+   */
+  basePath?:      string;
   subcategories:  MockCategory[];
   products:       MockProduct[];
   activeSubSlug:  string | null;
@@ -34,12 +42,12 @@ function getDefaultPrice(product: MockProduct) {
 // ─── Subcategory tabs ─────────────────────────────────────────────────────────
 
 function SubcategoryTabs({
-  parentSlug,
+  basePath,
   subcategories,
   activeSlug,
   accentClass,
 }: {
-  parentSlug:    string;
+  basePath:      string;
   subcategories: MockCategory[];
   activeSlug:    string | null;
   accentClass:   string;
@@ -58,7 +66,7 @@ function SubcategoryTabs({
           aria-label="תתי-קטגוריות"
         >
           <Link
-            href={`/${parentSlug}`}
+            href={basePath}
             className={cn(
               "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap",
               !activeSlug
@@ -72,7 +80,7 @@ function SubcategoryTabs({
           {subcategories.map((cat) => (
             <Link
               key={cat.id}
-              href={`/${parentSlug}?sub=${cat.slug}`}
+              href={`${basePath}?sub=${cat.slug}`}
               className={cn(
                 "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 whitespace-nowrap",
                 activeSlug === cat.slug
@@ -123,10 +131,12 @@ function EmptyState({ search, onClear }: { search: string; onClear: () => void }
 export function ParentCategoryShell({
   heroConfig,
   parentSlug,
+  basePath,
   subcategories,
   products,
   activeSubSlug,
 }: ParentCategoryShellProps) {
+  const resolvedBasePath      = basePath ?? `/${parentSlug}`;
   const [search, setSearch]   = useState("");
   const [sortBy, setSortBy]   = useState<SortOption>("default");
   const [visible, setVisible] = useState(ITEMS_PER_STEP);
@@ -190,7 +200,7 @@ export function ParentCategoryShell({
 
       {/* Subcategory tabs */}
       <SubcategoryTabs
-        parentSlug={parentSlug}
+        basePath={resolvedBasePath}
         subcategories={subcategories}
         activeSlug={activeSubSlug}
         accentClass={heroConfig.accentClass}
@@ -203,7 +213,7 @@ export function ParentCategoryShell({
           <Link href="/" className="hover:text-brand-700 transition-colors">דף הבית</Link>
           <span aria-hidden="true">/</span>
           <Link
-            href={`/${parentSlug}`}
+            href={resolvedBasePath}
             className={cn(
               activeSubSlug
                 ? "hover:text-brand-700 transition-colors"

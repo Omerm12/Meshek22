@@ -61,7 +61,33 @@ export async function updateSession(request: NextRequest) {
   // and caches it, so duplicating it in middleware would only add latency.
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
+
+  // A refresh token Supabase has already rejected (rotated away by a
+  // concurrent request on the same navigation, or left over from a previous
+  // session) will never succeed on retry — leaving it in place would just
+  // reproduce this exact AuthApiError on every subsequent admin request.
+  // signOut() clears only the cookies THIS client's cookie adapter manages
+  // (the Supabase auth cookies), never cart/accessibility/other app cookies,
+  // and never the tokens themselves are read or logged. No mutation is
+  // attempted and no retry happens — the admin is sent straight to a clean
+  // login with a plain-language reason.
+  if (error?.code === "refresh_token_not_found") {
+    await supabase.auth.signOut();
+
+    const loginUrl = new URL(ADMIN_ROUTES.login, request.url);
+    loginUrl.searchParams.set("reason", "session_expired");
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    // Carry over the cleared-cookie headers signOut() just wrote onto
+    // supabaseResponse via the cookie adapter's setAll — a bare
+    // NextResponse.redirect() here would leave the stale cookie in the
+    // browser and reproduce the same error on the very next admin request.
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie);
+    }
+    return redirectResponse;
+  }
 
   if (!user) {
     return NextResponse.redirect(new URL(ADMIN_ROUTES.login, request.url));

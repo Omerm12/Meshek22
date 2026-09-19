@@ -22,13 +22,13 @@ export default async function EditCategoryPage({
   const [{ data: category, error }, { data: allTopLevel }] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, name, slug, description, image_url, sort_order, is_active, is_featured, parent_id")
+      .select("id, name, slug, description, image_url, sort_order, is_active, is_featured, show_in_navbar, show_as_top_level_nav, parent_id")
       .eq("id", id)
       .single(),
     // Only top-level categories can be parents; exclude self
     supabase
       .from("categories")
-      .select("id, name")
+      .select("id, name, slug")
       .is("parent_id", null)
       .order("sort_order", { ascending: true })
       .order("name",       { ascending: true }),
@@ -70,6 +70,8 @@ export default async function EditCategoryPage({
             sort_order:  category.sort_order,
             is_active:   category.is_active,
             is_featured: category.is_featured,
+            show_in_navbar: category.show_in_navbar,
+            show_as_top_level_nav: category.show_as_top_level_nav,
             parent_id:   category.parent_id ?? "",
           }}
           action={actionWithId}

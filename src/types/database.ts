@@ -133,6 +133,10 @@ export interface Database {
           sort_order: number;
           is_active: boolean;
           is_featured: boolean;
+          /** Controls top-nav visibility only — independent of is_active. See categories.show_in_navbar migration. */
+          show_in_navbar: boolean;
+          /** Promotes a CHILD category to also appear as its own top-level nav heading, in addition to its parent submenu. Independent of show_in_navbar. See categories.show_as_top_level_nav migration. */
+          show_as_top_level_nav: boolean;
           parent_id: string | null;
           created_at: string;
         };
@@ -145,6 +149,8 @@ export interface Database {
           sort_order?: number;
           is_active?: boolean;
           is_featured?: boolean;
+          show_in_navbar?: boolean;
+          show_as_top_level_nav?: boolean;
           parent_id?: string | null;
         };
         Update: {
@@ -155,6 +161,8 @@ export interface Database {
           sort_order?: number;
           is_active?: boolean;
           is_featured?: boolean;
+          show_in_navbar?: boolean;
+          show_as_top_level_nav?: boolean;
           parent_id?: string | null;
         };
         Relationships: [];

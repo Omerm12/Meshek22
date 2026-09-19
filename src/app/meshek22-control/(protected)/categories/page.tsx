@@ -20,8 +20,10 @@ type CategoryRow = {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  show_in_navbar: boolean;
+  show_as_top_level_nav: boolean;
   parent_id: string | null;
-  parent: { id: string; name: string } | null;
+  parent: { id: string; name: string; slug: string } | null;
 };
 
 interface PageProps {
@@ -40,7 +42,7 @@ export default async function AdminCategoriesPage({ searchParams }: PageProps) {
     // Search mode: flat list of all matching categories, no pagination needed
     const { data: categories, error } = await supabase
       .from("categories")
-      .select("id, name, slug, description, sort_order, is_active, parent_id, parent:parent_id(id, name)")
+      .select("id, name, slug, description, sort_order, is_active, show_in_navbar, show_as_top_level_nav, parent_id, parent:parent_id(id, name, slug)")
       .ilike("name", `%${q}%`)
       .order("sort_order", { ascending: true })
       .order("name",       { ascending: true });
@@ -78,7 +80,7 @@ export default async function AdminCategoriesPage({ searchParams }: PageProps) {
       .is("parent_id", null),
     supabase
       .from("categories")
-      .select("id, name, slug, description, sort_order, is_active, parent_id, parent:parent_id(id, name)")
+      .select("id, name, slug, description, sort_order, is_active, show_in_navbar, show_as_top_level_nav, parent_id, parent:parent_id(id, name, slug)")
       .is("parent_id", null)
       .order("sort_order", { ascending: true })
       .order("name",       { ascending: true })
@@ -107,7 +109,7 @@ export default async function AdminCategoriesPage({ searchParams }: PageProps) {
   const { data: childrenData } = topLevelIds.length > 0
     ? await supabase
         .from("categories")
-        .select("id, name, slug, description, sort_order, is_active, parent_id, parent:parent_id(id, name)")
+        .select("id, name, slug, description, sort_order, is_active, show_in_navbar, show_as_top_level_nav, parent_id, parent:parent_id(id, name, slug)")
         .in("parent_id", topLevelIds)
         .order("sort_order", { ascending: true })
         .order("name",       { ascending: true })
@@ -144,6 +146,8 @@ export default async function AdminCategoriesPage({ searchParams }: PageProps) {
                   <th className="text-right px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Slug</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-500 hidden md:table-cell">מיון</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-500">סטטוס</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-500 hidden md:table-cell">תפריט</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">כותרת ראשית</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -152,7 +156,13 @@ export default async function AdminCategoriesPage({ searchParams }: PageProps) {
                   <Fragment key={cat.id}>
                     <CategoryRow cat={cat} isChild={false} />
                     {(childrenByParent.get(cat.id) ?? []).map((child) => (
-                      <CategoryRow key={child.id} cat={child} isChild parentName={cat.name} />
+                      <CategoryRow
+                        key={child.id}
+                        cat={child}
+                        isChild
+                        parentName={cat.name}
+                        parentSlug={cat.slug}
+                      />
                     ))}
                   </Fragment>
                 ))}
@@ -231,6 +241,8 @@ function CategoriesTable({ cats, flat }: { cats: CategoryRow[]; flat?: boolean }
               <th className="text-right px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Slug</th>
               <th className="text-right px-4 py-3 font-medium text-gray-500 hidden md:table-cell">מיון</th>
               <th className="text-right px-4 py-3 font-medium text-gray-500">סטטוס</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-500 hidden md:table-cell">תפריט</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">כותרת ראשית</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -241,6 +253,7 @@ function CategoriesTable({ cats, flat }: { cats: CategoryRow[]; flat?: boolean }
                 cat={cat}
                 isChild={!!cat.parent_id}
                 parentName={cat.parent?.name}
+                parentSlug={cat.parent?.slug}
                 flat={flat}
               />
             ))}
@@ -296,11 +309,13 @@ function CategoryRow({
   cat,
   isChild,
   parentName,
+  parentSlug,
   flat,
 }: {
   cat: CategoryRow;
   isChild: boolean;
   parentName?: string;
+  parentSlug?: string;
   flat?: boolean;
 }) {
   return (
@@ -327,8 +342,11 @@ function CategoryRow({
       </td>
       <td className="px-4 py-3.5 hidden sm:table-cell">
         {parentName ? (
-          <span className="inline-flex items-center h-6 px-2.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+          <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
             {parentName}
+            {parentSlug && (
+              <code className="text-blue-400 font-mono" dir="ltr">({parentSlug})</code>
+            )}
           </span>
         ) : (
           <span className="text-xs text-gray-400">ראשית</span>
@@ -354,6 +372,27 @@ function CategoryRow({
         >
           {cat.is_active ? "פעילה" : "לא פעילה"}
         </span>
+      </td>
+      <td className="px-4 py-3.5 hidden md:table-cell">
+        <span
+          className={[
+            "inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold",
+            cat.show_in_navbar
+              ? "bg-blue-50 text-blue-700"
+              : "bg-gray-100 text-gray-500",
+          ].join(" ")}
+        >
+          {cat.show_in_navbar ? "בתפריט" : "לא בתפריט"}
+        </span>
+      </td>
+      <td className="px-4 py-3.5 hidden lg:table-cell">
+        {cat.show_as_top_level_nav ? (
+          <span className="inline-flex items-center h-6 px-2.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
+            כותרת ראשית
+          </span>
+        ) : (
+          <span className="text-xs text-gray-300">—</span>
+        )}
       </td>
       <td className="px-4 py-3.5">
         <div className="flex items-center justify-end gap-2">

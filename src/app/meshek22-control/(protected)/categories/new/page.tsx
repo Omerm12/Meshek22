@@ -14,7 +14,7 @@ export default async function NewCategoryPage() {
   // Only top-level categories can be parents
   const { data: topLevelCategories } = await supabase
     .from("categories")
-    .select("id, name")
+    .select("id, name, slug")
     .is("parent_id", null)
     .order("sort_order", { ascending: true })
     .order("name",       { ascending: true });

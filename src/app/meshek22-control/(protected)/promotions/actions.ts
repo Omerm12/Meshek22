@@ -1,13 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { promotionSchema } from "@/lib/validations/admin-promotion";
-import { logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -95,7 +94,7 @@ export async function createPromotion(formData: FormData): Promise<ActionResult>
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("promotion-create", start, { outcome: "validation-error" });
+    logMutationTiming("promotion-create", start, { outcome: "validation-error", stage: "validation_failed" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
@@ -103,7 +102,7 @@ export async function createPromotion(formData: FormData): Promise<ActionResult>
 
   const perKgError = await rejectPerKgVariants(db, parsed.data.variant_ids);
   if (perKgError) {
-    logMutationTiming("promotion-create", start, { outcome: "rejected" });
+    logMutationTiming("promotion-create", start, { outcome: "rejected", stage: "validation_failed" });
     return { success: false, error: perKgError };
   }
 
@@ -125,15 +124,20 @@ export async function createPromotion(formData: FormData): Promise<ActionResult>
   const rpcMs = Math.round(performance.now() - rpcStart);
 
   if (error) {
-    logMutationTiming("promotion-create", start, { rpcMs, outcome: "error" });
+    logMutationTiming("promotion-create", start, { rpcMs, outcome: "error", stage: "write_failed" });
     return { success: false, error: translateDbError(error.message) };
   }
 
-  revalidatePath(ADMIN_ROUTES.promotions);
-  revalidateStorefront();
-
-  logMutationTiming("promotion-create", start, { rpcMs, outcome: "success" });
-  redirect(ADMIN_ROUTES.promotions);
+  completeMutation(
+    "promotion-create",
+    start,
+    ADMIN_ROUTES.promotions,
+    () => {
+      revalidatePath(ADMIN_ROUTES.promotions);
+      revalidateStorefront();
+    },
+    { rpcMs }
+  );
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -146,7 +150,7 @@ export async function updatePromotion(id: string, formData: FormData): Promise<A
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("promotion-update", start, { authMs, outcome: "validation-error" });
+    logMutationTiming("promotion-update", start, { authMs, outcome: "validation-error", stage: "validation_failed" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
@@ -154,7 +158,7 @@ export async function updatePromotion(id: string, formData: FormData): Promise<A
 
   const perKgError = await rejectPerKgVariants(db, parsed.data.variant_ids);
   if (perKgError) {
-    logMutationTiming("promotion-update", start, { authMs, outcome: "rejected" });
+    logMutationTiming("promotion-update", start, { authMs, outcome: "rejected", stage: "validation_failed" });
     return { success: false, error: perKgError };
   }
 
@@ -178,15 +182,20 @@ export async function updatePromotion(id: string, formData: FormData): Promise<A
   const rpcMs = Math.round(performance.now() - rpcStart);
 
   if (error) {
-    logMutationTiming("promotion-update", start, { authMs, rpcMs, outcome: "error" });
+    logMutationTiming("promotion-update", start, { authMs, rpcMs, outcome: "error", stage: "write_failed" });
     return { success: false, error: translateDbError(error.message) };
   }
 
-  revalidatePath(ADMIN_ROUTES.promotions);
-  revalidateStorefront();
-
-  logMutationTiming("promotion-update", start, { authMs, rpcMs, outcome: "success" });
-  redirect(ADMIN_ROUTES.promotions);
+  completeMutation(
+    "promotion-update",
+    start,
+    ADMIN_ROUTES.promotions,
+    () => {
+      revalidatePath(ADMIN_ROUTES.promotions);
+      revalidateStorefront();
+    },
+    { authMs, rpcMs }
+  );
 }
 
 // ── Enable / disable ──────────────────────────────────────────────────────────
@@ -199,13 +208,13 @@ export async function setPromotionActive(id: string, isActive: boolean): Promise
   const { error } = await db.from("promotions").update({ is_active: isActive }).eq("id", id);
 
   if (error) {
-    logMutationTiming("promotion-toggle-active", start, { outcome: "error" });
+    logMutationTiming("promotion-toggle-active", start, { outcome: "error", stage: "write_failed" });
     return { success: false, error: translateDbError(error.message) };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
   revalidateStorefront();
-  logMutationTiming("promotion-toggle-active", start, { outcome: "success" });
+  logMutationTiming("promotion-toggle-active", start, { outcome: "success", stage: "write_succeeded" });
   return { success: true };
 }
 
@@ -222,13 +231,13 @@ export async function deletePromotion(id: string): Promise<ActionResult> {
   const { error } = await db.from("promotions").delete().eq("id", id);
 
   if (error) {
-    logMutationTiming("promotion-delete", start, { outcome: "error" });
+    logMutationTiming("promotion-delete", start, { outcome: "error", stage: "write_failed" });
     return { success: false, error: "שגיאה במחיקת המבצע. נסו שוב." };
   }
 
   revalidatePath(ADMIN_ROUTES.promotions);
   revalidateStorefront();
-  logMutationTiming("promotion-delete", start, { outcome: "success" });
+  logMutationTiming("promotion-delete", start, { outcome: "success", stage: "write_succeeded" });
   return { success: true };
 }
 

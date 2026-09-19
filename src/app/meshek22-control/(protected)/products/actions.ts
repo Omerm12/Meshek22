@@ -1,13 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -98,7 +97,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
 
   const parsed = parseFormData(formData);
   if (!parsed) {
-    logMutationTiming("product-create", start, { outcome: "validation-error" });
+    logMutationTiming("product-create", start, { outcome: "validation-error", stage: "validation_failed" });
     return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
   }
 
@@ -120,7 +119,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
     .single();
 
   if (productError) {
-    logMutationTiming("product-create", start, { outcome: "error" });
+    logMutationTiming("product-create", start, { outcome: "error", stage: "write_failed" });
     if (productError.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
     return { success: false, error: "שגיאה ביצירת המוצר" };
@@ -132,14 +131,20 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
 
   if (variantsError) {
     await supabase.from("products").delete().eq("id", product.id);
-    logMutationTiming("product-create", start, { outcome: "error" });
+    logMutationTiming("product-create", start, { outcome: "error", stage: "write_failed" });
     return { success: false, error: "שגיאה ביצירת הגרסאות. המוצר לא נשמר." };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/products`);
-  revalidateStorefront();
-  logMutationTiming("product-create", start, { outcome: "success", variantCount: variants.length });
-  redirect(`${ADMIN_BASE_PATH}/products`);
+  completeMutation(
+    "product-create",
+    start,
+    `${ADMIN_BASE_PATH}/products`,
+    () => {
+      revalidatePath(`${ADMIN_BASE_PATH}/products`);
+      revalidateStorefront();
+    },
+    { variantCount: variants.length }
+  );
 }
 
 // ─── Update ───────────────────────────────────────────────────────────────────
@@ -155,7 +160,7 @@ export async function updateProduct(
 
   const parsed = parseFormData(formData);
   if (!parsed) {
-    logMutationTiming("product-update", start, { authMs, outcome: "validation-error" });
+    logMutationTiming("product-update", start, { authMs, outcome: "validation-error", stage: "validation_failed" });
     return { success: false, error: "אימות נתונים נכשל. בדקו את הטופס." };
   }
 
@@ -182,7 +187,7 @@ export async function updateProduct(
   ]);
 
   if (productError) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error" });
+    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
     if (productError.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
     return { success: false, error: "שגיאה בעדכון המוצר" };
@@ -238,7 +243,7 @@ export async function updateProduct(
   ]);
 
   if (deleteError) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error" });
+    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
     if (deleteError.code === "23503")
       return { success: false, error: "לא ניתן להסיר גרסאות שנמצאות בהזמנות קיימות" };
     return { success: false, error: "שגיאה במחיקת גרסאות" };
@@ -263,23 +268,25 @@ export async function updateProduct(
   ]);
 
   if (upsertResult.error) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error" });
+    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
     return { success: false, error: "שגיאה בעדכון גרסאות" };
   }
   if (insertResult.error) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error" });
+    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
     return { success: false, error: "שגיאה ביצירת גרסאות חדשות" };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/products`);
-  revalidateStorefront();
-  revalidatePath(`/product/${parsed.slug}`);
-  logMutationTiming("product-update", start, {
-    authMs,
-    outcome: "success",
-    variantCount: mutableVariants.length,
-  });
-  redirect(`${ADMIN_BASE_PATH}/products`);
+  completeMutation(
+    "product-update",
+    start,
+    `${ADMIN_BASE_PATH}/products`,
+    () => {
+      revalidatePath(`${ADMIN_BASE_PATH}/products`);
+      revalidateStorefront();
+      revalidatePath(`/product/${parsed.slug}`);
+    },
+    { authMs, variantCount: mutableVariants.length }
+  );
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -292,7 +299,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("products").delete().eq("id", id);
 
   if (error) {
-    logMutationTiming("product-delete", start, { outcome: "error" });
+    logMutationTiming("product-delete", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23503")
       return { success: false, error: "לא ניתן למחוק מוצר שנמצא בהזמנות קיימות" };
     return { success: false, error: "שגיאה במחיקת המוצר" };
@@ -300,6 +307,6 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 
   revalidatePath(`${ADMIN_BASE_PATH}/products`);
   revalidateStorefront();
-  logMutationTiming("product-delete", start, { outcome: "success" });
+  logMutationTiming("product-delete", start, { outcome: "success", stage: "write_succeeded" });
   return { success: true };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -128,6 +129,11 @@ export function DeliveryZoneForm({
           setServerError(result.error);
         }
       } catch (err) {
+        // See CategoryForm.tsx: redirect() on the server crosses this call as
+        // a thrown NEXT_REDIRECT signal on a successful save, not a return
+        // value — let it keep propagating instead of misreporting it as a
+        // failure.
+        unstable_rethrow(err);
         console.error("[DeliveryZoneForm] submit failed", err);
         setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }

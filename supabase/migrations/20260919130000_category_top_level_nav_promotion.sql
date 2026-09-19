@@ -1,0 +1,31 @@
+-- ============================================================
+-- Add show_as_top_level_nav: lets a CHILD category appear as an independent
+-- top-level heading in the navbar, IN ADDITION TO remaining a child of its
+-- parent category. This is a display-only promotion — it never changes
+-- parent_id, so the category's actual hierarchy, its place on its parent's
+-- page, and its products are entirely unaffected.
+--
+-- Distinct from, and independent of, show_in_navbar:
+--
+--   show_in_navbar = true          -> shown inside its parent's submenu
+--   show_as_top_level_nav = true   -> ALSO shown as its own top-level entry
+--
+-- Both may be true at once (a category can appear in both places), and
+-- either may be turned off without affecting the other:
+--   - turning off show_as_top_level_nav only removes the top-level entry;
+--     the category stays in its parent's submenu if show_in_navbar is on.
+--   - turning off show_in_navbar only hides it from the submenu; it can
+--     still be promoted to the top level if show_as_top_level_nav is on.
+--
+-- is_active = false hides it from every public navbar position regardless
+-- of either flag — enforced in application code (every storefront read
+-- already filters is_active = true first), not by a CHECK constraint here.
+--
+-- Idempotent: safe to run more than once. Adds no backfill — every existing
+-- category (including any child that already has show_in_navbar = true)
+-- stays unpromoted by default; an admin opts a specific category in
+-- explicitly through the edit form.
+-- ============================================================
+
+ALTER TABLE public.categories
+  ADD COLUMN IF NOT EXISTS show_as_top_level_nav BOOLEAN NOT NULL DEFAULT FALSE;

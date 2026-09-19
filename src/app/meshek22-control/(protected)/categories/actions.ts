@@ -2,12 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { categorySchema } from "@/lib/validations/admin-category";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result types ───────────────────────────────────────────────────────
 
@@ -27,6 +26,8 @@ function parseForm(formData: FormData) {
     sort_order:  Number(formData.get("sort_order")),
     is_active:   formData.get("is_active")   === "true",
     is_featured: formData.get("is_featured") === "true",
+    show_in_navbar: formData.get("show_in_navbar") === "true",
+    show_as_top_level_nav: formData.get("show_as_top_level_nav") === "true",
     parent_id:   rawParentId,
   });
 }
@@ -41,7 +42,7 @@ export async function createCategory(
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("category-create", start, { outcome: "validation-error" });
+    logMutationTiming("category-create", start, { outcome: "validation-error", stage: "validation_failed" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
@@ -56,22 +57,23 @@ export async function createCategory(
     sort_order:  parsed.data.sort_order,
     is_active:   parsed.data.is_active,
     is_featured: parsed.data.is_featured,
+    show_in_navbar: parsed.data.show_in_navbar,
+    show_as_top_level_nav: parsed.data.show_as_top_level_nav,
     parent_id:   parentId,
   });
 
   if (error) {
-    logMutationTiming("category-create", start, { outcome: "error" });
+    logMutationTiming("category-create", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23505") {
       return { success: false, error: "קיימת כבר קטגוריה עם slug זה. בחרו slug אחר." };
     }
     return { success: false, error: "שגיאה ביצירת הקטגוריה. נסו שוב." };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/categories`);
-  revalidateStorefront();
-
-  logMutationTiming("category-create", start, { outcome: "success" });
-  redirect(`${ADMIN_BASE_PATH}/categories`);
+  completeMutation("category-create", start, `${ADMIN_BASE_PATH}/categories`, () => {
+    revalidatePath(`${ADMIN_BASE_PATH}/categories`);
+    revalidateStorefront();
+  });
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -87,14 +89,14 @@ export async function updateCategory(
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("category-update", start, { authMs, outcome: "validation-error" });
+    logMutationTiming("category-update", start, { authMs, outcome: "validation-error", stage: "validation_failed" });
     return { success: false, error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
   }
 
   // Prevent self-parenting
   const parentId = parsed.data.parent_id || null;
   if (parentId === id) {
-    logMutationTiming("category-update", start, { authMs, outcome: "rejected" });
+    logMutationTiming("category-update", start, { authMs, outcome: "rejected", stage: "validation_failed" });
     return { success: false, error: "קטגוריה לא יכולה להיות קטגוריית האב של עצמה." };
   }
 
@@ -110,24 +112,31 @@ export async function updateCategory(
       sort_order:  parsed.data.sort_order,
       is_active:   parsed.data.is_active,
       is_featured: parsed.data.is_featured,
+      show_in_navbar: parsed.data.show_in_navbar,
+      show_as_top_level_nav: parsed.data.show_as_top_level_nav,
       parent_id:   parentId,
     })
     .eq("id", id);
   const dbMs = Math.round(performance.now() - dbStart);
 
   if (error) {
-    logMutationTiming("category-update", start, { authMs, dbMs, outcome: "error" });
+    logMutationTiming("category-update", start, { authMs, dbMs, outcome: "error", stage: "write_failed" });
     if (error.code === "23505") {
       return { success: false, error: "קיימת כבר קטגוריה עם slug זה. בחרו slug אחר." };
     }
     return { success: false, error: "שגיאה בעדכון הקטגוריה. נסו שוב." };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/categories`);
-  revalidateStorefront();
-
-  logMutationTiming("category-update", start, { authMs, dbMs, outcome: "success" });
-  redirect(`${ADMIN_BASE_PATH}/categories`);
+  completeMutation(
+    "category-update",
+    start,
+    `${ADMIN_BASE_PATH}/categories`,
+    () => {
+      revalidatePath(`${ADMIN_BASE_PATH}/categories`);
+      revalidateStorefront();
+    },
+    { authMs, dbMs }
+  );
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -156,7 +165,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("categories").delete().eq("id", id);
 
   if (error) {
-    logMutationTiming("category-delete", start, { outcome: "error" });
+    logMutationTiming("category-delete", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23503") {
       return {
         success: false,
@@ -170,6 +179,6 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   revalidatePath(`${ADMIN_BASE_PATH}/categories`);
   revalidateStorefront();
 
-  logMutationTiming("category-delete", start, { outcome: "success" });
+  logMutationTiming("category-delete", start, { outcome: "success", stage: "write_succeeded" });
   return { success: true };
 }

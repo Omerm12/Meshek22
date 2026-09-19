@@ -1,12 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { settlementSchema } from "@/lib/validations/admin-settlement";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -38,7 +37,7 @@ export async function createSettlement(formData: FormData): Promise<ActionResult
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("settlement-create", start, { outcome: "validation-error" });
+    logMutationTiming("settlement-create", start, { outcome: "validation-error", stage: "validation_failed" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -55,7 +54,7 @@ export async function createSettlement(formData: FormData): Promise<ActionResult
   });
 
   if (error) {
-    logMutationTiming("settlement-create", start, { outcome: "error" });
+    logMutationTiming("settlement-create", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -65,9 +64,7 @@ export async function createSettlement(formData: FormData): Promise<ActionResult
     return { success: false, error: "שגיאה ביצירת היישוב. נסו שוב." };
   }
 
-  revalidate();
-  logMutationTiming("settlement-create", start, { outcome: "success" });
-  redirect(`${ADMIN_BASE_PATH}/settlements`);
+  completeMutation("settlement-create", start, `${ADMIN_BASE_PATH}/settlements`, revalidate);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -83,7 +80,7 @@ export async function updateSettlement(
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("settlement-update", start, { authMs, outcome: "validation-error" });
+    logMutationTiming("settlement-update", start, { authMs, outcome: "validation-error", stage: "validation_failed" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -105,7 +102,7 @@ export async function updateSettlement(
   const dbMs = Math.round(performance.now() - dbStart);
 
   if (error) {
-    logMutationTiming("settlement-update", start, { authMs, dbMs, outcome: "error" });
+    logMutationTiming("settlement-update", start, { authMs, dbMs, outcome: "error", stage: "write_failed" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -115,9 +112,13 @@ export async function updateSettlement(
     return { success: false, error: "שגיאה בעדכון היישוב. נסו שוב." };
   }
 
-  revalidate();
-  logMutationTiming("settlement-update", start, { authMs, dbMs, outcome: "success" });
-  redirect(`${ADMIN_BASE_PATH}/settlements`);
+  completeMutation(
+    "settlement-update",
+    start,
+    `${ADMIN_BASE_PATH}/settlements`,
+    revalidate,
+    { authMs, dbMs }
+  );
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ export async function deleteSettlement(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("settlements").delete().eq("id", id);
 
   if (error) {
-    logMutationTiming("settlement-delete", start, { outcome: "error" });
+    logMutationTiming("settlement-delete", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23503") {
       return {
         success: false,
@@ -142,6 +143,6 @@ export async function deleteSettlement(id: string): Promise<ActionResult> {
   }
 
   revalidate();
-  logMutationTiming("settlement-delete", start, { outcome: "success" });
+  logMutationTiming("settlement-delete", start, { outcome: "success", stage: "write_succeeded" });
   return { success: true };
 }

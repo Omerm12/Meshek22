@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -155,6 +156,11 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
           setServerError(result.error);
         }
       } catch (err) {
+        // A successful create/update redirects server-side, which crosses this
+        // call as a thrown NEXT_REDIRECT signal, not a return value — let it
+        // keep propagating so the framework performs the navigation; anything
+        // else is a real failure. See CategoryForm.tsx for the full explanation.
+        unstable_rethrow(err);
         console.error("[ProductForm] submit failed", err);
         setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
       }

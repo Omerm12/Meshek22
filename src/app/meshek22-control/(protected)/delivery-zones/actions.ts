@@ -1,12 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { deliveryZoneSchema } from "@/lib/validations/admin-delivery-zone";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -56,7 +55,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("delivery-zone-create", start, { outcome: "validation-error" });
+    logMutationTiming("delivery-zone-create", start, { outcome: "validation-error", stage: "validation_failed" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -82,7 +81,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
   });
 
   if (error) {
-    logMutationTiming("delivery-zone-create", start, { outcome: "error" });
+    logMutationTiming("delivery-zone-create", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -92,9 +91,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
     return { success: false, error: "שגיאה ביצירת אזור המשלוח. נסו שוב." };
   }
 
-  revalidate();
-  logMutationTiming("delivery-zone-create", start, { outcome: "success" });
-  redirect(`${ADMIN_BASE_PATH}/delivery-zones`);
+  completeMutation("delivery-zone-create", start, `${ADMIN_BASE_PATH}/delivery-zones`, revalidate);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -110,7 +107,7 @@ export async function updateDeliveryZone(
 
   const parsed = parseForm(formData);
   if (!parsed.success) {
-    logMutationTiming("delivery-zone-update", start, { authMs, outcome: "validation-error" });
+    logMutationTiming("delivery-zone-update", start, { authMs, outcome: "validation-error", stage: "validation_failed" });
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים",
@@ -142,7 +139,7 @@ export async function updateDeliveryZone(
   const dbMs = Math.round(performance.now() - dbStart);
 
   if (error) {
-    logMutationTiming("delivery-zone-update", start, { authMs, dbMs, outcome: "error" });
+    logMutationTiming("delivery-zone-update", start, { authMs, dbMs, outcome: "error", stage: "write_failed" });
     if (error.code === "23505") {
       return {
         success: false,
@@ -152,9 +149,13 @@ export async function updateDeliveryZone(
     return { success: false, error: "שגיאה בעדכון אזור המשלוח. נסו שוב." };
   }
 
-  revalidate();
-  logMutationTiming("delivery-zone-update", start, { authMs, dbMs, outcome: "success" });
-  redirect(`${ADMIN_BASE_PATH}/delivery-zones`);
+  completeMutation(
+    "delivery-zone-update",
+    start,
+    `${ADMIN_BASE_PATH}/delivery-zones`,
+    revalidate,
+    { authMs, dbMs }
+  );
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
     .eq("delivery_zone_id", id);
 
   if (count && count > 0) {
-    logMutationTiming("delivery-zone-delete", start, { outcome: "rejected" });
+    logMutationTiming("delivery-zone-delete", start, { outcome: "rejected", stage: "validation_failed" });
     return {
       success: false,
       error: `לא ניתן למחוק אזור משלוח זה כי ${count} יישובים משויכים אליו. שנו את אזור המשלוח של היישובים האלה תחילה, או בטלו את השיוך שלהם.`,
@@ -187,7 +188,7 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
     .eq("id", id);
 
   if (error) {
-    logMutationTiming("delivery-zone-delete", start, { outcome: "error" });
+    logMutationTiming("delivery-zone-delete", start, { outcome: "error", stage: "write_failed" });
     if (error.code === "23503") {
       return {
         success: false,
@@ -199,6 +200,6 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
   }
 
   revalidate();
-  logMutationTiming("delivery-zone-delete", start, { outcome: "success" });
+  logMutationTiming("delivery-zone-delete", start, { outcome: "success", stage: "write_succeeded" });
   return { success: true };
 }

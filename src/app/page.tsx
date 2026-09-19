@@ -8,6 +8,7 @@ import { FeaturedCategories } from "@/components/home/FeaturedCategories";
 import { BestSellers } from "@/components/home/BestSellers";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { FinalCTA } from "@/components/home/FinalCTA";
+import { fetchNavbarCategoryTree } from "@/lib/data/storefront";
 
 // ISR: rebuild the homepage at most once per 60 seconds.
 // FeaturedCategories and BestSellers now use createPublicClient() (no cookies()),
@@ -106,7 +107,9 @@ function BestSellersSkeleton() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const categoryTree = await fetchNavbarCategoryTree();
+
   return (
     <>
       <script
@@ -115,7 +118,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
-      <Header />
+      <Header categoryTree={categoryTree} />
 
       <main id="main-content">
         <HeroSection />

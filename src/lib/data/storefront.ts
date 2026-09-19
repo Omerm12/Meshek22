@@ -17,6 +17,8 @@
  *                                           category — one cached categories
  *                                           lookup shared by every caller
  *   fetchPromotionalProducts()            – the dynamic /promotions collection
+ *   fetchNavbarCategoryTree()             – the header's parent→children tree,
+ *                                           filtered by is_active + show_in_navbar
  */
 
 import { unstable_cache } from "next/cache";
@@ -28,7 +30,7 @@ import {
   isPromotionalProduct,
 } from "@/lib/data/promotions";
 import { buildVariantPromotionMap } from "@/lib/promotions/engine";
-import { MORE_FROM_THE_FARM_SLUG } from "@/lib/config/nav-categories";
+import { MORE_FROM_THE_FARM_SLUG, resolveParentCategoryHref } from "@/lib/config/nav-categories";
 import { pickInitialVariant } from "@/lib/data/variant-selection";
 import type { Promotion } from "@/lib/promotions/types";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
@@ -409,6 +411,193 @@ export async function fetchAllCategorySlugs(): Promise<string[]> {
     .select("slug")
     .eq("is_active", true);
   return (data ?? []).map((r) => r.slug);
+}
+
+// ─── Navbar category tree ───────────────────────────────────────────────────────
+
+type NavbarCategorySourceRow = {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id: string | null;
+  sort_order: number;
+  show_in_navbar: boolean;
+  show_as_top_level_nav: boolean;
+};
+
+export interface NavCategoryChild {
+  id: string;
+  name: string;
+  slug: string;
+  href: string;
+}
+
+export interface NavCategoryNode extends NavCategoryChild {
+  icon: string;
+  children: NavCategoryChild[];
+}
+
+/** sort_order ascending, then name (Hebrew collation) as a stable tiebreak. */
+function bySortOrderThenName(a: NavbarCategorySourceRow, b: NavbarCategorySourceRow): number {
+  if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+  return a.name.localeCompare(b.name, "he");
+}
+
+/**
+ * Build one root-level navbar entry: its own link, plus its active
+ * show_in_navbar-flagged children for the submenu.
+ */
+function buildRootNode(
+  parent: NavbarCategorySourceRow,
+  children: NavbarCategorySourceRow[]
+): NavCategoryNode {
+  const href = resolveParentCategoryHref(parent.slug);
+  return {
+    id: parent.id,
+    name: parent.name,
+    slug: parent.slug,
+    href,
+    icon: getCategoryDisplay(parent.slug).icon,
+    children: children
+      .filter((child) => child.show_in_navbar)
+      .map((child) => ({
+        id: child.id,
+        name: child.name,
+        slug: child.slug,
+        href: `${href}?sub=${encodeURIComponent(child.slug)}`,
+      })),
+  };
+}
+
+/**
+ * Build one promoted-child navbar entry: a child category rendered as its
+ * own top-level heading, linking straight to its actual parent page with its
+ * slug preselected (e.g. /vegetables?sub=mushrooms-pack) — never a root
+ * route of its own, since its parent_id is untouched.
+ *
+ * No dropdown: this schema has no third hierarchy level, so a promoted child
+ * never has children of its own to show.
+ */
+function buildPromotedNode(
+  child: NavbarCategorySourceRow,
+  parent: NavbarCategorySourceRow
+): NavCategoryNode {
+  const parentHref = resolveParentCategoryHref(parent.slug);
+  return {
+    id: child.id,
+    name: child.name,
+    slug: child.slug,
+    href: `${parentHref}?sub=${encodeURIComponent(child.slug)}`,
+    icon: getCategoryDisplay(child.slug).icon,
+    children: [],
+  };
+}
+
+/**
+ * Build the navbar's top-level list from every active category row: normal
+ * root categories (show_in_navbar = true) plus any CHILD category promoted
+ * to also appear at the top level (show_as_top_level_nav = true) — the same
+ * category can legitimately appear in both its parent's submenu and as a
+ * standalone top-level heading, per the two independent flags.
+ *
+ * Ordering: root categories keep their existing sort_order-driven order.
+ * Promoted children are sorted among themselves by sort_order then name (a
+ * stable, general rule — nothing here keys off any specific category's name
+ * or slug), and spliced in as one block immediately before the
+ * "עוד מהמשק" (MORE_FROM_THE_FARM_SLUG) root entry if it is currently
+ * shown — that catch-all category is the one existing anchor point in this
+ * app's navigation, so real product categories (root or promoted) stay
+ * grouped together ahead of it. If that root entry isn't present, the
+ * promoted block is simply appended after the other root categories.
+ *
+ * Promotion is read ONLY from child rows (parent_id set): a root category's
+ * own show_as_top_level_nav is never consulted, so a root already shown via
+ * show_in_navbar can never be duplicated. A promoted child whose parent row
+ * isn't in this active-only row set (the parent itself is inactive) is
+ * skipped — its link would have nowhere valid to resolve to.
+ *
+ * `is_active` is enforced by the caller (rows passed in must already be
+ * active-only) — this function never re-checks it, so an inactive category
+ * can never slip into the navbar via either path.
+ *
+ * Exported as a pure function (rows in, tree out) so it can be unit tested
+ * without a Supabase client, the same pattern as collectCategoryIds /
+ * dedupeProductsById above.
+ */
+export function buildNavbarTree(rows: NavbarCategorySourceRow[]): NavCategoryNode[] {
+  const childrenByParent = new Map<string, NavbarCategorySourceRow[]>();
+  const rootsById = new Map<string, NavbarCategorySourceRow>();
+  for (const row of rows) {
+    if (row.parent_id) {
+      const siblings = childrenByParent.get(row.parent_id) ?? [];
+      siblings.push(row);
+      childrenByParent.set(row.parent_id, siblings);
+    } else {
+      rootsById.set(row.id, row);
+    }
+  }
+
+  const rootNodes = rows
+    .filter((row) => !row.parent_id && row.show_in_navbar)
+    .map((parent) => buildRootNode(parent, childrenByParent.get(parent.id) ?? []));
+
+  const promotedNodes = rows
+    .filter((row) => row.parent_id && row.show_as_top_level_nav)
+    .filter((row) => rootsById.has(row.parent_id!))
+    .sort(bySortOrderThenName)
+    .map((child) => buildPromotedNode(child, rootsById.get(child.parent_id!)!));
+
+  const anchorIndex = rootNodes.findIndex((node) => node.slug === MORE_FROM_THE_FARM_SLUG);
+  const insertAt = anchorIndex === -1 ? rootNodes.length : anchorIndex;
+
+  return [...rootNodes.slice(0, insertAt), ...promotedNodes, ...rootNodes.slice(insertAt)];
+}
+
+/**
+ * The storefront navbar's full top-level list (root categories plus any
+ * promoted children), in one Supabase round trip: every active category
+ * (parents and children together), grouped, filtered and ordered in JS by
+ * buildNavbarTree() rather than one query per parent. No N+1 — this function
+ * issues exactly one `.from("categories")` query no matter how many root
+ * entries or promoted children end up in the menu.
+ *
+ * Cached alongside every other categories read (see
+ * getCachedParentCategoryTree above) under the same "categories" tag, so an
+ * admin toggling show_in_navbar, show_as_top_level_nav, is_active or
+ * parent_id takes effect immediately via revalidateStorefront()'s
+ * updateTag("categories") call — no separate invalidation path to maintain.
+ */
+const getCachedNavbarCategoryTree = unstable_cache(
+  async (): Promise<NavCategoryNode[]> => {
+    const supabase = createPublicClient();
+
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name, slug, parent_id, sort_order, show_in_navbar, show_as_top_level_nav")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to load navbar categories: ${error.message}`);
+    }
+
+    return buildNavbarTree((data ?? []) as NavbarCategorySourceRow[]);
+  },
+  ["navbar-category-tree"],
+  { revalidate: 60, tags: ["categories"] }
+);
+
+/**
+ * Fetched once per request (from the (shop) layout for every shop page, and
+ * from the homepage) and passed down as a prop — the desktop and mobile menus
+ * inside Header both render from that same prop, so this is the only
+ * Supabase round trip the navbar ever costs a page render, cache misses
+ * aside. Never depends on cookies/session: uses createPublicClient() like
+ * every other function in this file, so the navbar renders identically for
+ * every visitor and Next.js can still statically optimise pages around it.
+ */
+export async function fetchNavbarCategoryTree(): Promise<NavCategoryNode[]> {
+  return getCachedNavbarCategoryTree();
 }
 
 // ─── Product queries ───────────────────────────────────────────────────────────

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEDICATED_PARENT_ROUTES,
   MERGED_CATEGORY_REDIRECTS,
   MORE_FROM_THE_FARM_HREF,
   MORE_FROM_THE_FARM_SLUG,
   PARENT_CATEGORY_NAV,
   SIMPLE_NAV_LINKS,
+  resolveParentCategoryHref,
 } from "@/lib/config/nav-categories";
 
 /**
@@ -123,5 +125,26 @@ describe("storefront navigation", () => {
     for (const href of allNavHrefs) {
       expect(href.startsWith("/")).toBe(true);
     }
+  });
+});
+
+describe("resolveParentCategoryHref (used by the dynamic navbar and the generic /category/[slug] page)", () => {
+  it("keeps vegetables, fruits and more-from-the-farm on their existing, SEO-indexed routes", () => {
+    expect(resolveParentCategoryHref("vegetables")).toBe("/vegetables");
+    expect(resolveParentCategoryHref("fruits")).toBe("/fruits");
+    expect(resolveParentCategoryHref(MORE_FROM_THE_FARM_SLUG)).toBe(MORE_FROM_THE_FARM_HREF);
+  });
+
+  it("falls back to the generic /category/[slug] route for any other slug, with no code change required", () => {
+    expect(resolveParentCategoryHref("dairy-products")).toBe("/category/dairy-products");
+    expect(resolveParentCategoryHref("anything-an-admin-might-type")).toBe(
+      "/category/anything-an-admin-might-type"
+    );
+  });
+
+  it("DEDICATED_PARENT_ROUTES has exactly the three predating parents — nothing else is special-cased", () => {
+    expect(Object.keys(DEDICATED_PARENT_ROUTES).sort()).toEqual(
+      ["fruits", "more-from-the-farm", "vegetables"].sort()
+    );
   });
 });
