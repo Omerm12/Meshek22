@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
-import { AlertCircle, Loader2, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils/money";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
+import { useSuccessFlash } from "@/hooks/useSuccessFlash";
 import {
   searchPromotionVariants,
   type ActionResult,
@@ -75,6 +76,7 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  const { visible: saved, trigger: showSaved, reset: resetSaved } = useSuccessFlash();
   const [isPending, startTransition] = useTransition();
 
   const errorRef = useRef<HTMLDivElement>(null);
@@ -151,6 +153,7 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    resetSaved();
 
     // Client-side checks mirror the server schema so the owner gets immediate
     // feedback; the server validates again regardless.
@@ -183,11 +186,16 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
     startTransition(async () => {
       try {
         const result = await action(fd);
-        // A successful create/update redirects server-side — which crosses
-        // this call as a thrown NEXT_REDIRECT below, not a resolved value — so
-        // reaching this line with a value at all already means no redirect
-        // happened.
-        if (result && !result.success) setError(result.error);
+        // A CREATE still redirects server-side — which crosses this call as a
+        // thrown NEXT_REDIRECT below, not a resolved value. An UPDATE now
+        // resolves normally with {success:true} instead (see
+        // completeUpdateMutation), so reaching this line with a value at all
+        // means either a real failure or a successful update.
+        if (result && !result.success) {
+          setError(result.error);
+        } else {
+          showSaved();
+        }
       } catch (err) {
         // See CategoryForm.tsx: let the NEXT_REDIRECT signal keep propagating
         // instead of misreporting a successful save as a failure.
@@ -210,6 +218,19 @@ export function PromotionForm({ initialValues, action, submitLabel }: PromotionF
         >
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Saved confirmation — only reachable on the update path, which no
+          longer redirects (see completeUpdateMutation). */}
+      {saved && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3.5 py-3"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          עודכן בהצלחה
         </div>
       )}
 

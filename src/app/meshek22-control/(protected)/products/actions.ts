@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -276,10 +276,9 @@ export async function updateProduct(
     return { success: false, error: "שגיאה ביצירת גרסאות חדשות" };
   }
 
-  completeMutation(
+  return completeUpdateMutation(
     "product-update",
     start,
-    `${ADMIN_BASE_PATH}/products`,
     () => {
       revalidatePath(`${ADMIN_BASE_PATH}/products`);
       revalidateStorefront();

@@ -29,6 +29,14 @@ const deliveryZoneActions = readFileSync(
   "src/app/meshek22-control/(protected)/delivery-zones/actions.ts",
   "utf8"
 );
+const categoryActions = readFileSync(
+  "src/app/meshek22-control/(protected)/categories/actions.ts",
+  "utf8"
+);
+const promotionActions = readFileSync(
+  "src/app/meshek22-control/(protected)/promotions/actions.ts",
+  "utf8"
+);
 
 describe("mutation forms disable their submit control while pending", () => {
   it.each([
@@ -83,5 +91,97 @@ describe("revalidation stays scoped to the domain that changed", () => {
     expect(productActions).toContain(`revalidatePath(\`\${ADMIN_BASE_PATH}/products\`)`);
     expect(productActions).toContain("revalidateStorefront()");
     expect(productActions).not.toMatch(/settlements|delivery-zones/);
+  });
+});
+
+/**
+ * Cuts the source of one `export async function <name>(...) { ... }` action
+ * out of a whole actions.ts file, up to (but not including) the next
+ * top-level `export async function` — good enough to isolate one action's
+ * body in these files without a real parser, since every action here is a
+ * flat top-level async function (no nested `export async function`s).
+ */
+function sliceFunction(source: string, fnName: string): string {
+  const start = source.indexOf(`export async function ${fnName}(`);
+  if (start === -1) throw new Error(`function ${fnName} not found in source`);
+  const nextFnIdx = source.indexOf("export async function", start + 1);
+  return nextFnIdx === -1 ? source.slice(start) : source.slice(start, nextFnIdx);
+}
+
+describe("admin UPDATE actions return success in place instead of forcing a redirect", () => {
+  // The root cause of slow-feeling admin edits: completeMutation() always
+  // redirect()s to the list, which pays for a fresh requireAdmin() and the
+  // list page's own queries on top of the mutation's own round trips, just to
+  // land on a page that doesn't show the edited row in any more detail than
+  // the form already open. completeUpdateMutation() (same invalidation, no
+  // redirect) is the fix — see src/lib/admin/instrumentation.ts.
+  const updateFns: [string, string][] = [
+    ["updateCategory", categoryActions],
+    ["updateProduct", productActions],
+    ["updateDeliveryZone", deliveryZoneActions],
+    ["updateSettlement", settlementActions],
+    ["updatePromotion", promotionActions],
+  ];
+
+  it.each(updateFns)("%s calls completeUpdateMutation, never completeMutation", (fnName, source) => {
+    const fn = sliceFunction(source, fnName);
+    expect(fn).toContain("completeUpdateMutation(");
+    expect(fn).not.toMatch(/\bcompleteMutation\(/);
+  });
+
+  const createFns: [string, string][] = [
+    ["createCategory", categoryActions],
+    ["createProduct", productActions],
+    ["createDeliveryZone", deliveryZoneActions],
+    ["createSettlement", settlementActions],
+    ["createPromotion", promotionActions],
+  ];
+
+  it.each(createFns)(
+    "%s still redirects via completeMutation — there is no existing row/page to stay on after a create",
+    (fnName, source) => {
+      const fn = sliceFunction(source, fnName);
+      expect(fn).toMatch(/\bcompleteMutation\(/);
+      expect(fn).not.toContain("completeUpdateMutation(");
+    }
+  );
+
+  it("every actions.ts file importing completeUpdateMutation also still imports completeMutation for its create path", () => {
+    for (const source of [categoryActions, productActions, deliveryZoneActions, settlementActions, promotionActions]) {
+      expect(source).toMatch(
+        /import\s*\{[^}]*\bcompleteMutation\b[^}]*\bcompleteUpdateMutation\b[^}]*\}\s*from\s*"@\/lib\/admin\/instrumentation"/
+      );
+    }
+  });
+});
+
+describe("mutation forms show an in-place saved confirmation instead of navigating away", () => {
+  const forms: [string, string][] = [
+    ["ProductForm", productForm],
+    ["SettlementForm", settlementForm],
+    ["DeliveryZoneForm", deliveryZoneForm],
+    ["CategoryForm", categoryForm],
+    ["PromotionForm", promotionForm],
+  ];
+
+  it.each(forms)("%s uses useSuccessFlash and shows 'עודכן בהצלחה' on the update success path", (_name, source) => {
+    expect(source).toMatch(/import\s*\{\s*useSuccessFlash\s*\}\s*from\s*"@\/hooks\/useSuccessFlash"/);
+    expect(source).toContain("showSaved()");
+    expect(source).toContain("resetSaved()");
+    expect(source).toContain("עודכן בהצלחה");
+  });
+
+  it.each(forms)("%s's submit button reads 'שומר...' while pending, not just a spinner", (_name, source) => {
+    expect(source).toMatch(/isPending\s*\?\s*"שומר\.\.\."/);
+  });
+
+  it("CategoryForm/SettlementForm/DeliveryZoneForm/ProductForm reset the saved flash at the start of every new submit (a second edit shouldn't show a stale success)", () => {
+    for (const source of [categoryForm, settlementForm, deliveryZoneForm, productForm]) {
+      const onSubmitIdx = source.indexOf("const onSubmit = (");
+      const resetIdx = source.indexOf("resetSaved()", onSubmitIdx);
+      const transitionIdx = source.indexOf("startTransition(", onSubmitIdx);
+      expect(resetIdx).toBeGreaterThan(onSubmitIdx);
+      expect(resetIdx).toBeLessThan(transitionIdx);
+    }
   });
 });

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { categorySchema, type CategoryFormData } from "@/lib/validations/admin-category";
 import { slugify } from "@/lib/utils/slugify";
+import { useSuccessFlash } from "@/hooks/useSuccessFlash";
 import type { ActionResult } from "@/app/meshek22-control/(protected)/categories/actions";
 
 interface ParentOption {
@@ -67,6 +68,7 @@ export function CategoryForm({
 }: CategoryFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState("");
+  const { visible: saved, trigger: showSaved, reset: resetSaved } = useSuccessFlash();
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(
     !!defaultValues?.slug
   );
@@ -103,6 +105,7 @@ export function CategoryForm({
 
   const onSubmit = (data: CategoryFormData) => {
     setServerError("");
+    resetSaved();
     const fd = new FormData();
     fd.set("name",        data.name);
     fd.set("slug",        data.slug);
@@ -120,10 +123,16 @@ export function CategoryForm({
         const result = await action(fd);
         if (result && !result.success) {
           setServerError(result.error);
+        } else {
+          // A create still ends with redirect() on the server (caught below);
+          // an update now resolves normally with {success:true} instead — see
+          // completeUpdateMutation in src/lib/admin/instrumentation.ts — so
+          // this is the edit path staying on the form with a saved indicator.
+          showSaved();
         }
       } catch (err) {
-        // A successful create/update ends with redirect() on the server,
-        // which crosses this Server Action call as a thrown "NEXT_REDIRECT"
+        // A successful CREATE ends with redirect() on the server, which
+        // crosses this Server Action call as a thrown "NEXT_REDIRECT"
         // signal, not a return value — awaiting the action directly (rather
         // than via a native <form action>) means that signal lands right
         // here. unstable_rethrow lets it continue propagating so the
@@ -319,6 +328,19 @@ export function CategoryForm({
         </div>
       )}
 
+      {/* Saved confirmation — only reachable on the update path, which no
+          longer redirects (see completeUpdateMutation). */}
+      {saved && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          עודכן בהצלחה
+        </div>
+      )}
+
       {/* Submit */}
       <div className="flex items-center gap-3 pt-1">
         <button
@@ -331,7 +353,7 @@ export function CategoryForm({
           ) : (
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           )}
-          {submitLabel}
+          {isPending ? "שומר..." : submitLabel}
         </button>
       </div>
     </form>

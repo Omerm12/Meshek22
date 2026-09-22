@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ShoppingCart, Menu, X, Phone, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
@@ -11,7 +11,33 @@ import { useCart } from "@/store/cart";
 import { Button } from "@/components/ui/Button";
 import { SIMPLE_NAV_LINKS } from "@/lib/config/nav-categories";
 import { NavbarSearch } from "@/components/layout/NavbarSearch";
+import { computeNavbarVersion } from "@/lib/utils/nav-version";
 import type { NavCategoryNode } from "@/lib/data/storefront";
+
+/**
+ * Throttle gate for the navbar freshness check, shared across every Header
+ * instance in this tab (module scope, not component state, so it survives
+ * Header remounting when navigation crosses from the homepage's root layout
+ * into/out of the (shop) layout). Ensures at most one /api/nav/version
+ * request per tab per this interval, no matter how often navigation or
+ * visibility events fire.
+ */
+const NAV_FRESHNESS_CHECK_INTERVAL_MS = 60_000;
+let lastNavFreshnessCheckAt = 0;
+
+/**
+ * True once this tab has passed its very first Header mount. Deliberately
+ * module-level, not a component ref: Header itself remounts on every
+ * navigation between the homepage (rendered from src/app/page.tsx, under the
+ * root layout) and any (shop) route (rendered from src/app/(shop)/layout.tsx)
+ * — they're different subtrees, so React tears down and recreates Header
+ * crossing that boundary. A per-instance ref would treat every one of those
+ * crossings as a fresh "first mount" and skip its freshness check — silently
+ * disabling the exact home↔category navigation this check exists for. A
+ * module-level flag survives the remount and is only ever true-on-first-load
+ * once per tab.
+ */
+let hasPassedFirstNavMount = false;
 
 interface HeaderProps {
   /**
@@ -28,6 +54,7 @@ interface HeaderProps {
 export function Header({ categoryTree }: HeaderProps) {
   const { totalItems, pricing, openCart } = useCart();
   const pathname = usePathname();
+  const router = useRouter();
 
   const [scrolled, setScrolled]             = useState(false);
   const [mobileOpen, setMobileOpen]         = useState(false);
@@ -36,6 +63,68 @@ export function Header({ categoryTree }: HeaderProps) {
 
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const dropdownRefs  = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // ── Navbar freshness (returning visitors / open tabs) ──────────────────────
+  // Server-side revalidation (revalidatePath/updateTag, triggered from the
+  // admin) fixes this data for the NEXT request it serves — it cannot reach
+  // into a tab that already has this page's server-rendered output sitting in
+  // Next.js's client-side Router Cache (up to 5 min for a static route like
+  // the homepage; see next.config.ts's unmodified default staleTimes). This
+  // effect is what closes that gap for a tab left open across an admin edit.
+  const currentVersionRef = useRef(computeNavbarVersion(categoryTree));
+  useEffect(() => {
+    currentVersionRef.current = computeNavbarVersion(categoryTree);
+  }, [categoryTree]);
+
+  useEffect(() => {
+    // Declared inside the effect (not module/component scope) so it always
+    // reads currentVersionRef.current fresh — nothing to add to deps below.
+    function checkNavFreshness() {
+      const now = Date.now();
+      if (now - lastNavFreshnessCheckAt < NAV_FRESHNESS_CHECK_INTERVAL_MS) return;
+      lastNavFreshnessCheckAt = now;
+
+      fetch("/api/nav/version", { cache: "no-store" })
+        .then((res) => (res.ok ? (res.json() as Promise<{ version: string }>) : null))
+        .then((data) => {
+          if (data && data.version !== currentVersionRef.current) {
+            // Re-fetches this route's Server Component tree (categoryTree
+            // included) and reconciles it with the existing client tree —
+            // client state (cart, open menus, form input) is untouched, and
+            // nothing here touches storage/cookies or reloads the page.
+            router.refresh();
+          }
+        })
+        .catch(() => {
+          // Best-effort freshness check — a failed request just means the
+          // navbar keeps whatever it last rendered until the next trigger.
+        });
+    }
+
+    // Skip only the very first Header mount in this tab: that page already
+    // rendered with data the server fetched moments ago, so checking again
+    // immediately would only re-confirm what's already on screen. Every
+    // mount after that — including ones caused by Header itself remounting
+    // across the home/(shop) boundary — is a real navigation to check.
+    if (!hasPassedFirstNavMount) {
+      hasPassedFirstNavMount = true;
+    } else if (!pathname.startsWith("/checkout")) {
+      checkNavFreshness();
+    }
+
+    if (typeof document === "undefined") return;
+    const onTabReturn = () => {
+      if (document.visibilityState === "visible" && !pathname.startsWith("/checkout")) {
+        checkNavFreshness();
+      }
+    };
+    document.addEventListener("visibilitychange", onTabReturn);
+    window.addEventListener("focus", onTabReturn);
+    return () => {
+      document.removeEventListener("visibilitychange", onTabReturn);
+      window.removeEventListener("focus", onTabReturn);
+    };
+  }, [pathname, router]);
 
   // ── Scroll ──────────────────────────────────────────────────────────────────
   useEffect(() => {

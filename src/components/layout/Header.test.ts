@@ -67,3 +67,62 @@ describe("navbar category tree is dynamic, not the static PARENT_CATEGORY_NAV co
     expect(homePageSource).toContain("<Header categoryTree={categoryTree} />");
   });
 });
+
+describe("navbar freshness check for already-open tabs", () => {
+  // Regression coverage for: an admin reorders a category, but a customer
+  // tab that already rendered the homepage (a static/ISR route — see
+  // next.config.ts's unmodified default staleTimes.static = 300s) keeps
+  // showing the old order from its client-side Router Cache until something
+  // client-side asks for fresh data. revalidatePath/updateTag (server side)
+  // cannot reach into that tab on their own.
+
+  it("polls the shared version endpoint, not a new per-visitor Supabase query", () => {
+    expect(headerSource).toContain('fetch("/api/nav/version"');
+  });
+
+  it("bypasses the browser HTTP cache on each check, so the throttle window is the only staleness source", () => {
+    expect(headerSource).toContain('cache: "no-store"');
+  });
+
+  it("throttles checks with a module-level (not component-state) timestamp, so it survives Header remounting across layouts", () => {
+    expect(headerSource).toMatch(/^let lastNavFreshnessCheckAt = 0;/m);
+    expect(headerSource).toContain("NAV_FRESHNESS_CHECK_INTERVAL_MS = 60_000");
+    expect(headerSource).toContain(
+      "now - lastNavFreshnessCheckAt < NAV_FRESHNESS_CHECK_INTERVAL_MS"
+    );
+  });
+
+  it("skips only the tab's very first mount, using a module-level flag — a component ref would reset (and wrongly re-skip) every time Header remounts crossing the home/(shop) layout boundary", () => {
+    expect(headerSource).toMatch(/^let hasPassedFirstNavMount = false;/m);
+    // Must NOT be component state/ref — that was the actual bug: a per-mount
+    // ref treats every home<->category crossing as a fresh "first mount"
+    // (Header lives in two different places in the tree: page.tsx for '/'
+    // and (shop)/layout.tsx for every other page) and so never fires the
+    // check on exactly the navigation this feature is for.
+    expect(headerSource).not.toContain("skippedFirstPathCheck");
+  });
+
+  it("only updates the navbar via router.refresh() when the fetched version actually differs — never unconditionally", () => {
+    const refreshIdx = headerSource.indexOf("router.refresh()");
+    expect(refreshIdx).toBeGreaterThan(-1);
+    const guardIdx = headerSource.indexOf("data.version !== currentVersionRef.current");
+    expect(guardIdx).toBeGreaterThan(-1);
+    expect(guardIdx).toBeLessThan(refreshIdx);
+  });
+
+  it("never calls router.push, router.replace, window.location, or full reloads to apply a refresh — cart/checkout state must survive", () => {
+    expect(headerSource).not.toContain("window.location.reload");
+    expect(headerSource).not.toContain("router.push(pathname");
+    expect(headerSource).not.toMatch(/localStorage\.(clear|removeItem)/);
+  });
+
+  it("does not run the freshness check while on the checkout route", () => {
+    expect(headerSource).toContain('pathname.startsWith("/checkout")');
+  });
+
+  it("does not poll on an interval — only reacts to navigation (pathname) and tab-visibility/focus events", () => {
+    expect(headerSource).not.toMatch(/setInterval/);
+    expect(headerSource).toContain("visibilitychange");
+    expect(headerSource).toContain("addEventListener(\"focus\"");
+  });
+});

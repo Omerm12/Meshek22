@@ -11,6 +11,7 @@ import {
   type DeliveryZoneFormData,
 } from "@/lib/validations/admin-delivery-zone";
 import { slugify } from "@/lib/utils/slugify";
+import { useSuccessFlash } from "@/hooks/useSuccessFlash";
 import type { ActionResult } from "@/app/meshek22-control/(protected)/delivery-zones/actions";
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ export function DeliveryZoneForm({
 }: DeliveryZoneFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState("");
+  const { visible: saved, trigger: showSaved, reset: resetSaved } = useSuccessFlash();
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!defaultValues?.slug);
 
   const {
@@ -101,6 +103,7 @@ export function DeliveryZoneForm({
 
   const onSubmit = (data: DeliveryZoneFormData) => {
     setServerError("");
+    resetSaved();
     const fd = new FormData();
     fd.set("name",                 data.name);
     fd.set("slug",                 data.slug);
@@ -127,12 +130,15 @@ export function DeliveryZoneForm({
         const result = await action(fd);
         if (result && !result.success) {
           setServerError(result.error);
+        } else {
+          // A create still redirects (caught below); an update now resolves
+          // normally with {success:true} — see completeUpdateMutation.
+          showSaved();
         }
       } catch (err) {
-        // See CategoryForm.tsx: redirect() on the server crosses this call as
-        // a thrown NEXT_REDIRECT signal on a successful save, not a return
-        // value — let it keep propagating instead of misreporting it as a
-        // failure.
+        // See CategoryForm.tsx: redirect() on the server (CREATE only) crosses
+        // this call as a thrown NEXT_REDIRECT signal, not a return value — let
+        // it keep propagating instead of misreporting it as a failure.
         unstable_rethrow(err);
         console.error("[DeliveryZoneForm] submit failed", err);
         setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
@@ -399,6 +405,19 @@ export function DeliveryZoneForm({
         </div>
       )}
 
+      {/* Saved confirmation — only reachable on the update path, which no
+          longer redirects (see completeUpdateMutation). */}
+      {saved && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          עודכן בהצלחה
+        </div>
+      )}
+
       {/* Submit */}
       <div className="flex items-center gap-3 pt-1">
         <button
@@ -411,7 +430,7 @@ export function DeliveryZoneForm({
           ) : (
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           )}
-          {submitLabel}
+          {isPending ? "שומר..." : submitLabel}
         </button>
       </div>
     </form>

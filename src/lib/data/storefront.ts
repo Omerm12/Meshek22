@@ -32,6 +32,7 @@ import {
 import { buildVariantPromotionMap } from "@/lib/promotions/engine";
 import { MORE_FROM_THE_FARM_SLUG, resolveParentCategoryHref } from "@/lib/config/nav-categories";
 import { pickInitialVariant } from "@/lib/data/variant-selection";
+import { computeNavbarVersion } from "@/lib/utils/nav-version";
 import type { Promotion } from "@/lib/promotions/types";
 import type { MockCategory, MockProduct, MockVariant } from "@/lib/data/mock";
 
@@ -598,6 +599,19 @@ const getCachedNavbarCategoryTree = unstable_cache(
  */
 export async function fetchNavbarCategoryTree(): Promise<NavCategoryNode[]> {
   return getCachedNavbarCategoryTree();
+}
+
+/**
+ * A cheap fingerprint of the current navbar tree, for the client-side
+ * freshness check in Header.tsx (see /api/nav/version). Calls the exact same
+ * cached function as fetchNavbarCategoryTree() above — sharing its
+ * unstable_cache entry rather than issuing a second Supabase query — so this
+ * costs nothing beyond what the navbar was already going to fetch this
+ * request/cache-window regardless of how many browser tabs poll it.
+ */
+export async function fetchNavbarVersion(): Promise<string> {
+  const tree = await getCachedNavbarCategoryTree();
+  return computeNavbarVersion(tree);
 }
 
 // ─── Product queries ───────────────────────────────────────────────────────────

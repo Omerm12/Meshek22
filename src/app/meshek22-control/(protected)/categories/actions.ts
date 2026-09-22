@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { categorySchema } from "@/lib/validations/admin-category";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result types ───────────────────────────────────────────────────────
 
@@ -127,10 +127,9 @@ export async function updateCategory(
     return { success: false, error: "שגיאה בעדכון הקטגוריה. נסו שוב." };
   }
 
-  completeMutation(
+  return completeUpdateMutation(
     "category-update",
     start,
-    `${ADMIN_BASE_PATH}/categories`,
     () => {
       revalidatePath(`${ADMIN_BASE_PATH}/categories`);
       revalidateStorefront();

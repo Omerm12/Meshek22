@@ -9,6 +9,7 @@ import { productFormSchema, type ProductFormData } from "@/lib/validations/admin
 import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
 import { ProductImageUpload } from "@/components/admin/products/ProductImageUpload";
+import { useSuccessFlash } from "@/hooks/useSuccessFlash";
 import type { ActionResult } from "@/app/meshek22-control/(protected)/products/actions";
 
 export interface CategoryOption {
@@ -97,6 +98,7 @@ function buildGroupedCategories(categories: CategoryOption[]): GroupedCategories
 export function ProductForm({ defaultValues, action, submitLabel, categories }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState("");
+  const { visible: saved, trigger: showSaved, reset: resetSaved } = useSuccessFlash();
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!defaultValues?.slug);
   const [dealOpen, setDealOpen] = useState(!!defaultValues?.qty_deal_enabled);
@@ -146,6 +148,7 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
 
   const onSubmit = (data: ProductFormData) => {
     setServerError("");
+    resetSaved();
     const fd = new FormData();
     fd.set("data", JSON.stringify(data));
 
@@ -154,12 +157,16 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
         const result = await action(fd);
         if (result && !result.success) {
           setServerError(result.error);
+        } else {
+          // A create still redirects (caught below); an update now resolves
+          // normally with {success:true} — see completeUpdateMutation.
+          showSaved();
         }
       } catch (err) {
-        // A successful create/update redirects server-side, which crosses this
-        // call as a thrown NEXT_REDIRECT signal, not a return value — let it
-        // keep propagating so the framework performs the navigation; anything
-        // else is a real failure. See CategoryForm.tsx for the full explanation.
+        // A successful CREATE redirects server-side, which crosses this call
+        // as a thrown NEXT_REDIRECT signal, not a return value — let it keep
+        // propagating so the framework performs the navigation; anything else
+        // is a real failure. See CategoryForm.tsx for the full explanation.
         unstable_rethrow(err);
         console.error("[ProductForm] submit failed", err);
         setServerError("אירעה שגיאה בלתי צפויה. נסו שוב.");
@@ -386,6 +393,19 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
         </div>
       )}
 
+      {/* Saved confirmation — only reachable on the update path, which no
+          longer redirects (see completeUpdateMutation). */}
+      {saved && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          עודכן בהצלחה
+        </div>
+      )}
+
       {/* ── Submit ────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 pt-1">
         <button
@@ -398,7 +418,7 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
           ) : (
             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           )}
-          {isImageUploading ? "ממתין לסיום העלאה..." : submitLabel}
+          {isImageUploading ? "ממתין לסיום העלאה..." : isPending ? "שומר..." : submitLabel}
         </button>
       </div>
     </form>

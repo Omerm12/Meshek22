@@ -17,7 +17,7 @@ const { redirect } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ redirect }));
 
-import { completeMutation } from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation } from "@/lib/admin/instrumentation";
 
 beforeEach(() => {
   redirect.mockClear();
@@ -88,5 +88,64 @@ describe("completeMutation", () => {
       ([, payload]) => (payload as { stage?: string }).stage === "write_succeeded"
     );
     expect(writeSucceededCall?.[1]).toMatchObject({ authMs: 12, dbMs: 34, outcome: "success" });
+  });
+});
+
+/**
+ * completeUpdateMutation() is completeMutation()'s non-redirecting twin, used
+ * by every update* admin action (products/categories/delivery-zones/
+ * settlements/promotions — see admin-mutations.test.ts for the per-action
+ * wiring check). The whole point is that it must NOT redirect: an edit stays
+ * on the form the admin is already looking at instead of paying for a fresh
+ * requireAdmin() and the list page's own queries just to land back on a page
+ * that shows the edited row in less detail than the form itself.
+ */
+describe("completeUpdateMutation", () => {
+  it("does not redirect — returns {success: true} directly", () => {
+    const invalidate = vi.fn();
+    const result = completeUpdateMutation("category-update", performance.now(), invalidate);
+
+    expect(result).toEqual({ success: true });
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("still runs the invalidation and logs write_succeeded, exactly like completeMutation", () => {
+    const calls: string[] = [];
+    const invalidate = vi.fn(() => calls.push("invalidate"));
+
+    completeUpdateMutation("settlement-update", performance.now(), invalidate);
+
+    expect(calls).toEqual(["invalidate"]);
+    const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
+    const stages = logCalls
+      .filter(([tag]) => tag === "[admin:timing]")
+      .map(([, payload]) => (payload as { stage?: string }).stage);
+    expect(stages).toEqual(["write_succeeded"]);
+  });
+
+  it("returns success even when invalidation throws — a cache failure must never surface as a failed save", () => {
+    const invalidate = vi.fn(() => {
+      throw new Error("cache backend unavailable");
+    });
+
+    const result = completeUpdateMutation("delivery-zone-update", performance.now(), invalidate);
+
+    expect(result).toEqual({ success: true });
+    const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
+    const stages = logCalls
+      .filter(([tag]) => tag === "[admin:timing]")
+      .map(([, payload]) => (payload as { stage?: string }).stage);
+    expect(stages).toEqual(["write_succeeded", "post_write_failed"]);
+  });
+
+  it("merges extra fields (e.g. authMs/dbMs) into the write_succeeded log line", () => {
+    completeUpdateMutation("product-update", performance.now(), () => {}, { authMs: 5, variantCount: 3 });
+
+    const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
+    const writeSucceededCall = logCalls.find(
+      ([, payload]) => (payload as { stage?: string }).stage === "write_succeeded"
+    );
+    expect(writeSucceededCall?.[1]).toMatchObject({ authMs: 5, variantCount: 3, outcome: "success" });
   });
 });

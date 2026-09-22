@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { promotionSchema } from "@/lib/validations/admin-promotion";
-import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -186,10 +186,9 @@ export async function updatePromotion(id: string, formData: FormData): Promise<A
     return { success: false, error: translateDbError(error.message) };
   }
 
-  completeMutation(
+  return completeUpdateMutation(
     "promotion-update",
     start,
-    ADMIN_ROUTES.promotions,
     () => {
       revalidatePath(ADMIN_ROUTES.promotions);
       revalidateStorefront();

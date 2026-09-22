@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { deliveryZoneSchema } from "@/lib/validations/admin-delivery-zone";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -149,10 +149,9 @@ export async function updateDeliveryZone(
     return { success: false, error: "שגיאה בעדכון אזור המשלוח. נסו שוב." };
   }
 
-  completeMutation(
+  return completeUpdateMutation(
     "delivery-zone-update",
     start,
-    `${ADMIN_BASE_PATH}/delivery-zones`,
     revalidate,
     { authMs, dbMs }
   );

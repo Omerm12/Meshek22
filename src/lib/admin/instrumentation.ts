@@ -62,27 +62,21 @@ export type MutationStage =
   | "redirect_success";
 
 /**
- * The common, safe tail of every admin create/update action: the database
- * write has already succeeded by the time this is called, so a failure in
+ * Shared by completeMutation and completeUpdateMutation below: the database
+ * write has already succeeded by the time this runs, so a failure in
  * `invalidate` (revalidatePath/revalidateStorefront — Next.js cache-marking
  * calls that do not perform I/O and essentially never throw, but are not
  * guaranteed not to) is logged as `post_write_failed`, distinct from
- * `write_failed`, and never turns into a false "the save failed" — the admin
- * is still redirected to the list, which self-corrects within the existing
- * 60s cache window regardless.
- *
- * Always throws via redirect() — callers should not expect this to return.
- * The thrown NEXT_REDIRECT is intentionally not caught here or anywhere else
- * server-side; see CategoryForm.tsx (and its siblings) for how the client
- * lets that same signal keep propagating instead of misreading it as failure.
+ * `write_failed`, and never turns into a false "the save failed" — the row is
+ * saved either way, and cache staleness self-corrects within the existing
+ * 60s window regardless.
  */
-export function completeMutation(
+function finishMutation(
   scope: string,
   start: number,
-  redirectTo: string,
   invalidate: () => void,
-  writeSucceededExtra: Record<string, unknown> = {}
-): never {
+  writeSucceededExtra: Record<string, unknown>
+): void {
   logMutationTiming(scope, start, {
     ...writeSucceededExtra,
     outcome: "success",
@@ -97,9 +91,48 @@ export function completeMutation(
       error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
     });
   }
+}
 
+/**
+ * The tail of every admin CREATE action: there is no existing row/page for
+ * the admin to stay on, so this still redirects to the list once the write
+ * (and best-effort cache invalidation) is done.
+ *
+ * Always throws via redirect() — callers should not expect this to return.
+ * The thrown NEXT_REDIRECT is intentionally not caught here or anywhere else
+ * server-side; see CategoryForm.tsx (and its siblings) for how the client
+ * lets that same signal keep propagating instead of misreading it as failure.
+ */
+export function completeMutation(
+  scope: string,
+  start: number,
+  redirectTo: string,
+  invalidate: () => void,
+  writeSucceededExtra: Record<string, unknown> = {}
+): never {
+  finishMutation(scope, start, invalidate, writeSucceededExtra);
   logMutationTiming(scope, start, { stage: "redirect_success" satisfies MutationStage });
   redirect(redirectTo);
+}
+
+/**
+ * The tail of every admin UPDATE action: the admin is already looking at the
+ * row being edited, so — unlike completeMutation — this does NOT redirect.
+ * Redirecting to the list here would force a fresh `requireAdmin()` and the
+ * list's own queries on top of the round trips the mutation itself already
+ * paid for, just to land back on a page that doesn't even show the row being
+ * edited in more detail than the form the admin is already looking at. The
+ * client (see CategoryForm.tsx and its siblings) shows an inline "עודכן
+ * בהצלחה" instead and stays on the form.
+ */
+export function completeUpdateMutation(
+  scope: string,
+  start: number,
+  invalidate: () => void,
+  writeSucceededExtra: Record<string, unknown> = {}
+): { success: true } {
+  finishMutation(scope, start, invalidate, writeSucceededExtra);
+  return { success: true };
 }
 
 export async function withAdminTiming<T>(
