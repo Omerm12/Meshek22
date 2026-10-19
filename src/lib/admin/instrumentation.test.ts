@@ -8,6 +8,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * a server-side redirect), so it is mocked the same way
  * combined-category.test.ts mocks permanentRedirect: a thrown, digest-style
  * signal the caller must let propagate.
+ *
+ * Both completeMutation() and completeUpdateMutation() are async now (they
+ * await getRequestId() and defer invalidation via runAfterResponse/after()),
+ * so redirect()'s throw surfaces as a REJECTED promise, not a synchronous
+ * throw — tests use `.rejects.toThrow(...)` accordingly.
  */
 const { redirect } = vi.hoisted(() => ({
   redirect: vi.fn((url: string) => {
@@ -17,7 +22,7 @@ const { redirect } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ redirect }));
 
-import { completeMutation, completeUpdateMutation } from "@/lib/admin/instrumentation";
+import { completeDeleteMutation, completeMutation, completeUpdateMutation } from "@/lib/admin/instrumentation";
 
 beforeEach(() => {
   redirect.mockClear();
@@ -25,13 +30,13 @@ beforeEach(() => {
 });
 
 describe("completeMutation", () => {
-  it("logs write_succeeded, runs the invalidation, logs redirect_success, then redirects", () => {
+  it("logs write_succeeded, runs the invalidation, logs redirect_success, then redirects", async () => {
     const calls: string[] = [];
     const invalidate = vi.fn(() => calls.push("invalidate"));
 
-    expect(() =>
+    await expect(
       completeMutation("category-create", performance.now(), "/meshek22-control/categories", invalidate)
-    ).toThrow(/NEXT_REDIRECT:\/meshek22-control\/categories/);
+    ).rejects.toThrow(/NEXT_REDIRECT:\/meshek22-control\/categories/);
 
     expect(invalidate).toHaveBeenCalledTimes(1);
     expect(redirect).toHaveBeenCalledWith("/meshek22-control/categories");
@@ -43,14 +48,14 @@ describe("completeMutation", () => {
     expect(stages).toEqual(["write_succeeded", "redirect_success"]);
   });
 
-  it("still redirects — and the data is still saved — even when invalidation throws", () => {
+  it("still redirects — and the data is still saved — even when invalidation throws", async () => {
     const invalidate = vi.fn(() => {
       throw new Error("cache backend unavailable");
     });
 
-    expect(() =>
+    await expect(
       completeMutation("category-update", performance.now(), "/meshek22-control/categories", invalidate)
-    ).toThrow(/NEXT_REDIRECT:\/meshek22-control\/categories/);
+    ).rejects.toThrow(/NEXT_REDIRECT:\/meshek22-control\/categories/);
 
     // The redirect still happened — a cache failure after a successful write
     // must never block the admin from returning to the list.
@@ -64,24 +69,24 @@ describe("completeMutation", () => {
     expect(stages).toEqual(["write_succeeded", "post_write_failed", "redirect_success"]);
   });
 
-  it("never logs write_failed for a post-write cache error — that stage is reserved for the database write itself failing", () => {
+  it("never logs write_failed for a post-write cache error — that stage is reserved for the database write itself failing", async () => {
     const invalidate = vi.fn(() => {
       throw new Error("boom");
     });
 
-    expect(() =>
+    await expect(
       completeMutation("category-update", performance.now(), "/x", invalidate)
-    ).toThrow();
+    ).rejects.toThrow();
 
     const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
     const stages = logCalls.map(([, payload]) => (payload as { stage?: string }).stage);
     expect(stages).not.toContain("write_failed");
   });
 
-  it("merges extra fields (e.g. authMs/dbMs) into the write_succeeded log line", () => {
-    expect(() =>
+  it("merges extra fields (e.g. authMs/dbMs) into the write_succeeded log line", async () => {
+    await expect(
       completeMutation("category-update", performance.now(), "/x", () => {}, { authMs: 12, dbMs: 34 })
-    ).toThrow();
+    ).rejects.toThrow();
 
     const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
     const writeSucceededCall = logCalls.find(
@@ -101,20 +106,20 @@ describe("completeMutation", () => {
  * that shows the edited row in less detail than the form itself.
  */
 describe("completeUpdateMutation", () => {
-  it("does not redirect — returns {success: true} directly", () => {
+  it("does not redirect — returns {success: true} directly", async () => {
     const invalidate = vi.fn();
-    const result = completeUpdateMutation("category-update", performance.now(), invalidate);
+    const result = await completeUpdateMutation("category-update", performance.now(), invalidate);
 
     expect(result).toEqual({ success: true });
     expect(invalidate).toHaveBeenCalledTimes(1);
     expect(redirect).not.toHaveBeenCalled();
   });
 
-  it("still runs the invalidation and logs write_succeeded, exactly like completeMutation", () => {
+  it("still runs the invalidation and logs write_succeeded, exactly like completeMutation", async () => {
     const calls: string[] = [];
     const invalidate = vi.fn(() => calls.push("invalidate"));
 
-    completeUpdateMutation("settlement-update", performance.now(), invalidate);
+    await completeUpdateMutation("settlement-update", performance.now(), invalidate);
 
     expect(calls).toEqual(["invalidate"]);
     const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
@@ -124,12 +129,12 @@ describe("completeUpdateMutation", () => {
     expect(stages).toEqual(["write_succeeded"]);
   });
 
-  it("returns success even when invalidation throws — a cache failure must never surface as a failed save", () => {
+  it("returns success even when invalidation throws — a cache failure must never surface as a failed save", async () => {
     const invalidate = vi.fn(() => {
       throw new Error("cache backend unavailable");
     });
 
-    const result = completeUpdateMutation("delivery-zone-update", performance.now(), invalidate);
+    const result = await completeUpdateMutation("delivery-zone-update", performance.now(), invalidate);
 
     expect(result).toEqual({ success: true });
     const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
@@ -139,13 +144,93 @@ describe("completeUpdateMutation", () => {
     expect(stages).toEqual(["write_succeeded", "post_write_failed"]);
   });
 
-  it("merges extra fields (e.g. authMs/dbMs) into the write_succeeded log line", () => {
-    completeUpdateMutation("product-update", performance.now(), () => {}, { authMs: 5, variantCount: 3 });
+  it("merges extra fields (e.g. authMs/dbMs) into the write_succeeded log line", async () => {
+    await completeUpdateMutation("product-update", performance.now(), () => {}, { authMs: 5, variantCount: 3 });
 
     const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
     const writeSucceededCall = logCalls.find(
       ([, payload]) => (payload as { stage?: string }).stage === "write_succeeded"
     );
     expect(writeSucceededCall?.[1]).toMatchObject({ authMs: 5, variantCount: 3, outcome: "success" });
+  });
+});
+
+/**
+ * completeDeleteMutation() is the same helper as completeUpdateMutation
+ * (both call the private finishMutation()) under the name every delete*
+ * action (and the promotion active/inactive toggle) actually uses — see
+ * admin-mutations.test.ts for the per-action wiring check. Before this, every
+ * delete action called revalidatePath/revalidateStorefront inline, which
+ * reproduced the exact forced-re-render-of-the-current-page bug the update
+ * path was already fixed for.
+ */
+describe("completeDeleteMutation", () => {
+  it("does not redirect — returns {success: true} directly", async () => {
+    const invalidate = vi.fn();
+    const result = await completeDeleteMutation("category-delete", performance.now(), invalidate);
+
+    expect(result).toEqual({ success: true });
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("defers invalidation the same way completeUpdateMutation does, and still logs write_succeeded", async () => {
+    const calls: string[] = [];
+    const invalidate = vi.fn(() => calls.push("invalidate"));
+
+    await completeDeleteMutation("product-delete", performance.now(), invalidate);
+
+    expect(calls).toEqual(["invalidate"]);
+    const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
+    const stages = logCalls
+      .filter(([tag]) => tag === "[admin:timing]")
+      .map(([, payload]) => (payload as { stage?: string }).stage);
+    expect(stages).toEqual(["write_succeeded"]);
+  });
+
+  it("returns success even when invalidation throws", async () => {
+    const invalidate = vi.fn(() => {
+      throw new Error("cache backend unavailable");
+    });
+
+    const result = await completeDeleteMutation("settlement-delete", performance.now(), invalidate);
+
+    expect(result).toEqual({ success: true });
+    const logCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
+    const stages = logCalls
+      .filter(([tag]) => tag === "[admin:timing]")
+      .map(([, payload]) => (payload as { stage?: string }).stage);
+    expect(stages).toEqual(["write_succeeded", "post_write_failed"]);
+  });
+});
+
+/**
+ * runAfterResponse() itself: the mechanism that makes the whole "no wasted
+ * current-page re-render" fix work. after() genuinely requires a Next.js
+ * request scope (unavailable in this vitest environment — see
+ * vitest.config.ts, environment "node", no Next.js request context), so
+ * these tests exercise the fallback path (run fn immediately) — the same
+ * path completeMutation/completeUpdateMutation's tests above already rely
+ * on implicitly. A dedicated describe block makes that reliance explicit and
+ * pins the fallback behavior on its own.
+ */
+describe("runAfterResponse", () => {
+  it("runs fn even with no Next.js request scope available (falls back to immediate execution)", async () => {
+    const { runAfterResponse } = await import("@/lib/admin/instrumentation");
+    const fn = vi.fn();
+    runAfterResponse(fn);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not throw or swallow the call even if fn itself throws inside the fallback", async () => {
+    const { runAfterResponse } = await import("@/lib/admin/instrumentation");
+    const fn = vi.fn(() => {
+      throw new Error("boom");
+    });
+    // The fallback path calls fn() directly with no try/catch of its own —
+    // callers (finishMutation, scheduleOrderRevalidation) are responsible
+    // for handling their own fn's errors, exactly as they already do.
+    expect(() => runAfterResponse(fn)).toThrow("boom");
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });

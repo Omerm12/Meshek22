@@ -22,6 +22,7 @@ export const ADMIN_ROUTES = {
   promotions:    `${ADMIN_BASE_PATH}/promotions`,
   deliveryZones: `${ADMIN_BASE_PATH}/delivery-zones`,
   settlements:   `${ADMIN_BASE_PATH}/settlements`,
+  reports:       `${ADMIN_BASE_PATH}/reports`,
 } as const;
 
 /** Build a path under the admin portal, e.g. adminPath("/orders", "abc"). */

@@ -26,7 +26,31 @@ import {
   selectOrdersWithFallback,
   type AdminOrderRow,
 } from "@/lib/admin/orders-data";
-import { withAdminTiming } from "@/lib/admin/instrumentation";
+import { withAdminTiming, runAfterResponse } from "@/lib/admin/instrumentation";
+import { getRequestId } from "@/lib/admin/request-id";
+
+/**
+ * Deferred via after(), not called inline. revalidatePath marks a single,
+ * request-WIDE flag (not scoped to which path was revalidated — see
+ * node_modules/next/dist/server/app-render/action-handler.js and
+ * node_modules/next/dist/server/web/spec-extension/revalidate.js) that makes
+ * Next.js re-render whatever page this Server Action was invoked from, as
+ * part of THIS action's own response. OrderActions.tsx applies the new
+ * order/payment status straight from this action's return value (via
+ * OrderStatusContext) and never calls router.refresh() for the common path
+ * — so that extra re-render (re-running the order detail page's own reads)
+ * was pure wasted work on every status change. Running revalidatePath in
+ * after() means the response is generated before anything revalidates,
+ * so Next.js skips that re-render; the admin list/dashboard/detail caches
+ * still get invalidated, just a moment after the response is already sent.
+ */
+function scheduleOrderRevalidation(orderId: string): void {
+  runAfterResponse(() => {
+    revalidatePath(ADMIN_BASE_PATH);
+    revalidatePath(`${ADMIN_BASE_PATH}/orders`);
+    revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+  });
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -229,9 +253,7 @@ export async function applyOrderTransition(
       const result = await recoverPaymentByOrderId(orderId);
       externalMs = Math.round(performance.now() - externalStart);
 
-      revalidatePath(ADMIN_BASE_PATH);
-      revalidatePath(`${ADMIN_BASE_PATH}/orders`);
-      revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+      scheduleOrderRevalidation(orderId);
 
       switch (result.outcome) {
         case "paid":
@@ -305,9 +327,7 @@ export async function applyOrderTransition(
       };
     }
 
-    revalidatePath(ADMIN_BASE_PATH);
-    revalidatePath(`${ADMIN_BASE_PATH}/orders`);
-    revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+    scheduleOrderRevalidation(orderId);
 
     outcome = "success";
     return {
@@ -318,6 +338,7 @@ export async function applyOrderTransition(
   } finally {
     console.log("[admin:timing]", {
       scope: "order-status-update",
+      reqId: await getRequestId(),
       action,
       outcome,
       totalMs: Math.round(performance.now() - totalStart),

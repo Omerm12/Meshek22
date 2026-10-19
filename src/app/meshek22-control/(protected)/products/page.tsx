@@ -31,21 +31,36 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
   let countQ = supabase.from("products").select("id", { count: "exact", head: true });
   if (q) countQ = countQ.ilike("name", `%${q}%`);
 
+  // product_variants(count): a single aggregate row, not one row per variant
+  // — the table only ever needs how MANY variants a product has, never their
+  // ids, so this fetches strictly less than embedding product_variants(id).
   let dataQ = supabase
     .from("products")
     .select(`
       id, name, slug, image_url, is_active, is_featured, sort_order,
       categories ( id, name ),
-      product_variants ( id )
+      product_variants ( count )
     `)
     .order("sort_order", { ascending: true })
     .order("name",       { ascending: true });
   if (q) dataQ = dataQ.ilike("name", `%${q}%`);
   dataQ = dataQ.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
+  // Each query timed individually (not just as one combined span) so a
+  // production trace can show which of the two — not just that "the page"
+  // was slow — actually dominates. Both still run concurrently: the inner
+  // timing wrap adds a .then() but doesn't change when either query starts.
   const [{ count }, { data: products, error }] = await withAdminTiming(
     "admin:products:list",
-    () => Promise.all([countQ, dataQ]),
+    () =>
+      Promise.all([
+        withAdminTiming("admin:products:list:count", async () => countQ, (r) => ({ hasSearch: !!q, failed: !!r.error })),
+        withAdminTiming("admin:products:list:data", async () => dataQ, (r) => ({
+          resultCount: r.data?.length ?? 0,
+          hasSearch: !!q,
+          failed: !!r.error,
+        })),
+      ]),
     ([countResult, dataResult]) => ({
       resultCount: dataResult.data?.length ?? 0,
       totalCount: countResult.count ?? 0,
@@ -147,9 +162,12 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
               <tbody className="divide-y divide-gray-100">
                 {products.map((product) => {
                   const category = product.categories as unknown as { id: string; name: string } | null;
-                  const variantCount = Array.isArray(product.product_variants)
-                    ? product.product_variants.length
-                    : 0;
+                  // product_variants(count) returns one aggregate row, e.g.
+                  // [{ count: 3 }] — NOT one row per variant, so this reads the
+                  // count field rather than the array's own .length (which
+                  // would always be 1 regardless of the real variant count).
+                  const variantRows = product.product_variants as unknown as { count: number }[] | null;
+                  const variantCount = variantRows?.[0]?.count ?? 0;
 
                   return (
                     <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
@@ -215,8 +233,13 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
                       {/* Actions */}
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-2">
+                          {/* prefetch={false}: default prefetch fires for every row
+                              scrolled into view — up to PAGE_SIZE (15) requests per
+                              page load, each paying the full admin auth chain, for
+                              edit pages the admin usually never visits. */}
                           <Link
                             href={`${ADMIN_BASE_PATH}/products/${product.id}/edit`}
+                            prefetch={false}
                             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-colors"
                             aria-label={`ערוך מוצר ${product.name}`}
                           >

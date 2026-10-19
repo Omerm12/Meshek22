@@ -164,8 +164,13 @@ export function OrdersListClient({
                       {formatDate(order.created_at)}
                     </td>
                     <td className="px-5 py-3.5">
+                      {/* prefetch={false}: default prefetch fires for every row
+                          scrolled into view, growing unbounded as "load more" adds
+                          rows — each paying the full admin auth chain for an order
+                          detail page the admin usually never opens. */}
                       <Link
                         href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
+                        prefetch={false}
                         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-brand-600 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors whitespace-nowrap"
                         aria-label={`צפה בהזמנה ${order.order_number}`}
                       >

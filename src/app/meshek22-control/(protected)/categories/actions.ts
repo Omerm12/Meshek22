@@ -6,7 +6,12 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { categorySchema } from "@/lib/validations/admin-category";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import {
+  completeDeleteMutation,
+  completeMutation,
+  completeUpdateMutation,
+  logMutationTiming,
+} from "@/lib/admin/instrumentation";
 
 // ── Shared result types ───────────────────────────────────────────────────────
 
@@ -70,7 +75,7 @@ export async function createCategory(
     return { success: false, error: "שגיאה ביצירת הקטגוריה. נסו שוב." };
   }
 
-  completeMutation("category-create", start, `${ADMIN_BASE_PATH}/categories`, () => {
+  return completeMutation("category-create", start, `${ADMIN_BASE_PATH}/categories`, () => {
     revalidatePath(`${ADMIN_BASE_PATH}/categories`);
     revalidateStorefront();
   });
@@ -175,9 +180,8 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     return { success: false, error: "שגיאה במחיקת הקטגוריה. נסו שוב." };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/categories`);
-  revalidateStorefront();
-
-  logMutationTiming("category-delete", start, { outcome: "success", stage: "write_succeeded" });
-  return { success: true };
+  return completeDeleteMutation("category-delete", start, () => {
+    revalidatePath(`${ADMIN_BASE_PATH}/categories`);
+    revalidateStorefront();
+  });
 }

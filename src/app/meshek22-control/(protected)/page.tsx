@@ -116,8 +116,16 @@ function AttentionCardTile({
   value: number | null;
 }) {
   return (
+    // prefetch={false}: 5 of these render together on the dashboard — the
+    // very first page after login — alongside 5 ConfigTiles and up to 10
+    // recent-order links; default prefetch fires all of them at once
+    // (confirmed live: a burst of ~8+ concurrent admin-auth-chain requests
+    // right after login, one contending to 3.3s while its sibling took
+    // 400ms). Losing instant-nav here avoids reproducing that burst on
+    // every dashboard view.
     <Link
       href={`${ADMIN_BASE_PATH}/orders?status=${card.bucket}`}
+      prefetch={false}
       className={`group bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3 transition-all hover:shadow-sm ${card.ring}`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -154,8 +162,10 @@ function ConfigTile({
   href: string;
 }) {
   return (
+    // prefetch={false}: see AttentionCardTile above — same dashboard burst.
     <Link
       href={href}
+      prefetch={false}
       className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3 hover:border-brand-300 transition-colors"
     >
       <span className="text-gray-400 shrink-0" aria-hidden="true">{icon}</span>
@@ -235,6 +245,7 @@ export default async function AdminDashboardPage() {
           </h2>
           <Link
             href={`${ADMIN_BASE_PATH}/orders`}
+            prefetch={false}
             className="text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
           >
             כל ההזמנות
@@ -305,8 +316,12 @@ export default async function AdminDashboardPage() {
                         </p>
                         <p className="text-xs text-gray-400">{formatDate(order.created_at)}</p>
                       </div>
+                      {/* prefetch={false}: up to RECENT_ORDERS_LIMIT (10) of these
+                          render on every dashboard view, each paying the full admin
+                          auth chain for an order the admin usually never opens. */}
                       <Link
                         href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
+                        prefetch={false}
                         className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-700 transition-colors shrink-0"
                       >
                         פתיחת הזמנה

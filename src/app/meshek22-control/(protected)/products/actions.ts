@@ -6,9 +6,17 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import {
+  completeDeleteMutation,
+  completeMutation,
+  completeUpdateMutation,
+  logMutationTiming,
+} from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
+export type UpdateProductResult =
+  | { success: true; variants: RpcVariant[] }
+  | { success: false; error: string };
 
 // ─── Image upload ─────────────────────────────────────────────────────────────
 
@@ -56,15 +64,33 @@ export async function uploadProductImage(formData: FormData): Promise<UploadResu
   return { url: publicUrl };
 }
 
-// ─── Variant → DB row ─────────────────────────────────────────────────────────
+// ─── Variant → RPC payload ──────────────────────────────────────────────────
 
-function toDbVariant(
-  v: ProductFormData["variants"][number],
-  productId: string
-) {
+export interface RpcVariant {
+  id: string;
+  unit: string;
+  label: string;
+  price_agorot: number;
+  compare_price_agorot: number | null;
+  stock_quantity: number | null;
+  quantity_pricing_mode: string;
+  quantity_step: number;
+  min_quantity: number;
+  is_available: boolean;
+  is_default: boolean;
+  sort_order: number;
+}
+
+/**
+ * Builds the JSON object admin_save_product_with_variants
+ * (20260923000000_admin_product_variants_rpc.sql) expects per variant. The
+ * `id` key must be OMITTED — not set to null — for a new variant: the RPC
+ * tests key presence (`elem ? 'id'`) to tell "new" from "existing", the same
+ * convention this function used before the RPC existed.
+ */
+function toRpcVariant(v: ProductFormData["variants"][number]) {
   return {
     ...(v.id ? { id: v.id } : {}),
-    product_id:            productId,
     unit:                  v.unit,
     label:                 v.label,
     price_agorot:          Math.round(v.price * 100),
@@ -104,38 +130,37 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
   const supabase = await createAdminClient();
   const { variants, qty_deal_price, ...productFields } = parsed;
 
-  const productRecord = {
-    ...productFields,
-    qty_deal_price_agorot: productFields.qty_deal_enabled && qty_deal_price != null
+  // One round trip, one transaction: product row + every variant write.
+  // A rejected variant (e.g. a duplicate default) rolls the product insert
+  // back too — see 20260923000000_admin_product_variants_rpc.sql.
+  const rpcStart = performance.now();
+  const { error } = await supabase.rpc("admin_save_product_with_variants", {
+    p_product_id: null,
+    p_category_id: productFields.category_id,
+    p_name: productFields.name,
+    p_slug: productFields.slug,
+    p_description: productFields.description ?? "",
+    p_image_url: productFields.image_url ?? "",
+    p_is_active: productFields.is_active,
+    p_is_featured: productFields.is_featured,
+    p_sort_order: productFields.sort_order,
+    p_qty_deal_enabled: productFields.qty_deal_enabled,
+    p_qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
+    p_qty_deal_price_agorot: productFields.qty_deal_enabled && qty_deal_price != null
       ? Math.round(qty_deal_price * 100)
       : null,
-    qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
-  };
+    p_variants: variants.map(toRpcVariant),
+  });
+  const rpcMs = Math.round(performance.now() - rpcStart);
 
-  const { data: product, error: productError } = await supabase
-    .from("products")
-    .insert(productRecord)
-    .select("id")
-    .single();
-
-  if (productError) {
-    logMutationTiming("product-create", start, { outcome: "error", stage: "write_failed" });
-    if (productError.code === "23505")
+  if (error) {
+    logMutationTiming("product-create", start, { rpcMs, outcome: "error", stage: "write_failed" });
+    if (error.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
     return { success: false, error: "שגיאה ביצירת המוצר" };
   }
 
-  const { error: variantsError } = await supabase
-    .from("product_variants")
-    .insert(variants.map((v) => toDbVariant(v, product.id)));
-
-  if (variantsError) {
-    await supabase.from("products").delete().eq("id", product.id);
-    logMutationTiming("product-create", start, { outcome: "error", stage: "write_failed" });
-    return { success: false, error: "שגיאה ביצירת הגרסאות. המוצר לא נשמר." };
-  }
-
-  completeMutation(
+  return completeMutation(
     "product-create",
     start,
     `${ADMIN_BASE_PATH}/products`,
@@ -152,7 +177,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
 export async function updateProduct(
   id: string,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<UpdateProductResult> {
   const start = performance.now();
   const authStart = start;
   await requireAdmin();
@@ -167,116 +192,47 @@ export async function updateProduct(
   const supabase = await createAdminClient();
   const { variants, qty_deal_price, ...productFields } = parsed;
 
-  const productRecord = {
-    ...productFields,
-    qty_deal_price_agorot: productFields.qty_deal_enabled && qty_deal_price != null
+  // One round trip, one transaction: product update + the 1kg→unit price
+  // sync + variant delete/upsert/insert, all inside
+  // admin_save_product_with_variants. Previously this was 3-4 sequential
+  // groups of Supabase calls (update+read → clear-defaults+delete →
+  // upsert+insert) — each one paying full network latency to the DB.
+  const rpcStart = performance.now();
+  const { data, error } = await supabase.rpc("admin_save_product_with_variants", {
+    p_product_id: id,
+    p_category_id: productFields.category_id,
+    p_name: productFields.name,
+    p_slug: productFields.slug,
+    p_description: productFields.description ?? "",
+    p_image_url: productFields.image_url ?? "",
+    p_is_active: productFields.is_active,
+    p_is_featured: productFields.is_featured,
+    p_sort_order: productFields.sort_order,
+    p_qty_deal_enabled: productFields.qty_deal_enabled,
+    p_qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
+    p_qty_deal_price_agorot: productFields.qty_deal_enabled && qty_deal_price != null
       ? Math.round(qty_deal_price * 100)
       : null,
-    qty_deal_quantity: productFields.qty_deal_enabled ? (productFields.qty_deal_quantity ?? null) : null,
-  };
+    p_variants: variants.map(toRpcVariant),
+  });
+  const rpcMs = Math.round(performance.now() - rpcStart);
 
-  // 1+2. Update the product record and read its current variants at the same
-  // time — the variant read doesn't depend on the product update's result, so
-  // there is no reason to pay for these round trips one after another.
-  const [{ error: productError }, { data: currentVariants }] = await Promise.all([
-    supabase.from("products").update(productRecord).eq("id", id),
-    supabase
-      .from("product_variants")
-      .select("id, unit, price_agorot, compare_price_agorot")
-      .eq("product_id", id),
-  ]);
-
-  if (productError) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
-    if (productError.code === "23505")
+  if (error) {
+    logMutationTiming("product-update", start, { authMs, rpcMs, outcome: "error", stage: "write_failed" });
+    if (error.code === "23505")
       return { success: false, error: "מוצר עם slug זה כבר קיים" };
+    if (error.code === "23503")
+      return { success: false, error: "לא ניתן להסיר גרסאות שנמצאות בהזמנות קיימות" };
     return { success: false, error: "שגיאה בעדכון המוצר" };
   }
 
-  // 3. Unit-price sync: if the 1kg variant price changed, update the 'unit'
-  //    variant price proportionally (same percentage change).
-  //    This runs before the upsert so the adjusted price is what gets saved.
-  const mutableVariants = variants.map((v) => ({ ...v }));
+  // Real DB ids for every variant, including ones just inserted — the client
+  // writes these back into its local form state so a second save (without a
+  // page reload) upserts instead of inserting a duplicate. See
+  // ProductForm.tsx's onSubmit and the RPC migration's own header comment.
+  const savedVariants = (data as { variants?: RpcVariant[] } | null)?.variants ?? [];
 
-  const currentKg = (currentVariants ?? []).find((v) => v.unit === "1kg");
-  const newKgIdx  = mutableVariants.findIndex((v) => v.unit === "1kg" && v.id);
-
-  if (currentKg && newKgIdx >= 0) {
-    const oldKgAgorot = currentKg.price_agorot;
-    const newKgAgorot = Math.round(mutableVariants[newKgIdx].price * 100);
-
-    if (oldKgAgorot !== newKgAgorot && oldKgAgorot > 0) {
-      const ratio = newKgAgorot / oldKgAgorot;
-
-      // Find the 'unit' variant in the current DB state and in the submitted form
-      const currentUnit = (currentVariants ?? []).find((v) => v.unit === "unit");
-      const newUnitIdx  = mutableVariants.findIndex((v) => v.unit === "unit");
-
-      if (currentUnit && newUnitIdx >= 0) {
-        // Sync price
-        mutableVariants[newUnitIdx].price =
-          Math.round(currentUnit.price_agorot * ratio) / 100;
-
-        // Sync compare_price if the unit variant has one
-        if (currentUnit.compare_price_agorot != null) {
-          mutableVariants[newUnitIdx].compare_price =
-            Math.round(currentUnit.compare_price_agorot * ratio) / 100;
-        }
-      }
-    }
-  }
-
-  // 4. Determine which existing variants were removed
-  const submittedIds = mutableVariants.filter((v) => v.id).map((v) => v.id!);
-  const currentIds   = (currentVariants ?? []).map((v) => v.id);
-  const idsToDelete  = currentIds.filter((cid) => !submittedIds.includes(cid));
-
-  // 4+5. Removing the dropped variants and clearing every default flag touch
-  // disjoint rows/columns, so they run concurrently. Both must finish before
-  // the upsert below, which depends on defaults already being cleared to
-  // avoid the unique-partial-index violation.
-  const [{ error: deleteError }] = await Promise.all([
-    idsToDelete.length > 0
-      ? supabase.from("product_variants").delete().in("id", idsToDelete)
-      : Promise.resolve({ error: null as { code?: string; message?: string } | null }),
-    supabase.from("product_variants").update({ is_default: false }).eq("product_id", id),
-  ]);
-
-  if (deleteError) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
-    if (deleteError.code === "23503")
-      return { success: false, error: "לא ניתן להסיר גרסאות שנמצאות בהזמנות קיימות" };
-    return { success: false, error: "שגיאה במחיקת גרסאות" };
-  }
-
-  // 6+7. Upsert existing variants (have id) and insert new ones (no id) — two
-  // disjoint sets of rows, so they run concurrently instead of one after the
-  // other. Both still wait on step 4+5 above, which clears the defaults these
-  // writes are about to re-set.
-  const existingVariants = mutableVariants.filter((v) => v.id);
-  const newVariants = mutableVariants.filter((v) => !v.id);
-
-  const [upsertResult, insertResult] = await Promise.all([
-    existingVariants.length > 0
-      ? supabase
-          .from("product_variants")
-          .upsert(existingVariants.map((v) => toDbVariant(v, id)), { onConflict: "id" })
-      : Promise.resolve({ error: null as { message?: string } | null }),
-    newVariants.length > 0
-      ? supabase.from("product_variants").insert(newVariants.map((v) => toDbVariant(v, id)))
-      : Promise.resolve({ error: null as { message?: string } | null }),
-  ]);
-
-  if (upsertResult.error) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
-    return { success: false, error: "שגיאה בעדכון גרסאות" };
-  }
-  if (insertResult.error) {
-    logMutationTiming("product-update", start, { authMs, outcome: "error", stage: "write_failed" });
-    return { success: false, error: "שגיאה ביצירת גרסאות חדשות" };
-  }
-
-  return completeUpdateMutation(
+  const result = await completeUpdateMutation(
     "product-update",
     start,
     () => {
@@ -284,8 +240,10 @@ export async function updateProduct(
       revalidateStorefront();
       revalidatePath(`/product/${parsed.slug}`);
     },
-    { authMs, variantCount: mutableVariants.length }
+    { authMs, rpcMs, variantCount: savedVariants.length }
   );
+
+  return { ...result, variants: savedVariants };
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -304,8 +262,8 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     return { success: false, error: "שגיאה במחיקת המוצר" };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/products`);
-  revalidateStorefront();
-  logMutationTiming("product-delete", start, { outcome: "success", stage: "write_succeeded" });
-  return { success: true };
+  return completeDeleteMutation("product-delete", start, () => {
+    revalidatePath(`${ADMIN_BASE_PATH}/products`);
+    revalidateStorefront();
+  });
 }
