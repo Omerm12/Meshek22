@@ -1,8 +1,10 @@
 # CardCom documents and Resend emails — who is responsible for what
 
-Status: **the accounting-document question is UNRESOLVED.** Nothing about the
-document configuration was changed, and nothing should be until the checklist at
-the bottom is answered by the merchant, CardCom, or the merchant's accountant.
+Status: **the site now requests a Tax Invoice + Receipt from CardCom**
+(`DocumentTypeToCreate: "TaxInvoiceAndReceipt"`, `IsSendByEmail: true`). It
+previously sent `"Order"`, which overrode the terminal's dashboard default and
+produced an "Order" PDF. The checklist at the bottom still needs a manual
+check on the live terminal.
 
 ## The three separate responsibilities
 
@@ -22,23 +24,22 @@ never suppresses the other.
 `src/lib/cardcom.ts` sends:
 
 ```ts
-DocumentTypeToCreate: "Order"
+DocumentTypeToCreate: "TaxInvoiceAndReceipt"
+IsSendByEmail: true
 ```
 
-That is an **order document**, which is not automatically a legal receipt. Whether
-CardCom actually produces and emails an accounting document depends on the
-merchant's documents module, business type, terminal configuration, dashboard
-overrides and customer-email settings — none of which are visible from this
-repository.
-
-**Therefore the branch taken is the conservative one:**
+CardCom creates the document as part of the same low-profile charge, so it only
+exists for a successful payment; the site never creates documents separately,
+so retries cannot duplicate one. Line items are sent as the exact charged
+amounts (promotion discounts folded into the line, delivery as its own row) and
+are checked to sum to the order total. How CardCom splits VAT is determined by
+the terminal/business settings, not by this payload.
 
 - The Resend customer order confirmation is **kept** for every payment method,
   including successful online-card payments.
 - No email, subject line or page describes itself as a קבלה or חשבונית. This is
   enforced by a test (`src/lib/email/order-emails.test.ts`) that greps the email
   service and both templates.
-- `DocumentTypeToCreate` was **not** changed.
 
 If CardCom is later confirmed to email the correct legal document automatically,
 and the merchant does not want two emails, the only change needed is to skip the

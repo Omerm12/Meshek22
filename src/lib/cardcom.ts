@@ -154,7 +154,8 @@ export async function createCardComSession({
   payload["FailedRedirectUrl"]  = errorUrl;
   payload["WebHookUrl"]         = webhookUrl;
   payload["Document"]           = {
-    DocumentTypeToCreate: "Order",
+    DocumentTypeToCreate: "TaxInvoiceAndReceipt",
+    IsSendByEmail: true,
     Name:     customerName,
     Email:    customerEmail,
     Phone:    customerPhone,

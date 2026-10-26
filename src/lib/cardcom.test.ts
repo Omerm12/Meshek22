@@ -48,7 +48,7 @@ function mockCardComSuccess() {
 /** The exact JSON body createCardComSession sent to CardCom on its one fetch call. */
 function sentPayload(): {
   Amount: number;
-  Document: { Products: Array<{ Description: string; Quantity: number; UnitCost: number; TotalLineCost: number }> };
+  Document: { DocumentTypeToCreate: string; IsSendByEmail: boolean; Email: string; Products: Array<{ Description: string; Quantity: number; UnitCost: number; TotalLineCost: number }> };
 } {
   expect(fetchMock).toHaveBeenCalledTimes(1);
   const [, init] = fetchMock.mock.calls[0];
@@ -114,6 +114,25 @@ function promotion(overrides: Partial<Promotion> & Pick<Promotion, "id" | "requi
     ...overrides,
   };
 }
+
+// ─── 0. Accounting document type ───────────────────────────────────────────────
+
+describe("accounting document", () => {
+  it("asks CardCom for a Tax Invoice + Receipt, emailed to the customer", async () => {
+    await createCardComSession(
+      baseArgs({
+        totalAgorot: 1500,
+        lineItems: [
+          { productId: "v1", description: "עגבניות", quantity: 1, unitPriceAgorot: 1500, totalPriceAgorot: 1500 },
+        ],
+      })
+    );
+    const { Document } = sentPayload();
+    expect(Document.DocumentTypeToCreate).toBe("TaxInvoiceAndReceipt");
+    expect(Document.IsSendByEmail).toBe(true);
+    expect(Document.Email).toBe("israel@example.com");
+  });
+});
 
 // ─── 1. Order without promotions ───────────────────────────────────────────────
 
