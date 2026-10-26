@@ -201,13 +201,8 @@ export default async function AdminSettlementsPage({
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-2">
-                          {/* prefetch={false}: default prefetch fires for every row
-                              scrolled into view — up to PAGE_SIZE (15) requests per
-                              page load, each paying the full admin auth chain, for
-                              edit pages the admin usually never visits. */}
                           <Link
                             href={`${ADMIN_BASE_PATH}/settlements/${settlement.id}/edit`}
-                            prefetch={false}
                             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-colors"
                             aria-label={`ערוך יישוב ${settlement.name}`}
                           >

@@ -10,7 +10,7 @@ import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
 import { ProductImageUpload } from "@/components/admin/products/ProductImageUpload";
 import { useSuccessFlash } from "@/hooks/useSuccessFlash";
-import type { ActionResult, UpdateProductResult } from "@/app/meshek22-control/(protected)/products/actions";
+import type { ActionResult } from "@/app/meshek22-control/(protected)/products/actions";
 
 export interface CategoryOption {
   id:        string;
@@ -20,7 +20,7 @@ export interface CategoryOption {
 
 interface ProductFormProps {
   defaultValues?: Partial<ProductFormData>;
-  action:         (formData: FormData) => Promise<ActionResult | UpdateProductResult>;
+  action:         (formData: FormData) => Promise<ActionResult>;
   submitLabel:    string;
   categories:     CategoryOption[];
 }
@@ -160,34 +160,6 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
         } else {
           // A create still redirects (caught below); an update now resolves
           // normally with {success:true} — see completeUpdateMutation.
-          //
-          // updateProduct also returns the saved variants with their real
-          // database ids. Writing them back into the form's local state is
-          // required, not cosmetic: without it, a variant just added by this
-          // same save still has no `id` locally, so saving again (without a
-          // page reload) would resubmit it as "new" and insert a duplicate
-          // row — see admin_save_product_with_variants and its migration's
-          // header comment for the DB side of this fix.
-          if (result && "variants" in result && result.variants.length > 0) {
-            setValue(
-              "variants",
-              result.variants.map((v) => ({
-                id:                    v.id,
-                unit:                  v.unit as ProductFormData["variants"][number]["unit"],
-                label:                 v.label,
-                price:                 v.price_agorot / 100,
-                compare_price:         v.compare_price_agorot != null ? v.compare_price_agorot / 100 : null,
-                stock_quantity:        v.stock_quantity,
-                quantity_pricing_mode: v.quantity_pricing_mode as ProductFormData["variants"][number]["quantity_pricing_mode"],
-                quantity_step:         v.quantity_step,
-                min_quantity:          v.min_quantity,
-                is_available:          v.is_available,
-                is_default:            v.is_default,
-                sort_order:            v.sort_order,
-              })),
-              { shouldDirty: false }
-            );
-          }
           showSaved();
         }
       } catch (err) {

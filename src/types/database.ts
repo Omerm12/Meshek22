@@ -716,31 +716,6 @@ export interface Database {
         Returns: string;
       };
       /**
-       * Create or update a product together with its variants in one
-       * transaction (insert/delete/upsert variants, 1kg→unit price sync,
-       * default-flag clearing). service_role only. Pass p_product_id = null
-       * to create. Returns { product, variants } with real DB ids for every
-       * variant, including ones just inserted.
-       */
-      admin_save_product_with_variants: {
-        Args: {
-          p_product_id: string | null;
-          p_category_id: string;
-          p_name: string;
-          p_slug: string;
-          p_description: string | null;
-          p_image_url: string | null;
-          p_is_active: boolean;
-          p_is_featured: boolean;
-          p_sort_order: number;
-          p_qty_deal_enabled: boolean;
-          p_qty_deal_quantity: number | null;
-          p_qty_deal_price_agorot: number | null;
-          p_variants: Json;
-        };
-        Returns: Json;
-      };
-      /**
        * Decrement stock for fixed-unit variants with a configured quantity.
        * Called inside create_guest_order_atomic; not invoked directly by the app.
        */

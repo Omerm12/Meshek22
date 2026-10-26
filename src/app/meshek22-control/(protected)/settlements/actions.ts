@@ -5,12 +5,7 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { settlementSchema } from "@/lib/validations/admin-settlement";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import {
-  completeDeleteMutation,
-  completeMutation,
-  completeUpdateMutation,
-  logMutationTiming,
-} from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -69,7 +64,7 @@ export async function createSettlement(formData: FormData): Promise<ActionResult
     return { success: false, error: "שגיאה ביצירת היישוב. נסו שוב." };
   }
 
-  return completeMutation("settlement-create", start, `${ADMIN_BASE_PATH}/settlements`, revalidate);
+  completeMutation("settlement-create", start, `${ADMIN_BASE_PATH}/settlements`, revalidate);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -146,5 +141,7 @@ export async function deleteSettlement(id: string): Promise<ActionResult> {
     return { success: false, error: "שגיאה במחיקת היישוב. נסו שוב." };
   }
 
-  return completeDeleteMutation("settlement-delete", start, revalidate);
+  revalidate();
+  logMutationTiming("settlement-delete", start, { outcome: "success", stage: "write_succeeded" });
+  return { success: true };
 }

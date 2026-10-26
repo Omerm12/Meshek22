@@ -158,12 +158,8 @@ export default async function AdminPromotionsPage() {
                       {formatWindow(promotion.startsAt, promotion.endsAt)}
                     </p>
 
-                    {/* prefetch={false}: this list has no pagination, so every
-                        promotion renders unconditionally — default prefetch would
-                        fire for the whole table on every page load. */}
                     <Link
                       href={`${ADMIN_ROUTES.promotions}/${promotion.id}/edit`}
-                      prefetch={false}
                       className="inline-block mt-3 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
                     >
                       עריכה

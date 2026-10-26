@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
 import { deleteSettlement } from "@/app/meshek22-control/(protected)/settlements/actions";
-import { hideDeletedRow } from "@/lib/admin/hide-row";
+import { useRouter } from "next/navigation";
 
 interface DeleteSettlementButtonProps {
   id: string;
@@ -14,7 +14,7 @@ export function DeleteSettlementButton({ id, name }: DeleteSettlementButtonProps
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
 
   const handleDelete = () => {
     setError("");
@@ -26,7 +26,7 @@ export function DeleteSettlementButton({ id, name }: DeleteSettlementButtonProps
           return;
         }
         setOpen(false);
-        hideDeletedRow(triggerRef.current);
+        router.refresh();
       } catch (err) {
         console.error("[DeleteSettlementButton] delete failed", err);
         setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
@@ -38,7 +38,6 @@ export function DeleteSettlementButton({ id, name }: DeleteSettlementButtonProps
     <>
       {/* Trigger */}
       <button
-        ref={triggerRef}
         onClick={() => { setError(""); setOpen(true); }}
         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
         aria-label={`מחק יישוב ${name}`}

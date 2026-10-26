@@ -6,12 +6,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { promotionSchema } from "@/lib/validations/admin-promotion";
-import {
-  completeDeleteMutation,
-  completeMutation,
-  completeUpdateMutation,
-  logMutationTiming,
-} from "@/lib/admin/instrumentation";
+import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
@@ -133,7 +128,7 @@ export async function createPromotion(formData: FormData): Promise<ActionResult>
     return { success: false, error: translateDbError(error.message) };
   }
 
-  return completeMutation(
+  completeMutation(
     "promotion-create",
     start,
     ADMIN_ROUTES.promotions,
@@ -216,10 +211,10 @@ export async function setPromotionActive(id: string, isActive: boolean): Promise
     return { success: false, error: translateDbError(error.message) };
   }
 
-  return completeUpdateMutation("promotion-toggle-active", start, () => {
-    revalidatePath(ADMIN_ROUTES.promotions);
-    revalidateStorefront();
-  });
+  revalidatePath(ADMIN_ROUTES.promotions);
+  revalidateStorefront();
+  logMutationTiming("promotion-toggle-active", start, { outcome: "success", stage: "write_succeeded" });
+  return { success: true };
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -239,10 +234,10 @@ export async function deletePromotion(id: string): Promise<ActionResult> {
     return { success: false, error: "שגיאה במחיקת המבצע. נסו שוב." };
   }
 
-  return completeDeleteMutation("promotion-delete", start, () => {
-    revalidatePath(ADMIN_ROUTES.promotions);
-    revalidateStorefront();
-  });
+  revalidatePath(ADMIN_ROUTES.promotions);
+  revalidateStorefront();
+  logMutationTiming("promotion-delete", start, { outcome: "success", stage: "write_succeeded" });
+  return { success: true };
 }
 
 // ── Product search for the promotion form ─────────────────────────────────────
