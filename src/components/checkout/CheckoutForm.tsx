@@ -67,7 +67,7 @@ function InputField({
 }
 
 const inputClass =
-  "w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-gray-900 text-base sm:text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow";
+  "w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-gray-900 text-base sm:text-sm placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow";
 
 /** Radio card used for both the fulfillment and the payment choice. */
 function ChoiceCard({
@@ -544,7 +544,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
               <div className="sm:col-span-2">
                 <InputField label="שם מלא" id="customer_name" required>
                   <div className="relative">
-                    <User className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                    <User className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-500" />
                     <input
                       id="customer_name"
                       type="text"
@@ -561,7 +561,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
 
               <InputField label="טלפון" id="customer_phone" required>
                 <div className="relative">
-                  <Phone className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                  <Phone className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-500" />
                   <input
                     id="customer_phone"
                     type="tel"
@@ -582,7 +582,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                 required={paymentMethod === "credit_card"}
               >
                 <div className="relative">
-                  <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                  <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-500" />
                   <input
                     id="customer_email"
                     type="email"
@@ -647,7 +647,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
               <h2 className="font-bold text-gray-900">
                 {isDelivery ? "הערות למשלוח" : "הערות להזמנה"}
               </h2>
-              <span className="text-xs text-stone-400">(אופציונלי)</span>
+              <span className="text-xs text-stone-500">(אופציונלי)</span>
             </div>
             <textarea
               value={notes}
@@ -660,9 +660,9 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
               }
               maxLength={300}
               rows={3}
-              className="w-full px-3.5 py-3 rounded-xl border border-stone-200 bg-white text-gray-900 text-base sm:text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow resize-none"
+              className="w-full px-3.5 py-3 rounded-xl border border-stone-200 bg-white text-gray-900 text-base sm:text-sm placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow resize-none"
             />
-            <p className="text-xs text-stone-400 mt-1 text-end">{notes.length}/300</p>
+            <p className="text-xs text-stone-500 mt-1 text-end">{notes.length}/300</p>
           </div>
         </div>
 
@@ -699,7 +699,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>
-                      <p className="text-xs text-stone-400">{item.variantLabel} × {item.quantity}</p>
+                      <p className="text-xs text-stone-500">{item.variantLabel} × {item.quantity}</p>
                     </div>
                     <p className={`text-sm font-semibold shrink-0 ${charged < normal ? "text-orange-600" : "text-gray-900"}`}>
                       {formatPrice(charged)}
@@ -752,7 +752,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                       formatPrice(quote.feeAgorot)
                     )
                   ) : (
-                    <span className="text-stone-400 text-xs">יחושב לפי אזור</span>
+                    <span className="text-stone-500 text-xs">יחושב לפי אזור</span>
                   )}
                 </span>
               </div>
@@ -764,7 +764,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
                 <span className="text-2xl font-bold text-brand-700">{formatPrice(totalAgorot)}</span>
               </div>
               {isDelivery && !quote && (
-                <p className="text-xs text-stone-400 mt-1">לא כולל דמי משלוח</p>
+                <p className="text-xs text-stone-500 mt-1">לא כולל דמי משלוח</p>
               )}
             </div>
 
@@ -821,7 +821,14 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
               )}
             </button>
 
-            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-stone-400 text-center">
+            <p className="mt-3 text-xs text-stone-500 text-center">
+              בביצוע ההזמנה אני מאשר/ת את{" "}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-brand-700">התקנון ותנאי השימוש</a>
+              {" "}ואת{" "}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-brand-700">מדיניות הפרטיות</a>.
+            </p>
+
+            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-stone-500 text-center">
               {paymentMethod === "credit_card" ? (
                 <>
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0" />

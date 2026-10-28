@@ -88,7 +88,7 @@ export function PromotionsShell({
 
       <Container className="py-6 lg:py-8 !max-w-[1400px]">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm text-stone-400 mb-5" aria-label="breadcrumb">
+        <nav className="flex items-center gap-1.5 text-sm text-stone-500 mb-5" aria-label="breadcrumb">
           <Link href="/" className="hover:text-brand-700 transition-colors">דף הבית</Link>
           <span aria-hidden="true">/</span>
           <span className="text-gray-700 font-medium">מבצעים</span>
@@ -96,7 +96,7 @@ export function PromotionsShell({
 
         <div className="mb-4">
           <h2 className="text-xl font-bold text-gray-900">כל המוצרים במבצע</h2>
-          <p className="mt-1 text-xs text-stone-400">
+          <p className="mt-1 text-xs text-stone-500">
             * משקל המוצרים עשוי להיות מעט גבוה או נמוך מהטווח המוצג באתר.
           </p>
         </div>
@@ -106,7 +106,7 @@ export function PromotionsShell({
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="relative flex-1">
               <Search
-                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+                className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-500 pointer-events-none"
                 aria-hidden="true"
               />
               <input
@@ -120,13 +120,13 @@ export function PromotionsShell({
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-base md:text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+                className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-base md:text-sm text-gray-900 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
               />
               {search && (
                 <button
                   onClick={() => { setSearch(""); setVisible(ITEMS_PER_STEP); }}
                   aria-label="נקה חיפוש"
-                  className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-400 hover:text-stone-700 cursor-pointer transition-colors"
+                  className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-500 hover:text-stone-700 cursor-pointer transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -146,7 +146,7 @@ export function PromotionsShell({
                 <option value="name">שם: א–ת</option>
               </select>
               <ChevronDown
-                className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-stone-400 pointer-events-none"
+                className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-stone-500 pointer-events-none"
                 aria-hidden="true"
               />
             </div>
@@ -188,7 +188,7 @@ function EmptyState({ search, onClear }: { search: string; onClear: () => void }
       <h3 className="font-bold text-gray-900 text-lg mb-2">
         {search ? `לא נמצאו תוצאות עבור "${search}"` : "אין מבצעים פעילים כרגע"}
       </h3>
-      <p className="text-sm text-stone-400 leading-relaxed mb-6 max-w-xs">
+      <p className="text-sm text-stone-500 leading-relaxed mb-6 max-w-xs">
         {search
           ? "נסו מילות חיפוש שונות, או נקו את שדה החיפוש"
           : "המבצעים שלנו מתחלפים בכל שבוע. שווה לחזור ולבדוק בקרוב."}

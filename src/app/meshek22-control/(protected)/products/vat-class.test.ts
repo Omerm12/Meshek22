@@ -101,7 +101,7 @@ describe("saving the VAT class", () => {
     const db = makeDb();
     dbRef.current = db;
     const result = await updateProduct("product-1", form(productData({ vat_class: "zero_rated" })));
-    expect(result).toEqual({ success: true });
+    expect(result).toMatchObject({ success: true });
     const update = db.writes.find((w) => w.table === "products" && w.op === "update");
     expect((update?.payload as { vat_class: string }).vat_class).toBe("zero_rated");
   });

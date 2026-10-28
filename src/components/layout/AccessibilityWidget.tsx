@@ -48,7 +48,7 @@ function ToggleRow({
           "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 transition-colors",
           active
             ? "bg-brand-600 text-white"
-            : "bg-stone-100 text-stone-400"
+            : "bg-stone-100 text-stone-500"
         )}
       >
         {active ? "פעיל" : "כבוי"}
@@ -76,7 +76,7 @@ function FontSizeRow({
         גודל טקסט
         <span className={cn(
           "me-1.5 text-[11px] font-semibold",
-          level > 0 ? "text-brand-700" : "text-stone-400"
+          level > 0 ? "text-brand-700" : "text-stone-500"
         )}>
           {" "}({labels[level]})
         </span>
@@ -180,7 +180,7 @@ export function AccessibilityWidget() {
             <button
               onClick={closePanel}
               aria-label="סגור"
-              className="h-7 w-7 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition-colors cursor-pointer"
+              className="h-7 w-7 flex items-center justify-center rounded-full text-stone-500 hover:text-stone-700 hover:bg-stone-200 transition-colors cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -233,7 +233,7 @@ export function AccessibilityWidget() {
 
           {/* Disclaimer */}
           <div className="px-3 pb-3">
-            <p className="text-[10px] text-stone-400 text-center leading-relaxed">
+            <p className="text-[10px] text-stone-500 text-center leading-relaxed">
               כלי זה מסייע בהתאמת תצוגה אישית.{" "}
               <a
                 href="/accessibility"

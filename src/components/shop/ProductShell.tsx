@@ -67,7 +67,7 @@ export function ProductShell({ product, relatedProducts }: ProductShellProps) {
       <div className="bg-white border-b border-stone-100">
         <Container className="py-3">
           <nav
-            className="flex items-center gap-1.5 text-sm text-stone-400"
+            className="flex items-center gap-1.5 text-sm text-stone-500"
             aria-label="breadcrumb"
           >
             <Link href="/" className="hover:text-brand-700 transition-colors">
@@ -172,7 +172,7 @@ export function ProductShell({ product, relatedProducts }: ProductShellProps) {
               </span>
               {hasSale && (
                 <>
-                  <span className="text-lg text-stone-400 line-through leading-none">
+                  <span className="text-lg text-stone-500 line-through leading-none">
                     {formatPrice(selectedVariant.comparePriceAgorot!)}
                   </span>
                   <span className="text-sm font-bold text-white bg-red-500 rounded-full px-2.5 py-0.5 leading-none">
@@ -278,7 +278,7 @@ export function ProductShell({ product, relatedProducts }: ProductShellProps) {
 
             {/* Running total */}
             {qty > 1 && (
-              <p className="text-sm text-stone-400 mb-4">
+              <p className="text-sm text-stone-500 mb-4">
                 סה&quot;כ:{" "}
                 <strong className="text-gray-700">{formatPrice(lineTotal)}</strong>
               </p>

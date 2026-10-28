@@ -28,10 +28,10 @@ export function FinalCTA() {
               טרי יותר?
             </h2>
 
-            <p className="text-stone-500 text-xl leading-relaxed mb-2">
+            <p className="text-stone-600 text-xl leading-relaxed mb-2">
               הצטרפו לאלפי משפחות שקונות ממשק 22 כל שבוע.
             </p>
-            <p className="text-stone-500 text-xl leading-relaxed mb-10">
+            <p className="text-stone-600 text-xl leading-relaxed mb-10">
               ירקות ופירות טריים, ישירות לבית שלכם.
             </p>
 

@@ -28,6 +28,8 @@ function SlidePanel({
         isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none",
       )}
       aria-hidden={!isActive}
+      // inert: a hidden slide's CTA link must not stay keyboard-focusable.
+      inert={!isActive}
     >
       {/* Background: gradient is CSS (instant), Next.js Image covers it when loaded */}
       <div className="absolute inset-0" style={{ background: slide.backgroundGradient }}>

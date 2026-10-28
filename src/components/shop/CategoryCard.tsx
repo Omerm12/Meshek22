@@ -55,7 +55,7 @@ export function CategoryCard({ category, className }: CategoryCardProps) {
         <p className="font-semibold text-[13px] text-gray-900 group-hover:text-brand-700 transition-colors leading-tight">
           {category.name}
         </p>
-        <p className="text-[11px] text-stone-400 mt-0.5">{category.count} מוצרים</p>
+        <p className="text-[11px] text-stone-500 mt-0.5">{category.count} מוצרים</p>
       </div>
     </a>
   );

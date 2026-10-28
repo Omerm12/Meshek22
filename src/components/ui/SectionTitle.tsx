@@ -23,7 +23,7 @@ export function SectionTitle({
         {title}
       </Tag>
       {subtitle && (
-        <p className="mt-3 text-lg text-stone-500 leading-relaxed">
+        <p className="mt-3 text-lg text-stone-600 leading-relaxed">
           {subtitle}
         </p>
       )}

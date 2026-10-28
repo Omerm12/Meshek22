@@ -101,24 +101,27 @@ export default async function OrderDetailPage({
 
   // Degrades to the legacy column set when the 20260808 migrations have not been
   // applied, so the page renders instead of 404-ing on a missing column.
-  const order = await withAdminTiming(
-    "admin:orders:detail",
-    () =>
-      selectOrderDetailWithFallback((columns) =>
-        ordersTable(supabase).select(columns).eq("id", id).maybeSingle()
-      ),
-    (result) => ({ found: !!result, itemCount: result?.order_items.length ?? 0 })
-  );
-
-  if (!order) notFound();
-
+  // The invoice facts read depends only on the route id, not on the order
+  // result, so both reads run concurrently — one round trip of latency, not two.
   // Only the stored payment facts the invoice link needs; a failed read just
   // means no invoice is offered, never a broken page.
-  const { data: invoiceFacts } = await supabase
-    .from("orders")
-    .select("id, payment_method, payment_status, payment_metadata")
-    .eq("id", order.id)
-    .maybeSingle();
+  const [order, { data: invoiceFacts }] = await Promise.all([
+    withAdminTiming(
+      "admin:orders:detail",
+      () =>
+        selectOrderDetailWithFallback((columns) =>
+          ordersTable(supabase).select(columns).eq("id", id).maybeSingle()
+        ),
+      (result) => ({ found: !!result, itemCount: result?.order_items.length ?? 0 })
+    ),
+    supabase
+      .from("orders")
+      .select("id, payment_method, payment_status, payment_metadata")
+      .eq("id", id)
+      .maybeSingle(),
+  ]);
+
+  if (!order) notFound();
 
   const customer = order.customer_snapshot as unknown as CustomerSnapshot;
   const address  = order.delivery_address_snapshot as unknown as AddressSnapshot;

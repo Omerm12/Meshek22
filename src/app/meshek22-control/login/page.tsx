@@ -60,7 +60,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
           <AdminLoginForm />
         </div>
 
-        <p className="mt-6 text-center text-xs text-stone-400 leading-relaxed">
+        <p className="mt-6 text-center text-xs text-stone-500 leading-relaxed">
           האזור מיועד לצוות משק 22 בלבד.
         </p>
       </div>

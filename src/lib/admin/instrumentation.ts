@@ -1,4 +1,36 @@
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { getRequestId } from "@/lib/admin/request-id";
+
+/**
+ * Runs `fn` via Next.js's after() — i.e. once the response has already been
+ * generated and sent — instead of inline. Used to defer
+ * revalidatePath/revalidateTag/updateTag calls: those mark a single,
+ * request-WIDE flag (not scoped to which path was revalidated — see
+ * node_modules/next/dist/server/app-render/action-handler.js's
+ * `executeActionAndPrepareForRender` and
+ * node_modules/next/dist/server/web/spec-extension/revalidate.js, which has
+ * its own `// TODO: only revalidate if the path matches` comment) that makes
+ * Next.js re-render whatever page the current Server Action was invoked
+ * from, as part of THIS action's own response — even when none of the
+ * revalidated paths have anything to do with that page. Calling
+ * revalidation from inside after() means nothing sets that flag until after
+ * the response is already on its way, so the admin never pays for that
+ * extra, usually-wasted re-render.
+ *
+ * Falls back to running `fn` immediately if after() itself throws — it
+ * requires a real Next.js request scope, absent in unit tests that call
+ * these mutation helpers directly (see instrumentation.test.ts and
+ * orders/actions.test.ts). Every real request has a request scope, so
+ * production always takes the after() path.
+ */
+export function runAfterResponse(fn: () => void): void {
+  try {
+    after(fn);
+  } catch {
+    fn();
+  }
+}
 
 /**
  * Minimal request-scoped timing for the admin panel's data loaders.
@@ -63,34 +95,61 @@ export type MutationStage =
 
 /**
  * Shared by completeMutation and completeUpdateMutation below: the database
- * write has already succeeded by the time this runs, so a failure in
- * `invalidate` (revalidatePath/revalidateStorefront — Next.js cache-marking
- * calls that do not perform I/O and essentially never throw, but are not
- * guaranteed not to) is logged as `post_write_failed`, distinct from
- * `write_failed`, and never turns into a false "the save failed" — the row is
- * saved either way, and cache staleness self-corrects within the existing
- * 60s window regardless.
+ * write has already succeeded by the time this runs.
+ *
+ * `invalidate` (revalidatePath/revalidateStorefront/revalidateTag/updateTag)
+ * runs inside after(), not inline. This isn't just about not blocking the
+ * response — it changes what Next.js does with THIS response.
+ * revalidatePath/revalidateTag/updateTag mark a single, request-WIDE flag
+ * (`workStore.pathWasRevalidated` — see
+ * node_modules/next/dist/server/app-render/action-handler.js's
+ * `executeActionAndPrepareForRender` and
+ * node_modules/next/dist/server/web/spec-extension/revalidate.js, which
+ * itself has a `// TODO: only revalidate if the path matches` comment) —
+ * NOT scoped to which path was revalidated. If that flag is set by the time
+ * the action function returns, Next.js re-renders whatever page the admin
+ * is currently viewing as part of THIS action's own response, even when
+ * every revalidated path (e.g. the storefront's /, /vegetables, /product/x
+ * from revalidateStorefront()) has nothing to do with the admin edit page
+ * being looked at. That extra, wasted re-render — re-running the edit
+ * page's own Supabase queries — was invisible to completeUpdateMutation's
+ * own {success:true} timing in a prior pass at this problem; it shows up
+ * as Next.js Function time AFTER the action body returns, not inside it.
+ * Deferring invalidation to after() means nothing calls
+ * revalidatePath/revalidateTag/updateTag until after the response has
+ * already been generated and sent — `pathWasRevalidated` stays undefined
+ * for the whole synchronous action body, so Next.js skips that re-render.
+ * Invalidation itself still runs, just a moment later — it was already
+ * best-effort/non-blocking (see the try/catch below, unchanged), so a few
+ * extra milliseconds before the storefront cache clears is not a
+ * regression.
  */
-function finishMutation(
+async function finishMutation(
   scope: string,
   start: number,
   invalidate: () => void,
   writeSucceededExtra: Record<string, unknown>
-): void {
+): Promise<void> {
+  const reqId = await getRequestId();
+
   logMutationTiming(scope, start, {
     ...writeSucceededExtra,
+    reqId,
     outcome: "success",
     stage: "write_succeeded" satisfies MutationStage,
   });
 
-  try {
-    invalidate();
-  } catch (cacheErr) {
-    logMutationTiming(scope, start, {
-      stage: "post_write_failed" satisfies MutationStage,
-      error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
-    });
-  }
+  runAfterResponse(() => {
+    try {
+      invalidate();
+    } catch (cacheErr) {
+      logMutationTiming(scope, start, {
+        reqId,
+        stage: "post_write_failed" satisfies MutationStage,
+        error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+      });
+    }
+  });
 }
 
 /**
@@ -103,15 +162,18 @@ function finishMutation(
  * server-side; see CategoryForm.tsx (and its siblings) for how the client
  * lets that same signal keep propagating instead of misreading it as failure.
  */
-export function completeMutation(
+export async function completeMutation(
   scope: string,
   start: number,
   redirectTo: string,
   invalidate: () => void,
   writeSucceededExtra: Record<string, unknown> = {}
-): never {
-  finishMutation(scope, start, invalidate, writeSucceededExtra);
-  logMutationTiming(scope, start, { stage: "redirect_success" satisfies MutationStage });
+): Promise<never> {
+  await finishMutation(scope, start, invalidate, writeSucceededExtra);
+  logMutationTiming(scope, start, {
+    stage: "redirect_success" satisfies MutationStage,
+    reqId: await getRequestId(),
+  });
   redirect(redirectTo);
 }
 
@@ -125,13 +187,34 @@ export function completeMutation(
  * client (see CategoryForm.tsx and its siblings) shows an inline "עודכן
  * בהצלחה" instead and stays on the form.
  */
-export function completeUpdateMutation(
+export async function completeUpdateMutation(
   scope: string,
   start: number,
   invalidate: () => void,
   writeSucceededExtra: Record<string, unknown> = {}
-): { success: true } {
-  finishMutation(scope, start, invalidate, writeSucceededExtra);
+): Promise<{ success: true }> {
+  await finishMutation(scope, start, invalidate, writeSucceededExtra);
+  return { success: true };
+}
+
+/**
+ * The tail of every admin DELETE action (and the promotion active/inactive
+ * toggle): like completeUpdateMutation, the admin is already looking at the
+ * list they're deleting a row from — there is no reason to redirect. Every
+ * delete/toggle action used to call revalidatePath/revalidateStorefront
+ * inline instead of through finishMutation, which reproduced the exact
+ * "forced re-render of the page you're already on" problem completeMutation/
+ * completeUpdateMutation were split out to fix for creates/updates — it was
+ * simply never applied to delete, since it was added afterwards. Same fix,
+ * same helper, just named for its call sites.
+ */
+export async function completeDeleteMutation(
+  scope: string,
+  start: number,
+  invalidate: () => void,
+  writeSucceededExtra: Record<string, unknown> = {}
+): Promise<{ success: true }> {
+  await finishMutation(scope, start, invalidate, writeSucceededExtra);
   return { success: true };
 }
 
@@ -141,10 +224,12 @@ export async function withAdminTiming<T>(
   meta?: (result: T) => Record<string, unknown>
 ): Promise<T> {
   const start = performance.now();
+  const reqId = await getRequestId();
   try {
     const result = await run();
     console.log("[admin:timing]", {
       scope,
+      reqId,
       durationMs: Math.round(performance.now() - start),
       ...(meta ? meta(result) : {}),
     });
@@ -152,6 +237,7 @@ export async function withAdminTiming<T>(
   } catch (thrown) {
     console.log("[admin:timing]", {
       scope,
+      reqId,
       durationMs: Math.round(performance.now() - start),
       error: true,
     });

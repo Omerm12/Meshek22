@@ -11,7 +11,7 @@ import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
 import { ProductImageUpload } from "@/components/admin/products/ProductImageUpload";
 import { useSuccessFlash } from "@/hooks/useSuccessFlash";
-import type { ActionResult } from "@/app/meshek22-control/(protected)/products/actions";
+import type { ActionResult, UpdateProductResult } from "@/app/meshek22-control/(protected)/products/actions";
 
 export interface CategoryOption {
   id:        string;
@@ -21,7 +21,7 @@ export interface CategoryOption {
 
 interface ProductFormProps {
   defaultValues?: Partial<ProductFormData>;
-  action:         (formData: FormData) => Promise<ActionResult>;
+  action:         (formData: FormData) => Promise<ActionResult | UpdateProductResult>;
   submitLabel:    string;
   categories:     CategoryOption[];
 }
@@ -110,6 +110,7 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
     control,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -162,6 +163,21 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
         } else {
           // A create still redirects (caught below); an update now resolves
           // normally with {success:true} — see completeUpdateMutation.
+          //
+          // An update also returns the ids of variants this save inserted.
+          // Writing them back is required: otherwise a second save (no
+          // reload) resubmits those variants as "new" and duplicates them.
+          if (result && "newVariantIds" in result && result.newVariantIds.length > 0) {
+            const ids = [...result.newVariantIds];
+            const current = getValues("variants");
+            if (current.length === data.variants.length) {
+              setValue(
+                "variants",
+                current.map((v) => (v.id ? v : { ...v, id: ids.shift() })),
+                { shouldDirty: false }
+              );
+            }
+          }
           showSaved();
         }
       } catch (err) {

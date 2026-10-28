@@ -59,7 +59,7 @@ export function WhyChooseUs() {
                 ].map(({ num, label }) => (
                   <div key={label}>
                     <p className="text-3xl font-bold text-brand-700 leading-none">{num}</p>
-                    <p className="text-sm text-stone-400 mt-1">{label}</p>
+                    <p className="text-sm text-stone-500 mt-1">{label}</p>
                   </div>
                 ))}
               </div>

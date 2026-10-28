@@ -7,7 +7,7 @@ import { adminLogin, type AdminLoginState } from "@/app/meshek22-control/login/a
 
 const inputClass =
   "w-full h-12 px-3.5 rounded-xl border border-stone-200 bg-white text-gray-900 text-base " +
-  "placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 " +
+  "placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-brand-500 " +
   "focus:border-transparent transition-shadow";
 
 const initialState: AdminLoginState = { error: null };
@@ -42,7 +42,7 @@ export function AdminLoginForm() {
         </label>
         <div className="relative">
           <User
-            className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400"
+            className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-500"
             aria-hidden="true"
           />
           <input
@@ -64,7 +64,7 @@ export function AdminLoginForm() {
         </label>
         <div className="relative">
           <Lock
-            className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400"
+            className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-500"
             aria-hidden="true"
           />
           <input

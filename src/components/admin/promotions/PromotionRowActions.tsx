@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
 import { Loader2, Power, Trash2 } from "lucide-react";
 import {
   deletePromotion,
   setPromotionActive,
 } from "@/app/meshek22-control/(protected)/promotions/actions";
+import { hideDeletedRow } from "@/lib/admin/hide-row";
 
 /**
  * Enable/disable and delete controls for one promotion row.
@@ -24,18 +24,22 @@ export function PromotionRowActions({
   promotionName: string;
   isActive: boolean;
 }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The server-rendered value is the initial state; a successful toggle
+  // updates this in place instead of refreshing the router, which would
+  // re-run the whole promotions list page's own query just to flip one flag.
+  const [localIsActive, setLocalIsActive] = useState(isActive);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = () => {
     setError(null);
     startTransition(async () => {
       try {
-        const result = await setPromotionActive(promotionId, !isActive);
+        const result = await setPromotionActive(promotionId, !localIsActive);
         if (!result.success) setError(result.error);
-        else router.refresh();
+        else setLocalIsActive((prev) => !prev);
       } catch (err) {
         console.error("[PromotionRowActions] toggle failed", err);
         setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
@@ -53,7 +57,7 @@ export function PromotionRowActions({
           setConfirming(false);
         } else {
           setConfirming(false);
-          router.refresh();
+          hideDeletedRow(containerRef.current);
         }
       } catch (err) {
         console.error("[PromotionRowActions] delete failed", err);
@@ -65,7 +69,7 @@ export function PromotionRowActions({
 
   if (confirming) {
     return (
-      <div className="flex flex-col gap-2 items-stretch sm:items-end">
+      <div ref={containerRef} className="flex flex-col gap-2 items-stretch sm:items-end">
         <p className="text-xs text-gray-600 leading-relaxed">
           למחוק את המבצע &quot;{promotionName}&quot;? הזמנות קודמות לא יושפעו.
         </p>
@@ -93,16 +97,16 @@ export function PromotionRowActions({
   }
 
   return (
-    <div className="flex flex-col items-stretch sm:items-end gap-1.5">
+    <div ref={containerRef} className="flex flex-col items-stretch sm:items-end gap-1.5">
       <div className="flex gap-2">
         <button
           type="button"
           onClick={handleToggle}
           disabled={isPending}
-          aria-label={isActive ? `כיבוי המבצע ${promotionName}` : `הפעלת המבצע ${promotionName}`}
-          title={isActive ? "כיבוי המבצע" : "הפעלת המבצע"}
+          aria-label={localIsActive ? `כיבוי המבצע ${promotionName}` : `הפעלת המבצע ${promotionName}`}
+          title={localIsActive ? "כיבוי המבצע" : "הפעלת המבצע"}
           className={`inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 ${
-            isActive
+            localIsActive
               ? "border border-gray-300 text-gray-700 hover:bg-gray-50"
               : "bg-brand-600 text-white hover:bg-brand-700"
           }`}
@@ -112,7 +116,7 @@ export function PromotionRowActions({
           ) : (
             <Power className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {isActive ? "כיבוי" : "הפעלה"}
+          {localIsActive ? "כיבוי" : "הפעלה"}
         </button>
 
         <button

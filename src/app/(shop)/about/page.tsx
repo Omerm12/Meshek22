@@ -117,7 +117,7 @@ export default function AboutPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-stone-500">
+              <div className="flex items-center gap-2 text-sm text-stone-600">
                 <MapPin className="h-4 w-4 text-brand-500 shrink-0" aria-hidden="true" />
                 <span>מושב ינון — סביבה חקלאית תומכת לצמיחה ולעשייה</span>
               </div>
@@ -138,7 +138,7 @@ export default function AboutPage() {
                   <p className="text-3xl font-bold text-brand-700 mb-1">
                     {value}
                   </p>
-                  <p className="text-sm text-stone-500">{label}</p>
+                  <p className="text-sm text-stone-600">{label}</p>
                 </div>
               ))}
             </div>
@@ -156,7 +156,7 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               מה מייחד את משק 22
             </h2>
-            <p className="text-stone-500 max-w-xl mx-auto">
+            <p className="text-stone-600 max-w-xl mx-auto">
               חקלאות שבאה מהלב — עם מחויבות אמיתית לאיכות ולשירות.
             </p>
           </div>
@@ -184,7 +184,7 @@ export default function AboutPage() {
                   />
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-base text-stone-500 leading-relaxed">{desc}</p>
+                <p className="text-base text-stone-600 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -199,7 +199,7 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold text-gray-900 mb-3">
                 המחויבות שלנו לאיכות ולשירות
               </h2>
-              <p className="text-stone-500 leading-relaxed mb-6">
+              <p className="text-stone-600 leading-relaxed mb-6">
                 אנחנו לא מסתירים מאחורי תנאי שירות. זו ההתחייבות שלנו בכתב —
                 ובמילה.
               </p>
@@ -220,7 +220,7 @@ export default function AboutPage() {
             </div>
 
             {/* CTA card */}
-            <div className="bg-brand-600 rounded-2xl p-8 text-white">
+            <div className="bg-brand-700 rounded-2xl p-8 text-white">
               <Leaf
                 className="h-10 w-10 text-brand-200 mb-5"
                 aria-hidden="true"
@@ -257,7 +257,7 @@ export default function AboutPage() {
         style={{ backgroundColor: "var(--color-surface)" }}
       >
         <Container>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-stone-500">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-stone-600">
             <span className="font-medium text-gray-900">יש לכם שאלה?</span>
             <a
               href="tel:0508863030"

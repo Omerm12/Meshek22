@@ -36,7 +36,7 @@ export function CardBrandNotice() {
       role="note"
       className="mt-3 flex items-start gap-2 rounded-lg bg-stone-50 border border-stone-100 p-2.5 text-xs text-stone-500 leading-relaxed"
     >
-      <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-stone-400" aria-hidden="true" />
+      <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-stone-500" aria-hidden="true" />
       <span>{GENERIC_CARD_NOTICE}</span>
     </div>
   );

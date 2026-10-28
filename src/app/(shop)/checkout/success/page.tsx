@@ -174,7 +174,7 @@ export default async function CheckoutSuccessPage({
           <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden mb-6">
             <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-stone-400 mb-0.5">מספר הזמנה</p>
+                <p className="text-xs text-stone-500 mb-0.5">מספר הזמנה</p>
                 <p className="font-bold text-gray-900 font-mono tracking-wide">
                   {order.order_number}
                 </p>

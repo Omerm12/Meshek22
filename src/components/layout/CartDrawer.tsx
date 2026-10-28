@@ -138,7 +138,7 @@ export function CartDrawer() {
               </span>
             </div>
 
-            <div className="flex items-center justify-between mb-4 text-xs text-stone-400">
+            <div className="flex items-center justify-between mb-4 text-xs text-stone-500">
               <span>דמי משלוח יחושבו בקופה</span>
             </div>
             <div className="h-px bg-stone-100 mb-4" />
@@ -165,7 +165,7 @@ export function CartDrawer() {
 
             <button
               onClick={closeCart}
-              className="mt-3 w-full text-center text-sm text-stone-400 hover:text-brand-700 transition-colors cursor-pointer"
+              className="mt-3 w-full text-center text-sm text-stone-500 hover:text-brand-700 transition-colors cursor-pointer"
             >
               המשיכו בקניות
             </button>
@@ -242,7 +242,7 @@ function CartItem({
         <p className="font-semibold text-sm text-gray-900 leading-snug truncate">
           {item.productName}
         </p>
-        <p className="text-xs text-stone-400 mt-0.5">
+        <p className="text-xs text-stone-500 mt-0.5">
           {item.variantLabel}
           {isPerKg && (
             <span className="ms-1 text-stone-300">
@@ -285,7 +285,7 @@ function CartItem({
           {/* Line price */}
           <span className="flex items-baseline gap-1.5 shrink-0">
             {isDiscounted && (
-              <span className="text-xs text-stone-400 line-through">
+              <span className="text-xs text-stone-500 line-through">
                 {formatPrice(normalTotal)}
               </span>
             )}
@@ -306,7 +306,7 @@ function CartItem({
         onClick={() => onRemove(item.variantId)}
         aria-label={`הסר ${item.productName} מהסל`}
         title="הסר מהסל"
-        className="shrink-0 self-start mt-0.5 h-8 w-8 flex items-center justify-center rounded-full text-stone-400 hover:text-red-500 hover:bg-red-50 active:scale-90 transition-all duration-150 cursor-pointer"
+        className="shrink-0 self-start mt-0.5 h-8 w-8 flex items-center justify-center rounded-full text-stone-500 hover:text-red-500 hover:bg-red-50 active:scale-90 transition-all duration-150 cursor-pointer"
       >
         <Trash2 className="h-4 w-4" />
       </button>
@@ -323,7 +323,7 @@ function EmptyCart({ onClose }: { onClose: () => void }) {
         <Leaf className="h-9 w-9 text-brand-400" aria-hidden="true" />
       </div>
       <h3 className="font-bold text-gray-900 text-lg mb-2">הסל שלכם ריק</h3>
-      <p className="text-sm text-stone-400 leading-relaxed mb-6">
+      <p className="text-sm text-stone-500 leading-relaxed mb-6">
         הוסיפו ירקות ופירות טריים ונתחיל לארוז
       </p>
       <Button variant="primary" size="md" onClick={onClose}>

@@ -181,7 +181,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
 
         {/* ── Deal badge: compact single-color pill ─────────────────────── */}
         {dealBadgeLabel && !hasSale && (
-          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-orange-500 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(234,88,12,0.45)]">
+          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-orange-700 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(234,88,12,0.45)]">
             <span className="text-[11px] md:text-[12px] font-black text-white leading-none tracking-tight whitespace-nowrap">
               {dealBadgeLabel}
             </span>
@@ -190,7 +190,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
 
         {/* ── Discount badge: compact "20% הנחה" pill, same weight as the deal badge ── */}
         {hasSale && (
-          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-red-500 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(220,38,38,0.45)]">
+          <div className="absolute top-2 end-2 md:top-2.5 md:end-2.5 z-10 bg-red-600 rounded-lg px-2 py-1 shadow-[0_2px_6px_rgba(220,38,38,0.45)]">
             <span className="text-[11px] md:text-[12px] font-black text-white leading-none tracking-tight whitespace-nowrap">
               {discountPct}% הנחה
             </span>
@@ -247,7 +247,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
             )}>
               {formatPrice(selectedVariant.priceAgorot)}
               {isPerKg && (
-                <span className="text-xs font-normal text-stone-400 ms-0.5">
+                <span className="text-xs font-normal text-stone-500 ms-0.5">
                   /ק&quot;ג
                 </span>
               )}
@@ -255,7 +255,7 @@ export function ProductCard({ product, className, priority = false }: ProductCar
 
             {/* Original price (strikethrough) */}
             {hasSale && (
-              <span className="text-[13px] md:text-[14px] font-medium text-stone-400 line-through mt-1 leading-none">
+              <span className="text-[13px] md:text-[14px] font-medium text-stone-500 line-through mt-1 leading-none">
                 {formatPrice(selectedVariant.comparePriceAgorot!)}
               </span>
             )}

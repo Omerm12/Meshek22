@@ -134,12 +134,12 @@ export function NavbarSearch({ className }: NavbarSearchProps) {
         <div className="relative">
           {loading ? (
             <Loader2
-              className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-stone-400 animate-spin pointer-events-none"
+              className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-stone-500 animate-spin pointer-events-none"
               aria-hidden="true"
             />
           ) : (
             <Search
-              className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-stone-400 pointer-events-none"
+              className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-stone-500 pointer-events-none"
               aria-hidden="true"
             />
           )}
@@ -170,7 +170,7 @@ export function NavbarSearch({ className }: NavbarSearchProps) {
             className={cn(
               "w-full h-10 md:h-9 rounded-full ps-9 pe-9",
               "bg-stone-50 border border-stone-200",
-              "text-[16px] md:text-sm text-gray-900 placeholder:text-stone-400",
+              "text-[16px] md:text-sm text-gray-900 placeholder:text-stone-500",
               "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white",
               "transition-all duration-200",
             )}
@@ -180,7 +180,7 @@ export function NavbarSearch({ className }: NavbarSearchProps) {
               type="button"
               onClick={handleClear}
               aria-label="נקה חיפוש"
-              className="absolute top-1/2 -translate-y-1/2 end-1.5 flex items-center justify-center h-7 w-7 rounded-full text-stone-400 hover:text-stone-600 active:bg-stone-100 transition-colors touch-manipulation"
+              className="absolute top-1/2 -translate-y-1/2 end-1.5 flex items-center justify-center h-7 w-7 rounded-full text-stone-500 hover:text-stone-600 active:bg-stone-100 transition-colors touch-manipulation"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -232,7 +232,7 @@ export function NavbarSearch({ className }: NavbarSearchProps) {
               </div>
             </>
           ) : (
-            <div className="px-4 py-5 text-sm text-stone-400 text-center">
+            <div className="px-4 py-5 text-sm text-stone-500 text-center">
               לא נמצאו תוצאות עבור &quot;{query}&quot;
             </div>
           )}

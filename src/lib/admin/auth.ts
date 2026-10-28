@@ -21,8 +21,11 @@
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { ADMIN_ROUTES } from "@/lib/admin/routes";
+import { ADMIN_VERIFIED_USER_ID_HEADER, verifyVerifiedUserToken } from "@/lib/admin/request-headers";
+import { getRequestId } from "@/lib/admin/request-id";
 
 export interface AdminUser {
   id: string;
@@ -36,23 +39,83 @@ export interface AdminUser {
  *
  * Wrapped in React cache() so the layout, the page and any Server Action in the
  * same request share one result. This removed the duplicate
- * getUser() + profiles round-trip that every admin page previously paid twice.
+ * getUser() + profiles round-trip that every admin page previously paid twice
+ * WITHIN one execution context.
+ *
+ * That said, cache() does NOT span execution contexts: Middleware
+ * (src/lib/supabase/middleware.ts) runs as a genuinely separate invocation
+ * from the Server Component/Action render that follows it (confirmed by
+ * production traces showing independent Middleware vs Function durations),
+ * so its own getUser() call is never deduplicated by this cache() on its
+ * own. Middleware instead forwards proof of its own verification via
+ * ADMIN_VERIFIED_USER_ID_HEADER — see the comment on that constant for why
+ * that header can be trusted. When present, this skips the second getUser()
+ * network round trip entirely and goes straight to the (always-required)
+ * profiles/role lookup; when absent (a request that didn't pass through
+ * Middleware), it falls back to the original, fully independent check.
  */
 export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
-  const supabase = await createClient();
+  const start = performance.now();
+  const [hdrs, reqId] = await Promise.all([headers(), getRequestId()]);
+  // Authentic, fresh, Middleware-signed token only; anything else (absent,
+  // forged, tampered, expired) is null and we do the full getUser() below.
+  const verifiedUserId = await verifyVerifiedUserToken(hdrs.get(ADMIN_VERIFIED_USER_ID_HEADER));
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  let userId: string;
+  let getUserMs = 0;
 
-  if (authError || !user) return null;
+  if (verifiedUserId) {
+    userId = verifiedUserId;
+  } else {
+    // Fallback only (request did not carry a valid Middleware token): verify
+    // the session with the Auth server ourselves.
+    const supabase = await createClient();
+    const getUserStart = performance.now();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    getUserMs = Math.round(performance.now() - getUserStart);
 
-  const { data: profile, error } = await supabase
+    if (authError || !user) {
+      console.log("[admin:timing]", {
+        scope: "admin-auth",
+        reqId,
+        stage: "getUser_failed",
+        verifiedByMiddleware: false,
+        getUserMs,
+        durationMs: Math.round(performance.now() - start),
+      });
+      return null;
+    }
+    userId = user.id;
+  }
+
+  // Role lookup with the service-role client, NOT the cookie-session client.
+  // The session client's first request awaits getSession(), and when the
+  // access token in the cookie is expired that means a token refresh which
+  // auth-js retries with exponential backoff for up to ~30s — a stall that
+  // blocked every admin page render (measured: 6 refresh attempts in 9s while
+  // the profiles query was never even sent). The identity is already verified
+  // above, so this read needs no user session; authorization is unchanged —
+  // the id must belong to a profile whose role is exactly 'admin'.
+  const profileStart = performance.now();
+  const { data: profile, error } = await createAdminClient()
     .from("profiles")
     .select("id, email, full_name, role")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
+  const profileMs = Math.round(performance.now() - profileStart);
+
+  console.log("[admin:timing]", {
+    scope: "admin-auth",
+    reqId,
+    stage: "resolved",
+    verifiedByMiddleware: !!verifiedUserId,
+    getUserMs,
+    profileMs,
+    durationMs: Math.round(performance.now() - start),
+  });
 
   if (error || !profile || profile.role !== "admin") return null;
 
@@ -74,7 +137,7 @@ export async function requireAdmin(): Promise<AdminUser> {
     // The single chokepoint every action and the protected layout call, so
     // one log line here covers auth_failed for all of them — see
     // src/lib/admin/instrumentation.ts for the full mutation-stage vocabulary.
-    console.log("[admin:timing]", { scope: "auth", stage: "auth_failed" });
+    console.log("[admin:timing]", { scope: "auth", stage: "auth_failed", reqId: await getRequestId() });
     redirect(ADMIN_ROUTES.login);
   }
   return admin;

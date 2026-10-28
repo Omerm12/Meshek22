@@ -76,7 +76,7 @@ export default function CartPage() {
           </div>
           <button
             onClick={clearCart}
-            className="text-sm text-stone-400 hover:text-red-500 transition-colors cursor-pointer"
+            className="text-sm text-stone-500 hover:text-red-500 transition-colors cursor-pointer"
           >
             ניקוי סל
           </button>
@@ -155,10 +155,10 @@ export default function CartPage() {
                           <p className="font-semibold text-gray-900 leading-snug truncate">
                             {item.productName}
                           </p>
-                          <p className="text-sm text-stone-400 mt-0.5">
+                          <p className="text-sm text-stone-500 mt-0.5">
                             {item.variantLabel}
                           </p>
-                          <p className="text-xs text-stone-400 mt-0.5">
+                          <p className="text-xs text-stone-500 mt-0.5">
                             {formatPrice(item.priceAgorot)} ליחידה
                           </p>
                         </div>
@@ -208,7 +208,7 @@ export default function CartPage() {
                           const charged = line?.chargedTotalAgorot ?? normal;
                           return charged < normal ? (
                             <p className="flex items-baseline gap-2">
-                              <span className="text-sm text-stone-400 line-through">
+                              <span className="text-sm text-stone-500 line-through">
                                 {formatPrice(normal)}
                               </span>
                               <span className="font-bold text-orange-600 text-base">
@@ -279,7 +279,7 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-stone-500">דמי משלוח</span>
-                  <span className="text-stone-400 text-xs">יחושב בקופה</span>
+                  <span className="text-stone-500 text-xs">יחושב בקופה</span>
                 </div>
               </div>
 
@@ -291,7 +291,7 @@ export default function CartPage() {
                     {formatPrice(chargedSubtotal)}
                   </span>
                 </div>
-                <p className="text-xs text-stone-400 mt-1">
+                <p className="text-xs text-stone-500 mt-1">
                   לא כולל דמי משלוח
                 </p>
               </div>
@@ -307,7 +307,7 @@ export default function CartPage() {
               </a>
 
               {/* Security note */}
-              <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-stone-400">
+              <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-stone-500">
                 <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 תשלום מאובטח · Bit · כרטיס אשראי
               </div>

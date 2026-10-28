@@ -70,7 +70,7 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
     fallbackBg: "bg-green-950",
     containerBg: "#0b2412",
     overlayColor: "rgba(10, 40, 18, 0.30)",
-    accentClass: "bg-green-600",
+    accentClass: "bg-green-700",
     headingColor: "text-white",
   },
   fruits: {
@@ -154,7 +154,7 @@ export const CATEGORY_HEROES: Record<string, CategoryHeroConfig> = {
     fallbackBg: "bg-sky-950",
     containerBg: "#041524",
     overlayColor: "rgba(4, 20, 40, 0.32)",
-    accentClass: "bg-sky-600",
+    accentClass: "bg-sky-700",
     headingColor: "text-white",
     imageObjectFit: "cover",
     imageObjectPosition: "40% center",

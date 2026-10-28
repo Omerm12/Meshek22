@@ -12,6 +12,7 @@ import {
   Truck,
   MapPin,
   Percent,
+  Receipt,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: ADMIN_ROUTES.promotions,    label: "מבצעים",      icon: Percent,         exact: false },
   { href: ADMIN_ROUTES.deliveryZones, label: "אזורי משלוח", icon: Truck,           exact: false },
   { href: ADMIN_ROUTES.settlements,   label: "יישובים",     icon: MapPin,          exact: false },
+  { href: ADMIN_ROUTES.reports,       label: "דוחות כספיים", icon: Receipt,         exact: false },
 ];
 
 interface AdminSidebarProps {
@@ -81,6 +83,7 @@ export function AdminSidebar({ adminName, adminEmail, isOpen, onClose }: AdminSi
               key={href}
               href={href}
               onClick={onClose}
+              prefetch={false}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
                 active

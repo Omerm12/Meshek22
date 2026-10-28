@@ -55,15 +55,17 @@ describe("mutation forms disable their submit control while pending", () => {
   });
 });
 
-describe("product update: the final variant writes run concurrently", () => {
-  it("upserts existing variants and inserts new ones inside one Promise.all", () => {
-    const section = productActions.slice(
-      productActions.indexOf("// 6+7."),
-      productActions.indexOf("if (upsertResult.error)")
-    );
-    expect(section).toMatch(/Promise\.all\(\[/);
-    expect(section).toMatch(/\.upsert\(/);
-    expect(section).toMatch(/\.insert\(/);
+describe("product update: VAT class and variant ids", () => {
+  it("updateProduct writes the product record spread (so vat_class is persisted) and never an RPC", () => {
+    const fn = sliceFunction(productActions, "updateProduct");
+    expect(fn).toContain("...productFields");
+    expect(fn).not.toContain(".rpc(");
+  });
+
+  it("updateProduct returns inserted variant ids so the client can avoid duplicate inserts on a second save", () => {
+    const fn = sliceFunction(productActions, "updateProduct");
+    expect(fn).toContain('.insert(newVariants.map((v) => toDbVariant(v, id))).select("id")');
+    expect(fn).toMatch(/newVariantIds/);
   });
 });
 
@@ -183,5 +185,156 @@ describe("mutation forms show an in-place saved confirmation instead of navigati
       expect(resetIdx).toBeGreaterThan(onSubmitIdx);
       expect(resetIdx).toBeLessThan(transitionIdx);
     }
+  });
+});
+
+const instrumentation = readFileSync("src/lib/admin/instrumentation.ts", "utf8");
+const ordersActions = readFileSync(
+  "src/app/meshek22-control/(protected)/orders/actions.ts",
+  "utf8"
+);
+
+describe("mutation invalidation is deferred to after(), not run inline in the action body", () => {
+  // Confirmed via node_modules/next/dist/server/app-render/action-handler.js:
+  // calling revalidatePath/revalidateTag/updateTag ANYWHERE inline in a
+  // Server Action's synchronous body sets a request-wide (not path-scoped)
+  // flag that makes Next.js re-render whatever page the action was invoked
+  // from as part of that action's own response — wasted work when the admin
+  // stays on the same form/page and never asked for a refresh. Running
+  // invalidation through runAfterResponse()/after() avoids that: nothing
+  // revalidates until after the response is already on its way.
+
+  it("finishMutation() (shared by every create/update action) defers invalidation via runAfterResponse", () => {
+    const fnIdx = instrumentation.indexOf("async function finishMutation(");
+    const fnEnd = instrumentation.indexOf("\n}\n", fnIdx);
+    const body = instrumentation.slice(fnIdx, fnEnd);
+    expect(body).toContain("runAfterResponse(() => {");
+    expect(body).toContain("invalidate();");
+    // The invalidate() call must be INSIDE the runAfterResponse callback,
+    // not called directly beforehand.
+    expect(body.indexOf("runAfterResponse(")).toBeLessThan(body.indexOf("invalidate();"));
+  });
+
+  it("applyOrderTransition's revalidation also goes through runAfterResponse, via scheduleOrderRevalidation", () => {
+    expect(ordersActions).toContain("import { withAdminTiming, runAfterResponse }");
+    const fnIdx = ordersActions.indexOf("function scheduleOrderRevalidation(");
+    const fnEnd = ordersActions.indexOf("\n}\n", fnIdx);
+    const body = ordersActions.slice(fnIdx, fnEnd);
+    expect(body).toContain("runAfterResponse(() => {");
+    expect(body).toContain("revalidatePath(");
+
+    // Both call sites inside applyOrderTransition use the helper, not their
+    // own inline revalidatePath calls.
+    const callSites = ordersActions.match(/scheduleOrderRevalidation\(orderId\);/g) ?? [];
+    expect(callSites.length).toBe(2);
+  });
+
+  it("runAfterResponse is exported from the shared instrumentation module, not reimplemented per call site", () => {
+    expect(instrumentation).toContain("export function runAfterResponse(");
+  });
+});
+
+describe("admin DELETE actions (and the promotion toggle) defer invalidation instead of running it inline", () => {
+  // Same bug class as the update path, found independently of it: every
+  // delete* action (and setPromotionActive) used to call
+  // revalidatePath/revalidateStorefront synchronously and return a literal
+  // `{ success: true }`, which — like the pre-fix update actions — forces
+  // Next.js to re-render whatever page the action was invoked from as part
+  // of the action's own response. completeDeleteMutation (a named alias for
+  // the same finishMutation() completeUpdateMutation uses — see
+  // instrumentation.ts) fixes this the same way.
+  const deleteFns: [string, string][] = [
+    ["deleteProduct", productActions],
+    ["deleteCategory", categoryActions],
+    ["deleteDeliveryZone", deliveryZoneActions],
+    ["deleteSettlement", settlementActions],
+    ["deletePromotion", promotionActions],
+  ];
+
+  it.each(deleteFns)("%s calls completeDeleteMutation, not an inline revalidate + literal return", (fnName, source) => {
+    const fn = sliceFunction(source, fnName);
+    expect(fn).toContain("completeDeleteMutation(");
+    expect(fn).not.toMatch(/return\s*\{\s*success:\s*true\s*\}/);
+  });
+
+  it("setPromotionActive also defers invalidation (via completeUpdateMutation — it's a field toggle, not a delete)", () => {
+    const fn = sliceFunction(promotionActions, "setPromotionActive");
+    expect(fn).toContain("completeUpdateMutation(");
+    expect(fn).not.toMatch(/return\s*\{\s*success:\s*true\s*\}/);
+  });
+
+  it("every actions.ts file with a delete action imports completeDeleteMutation", () => {
+    for (const source of [productActions, categoryActions, deliveryZoneActions, settlementActions, promotionActions]) {
+      expect(source).toMatch(
+        /import\s*\{[^}]*\bcompleteDeleteMutation\b[^}]*\}\s*from\s*"@\/lib\/admin\/instrumentation"/
+      );
+    }
+  });
+});
+
+describe("delete buttons update the UI locally instead of calling router.refresh()", () => {
+  // The server-side fix above (completeDeleteMutation) is necessary but not
+  // sufficient on its own: every delete button/row-action component called
+  // router.refresh() on success regardless, which forces Next.js to re-run
+  // the whole list page's own Server Component query just to remove one row
+  // — the same "forced re-render of the page you're already on" cost, just
+  // triggered by the client this time instead of the server. hideDeletedRow
+  // (src/lib/admin/hide-row.ts) removes the row's own DOM node instead.
+  const deleteButtons: [string, string][] = [
+    ["DeleteProductButton", "src/components/admin/products/DeleteProductButton.tsx"],
+    ["DeleteCategoryButton", "src/components/admin/categories/DeleteCategoryButton.tsx"],
+    ["DeleteDeliveryZoneButton", "src/components/admin/delivery-zones/DeleteDeliveryZoneButton.tsx"],
+    ["DeleteSettlementButton", "src/components/admin/settlements/DeleteSettlementButton.tsx"],
+    ["PromotionRowActions", "src/components/admin/promotions/PromotionRowActions.tsx"],
+  ];
+
+  it.each(deleteButtons)("%s calls hideDeletedRow, never router.refresh()", (_name, path) => {
+    const source = readFileSync(path, "utf8");
+    expect(source).toContain("hideDeletedRow(");
+    expect(source).not.toContain("router.refresh()");
+    expect(source).not.toMatch(/useRouter/);
+  });
+
+  it("PromotionRowActions applies a successful toggle to local state instead of refreshing", () => {
+    const source = readFileSync("src/components/admin/promotions/PromotionRowActions.tsx", "utf8");
+    expect(source).toContain("setLocalIsActive(");
+  });
+});
+
+describe("high-fanout admin row links disable automatic prefetch", () => {
+  // Default Next.js Link prefetch fires for every link scrolled into
+  // viewport in a production build — each one re-runs the full admin auth
+  // chain (Middleware + requireAdmin). Row-level edit/view links (up to
+  // PAGE_SIZE per page, or unbounded for promotions/orders) are the
+  // high-fanout case within a single list. The sidebar nav and the
+  // dashboard's tiles/recent-order links are a DIFFERENT high-fanout case:
+  // a fixed but still sizeable set (7 nav links + 5 attention cards + 5
+  // config tiles + up to 10 recent orders = 27+) that all mount TOGETHER on
+  // the very first page after login. Verified live: logging in triggered a
+  // burst of concurrent admin-auth-chain requests (one per link) with one
+  // request measured at 3346ms while a sibling took 402ms — the same
+  // "requests started simultaneously, one much slower" shape as the
+  // original production evidence this whole investigation started from.
+  // Pagination prev/next (2 links, clicked with strong intent) is the one
+  // remaining case left at the default.
+  const pagesWithRowLinks: [string, string][] = [
+    ["products list", "src/app/meshek22-control/(protected)/products/page.tsx"],
+    ["categories list", "src/app/meshek22-control/(protected)/categories/page.tsx"],
+    ["delivery-zones list", "src/app/meshek22-control/(protected)/delivery-zones/page.tsx"],
+    ["settlements list", "src/app/meshek22-control/(protected)/settlements/page.tsx"],
+    ["promotions list", "src/app/meshek22-control/(protected)/promotions/page.tsx"],
+    ["orders list", "src/components/admin/orders/OrdersListClient.tsx"],
+    ["admin sidebar nav", "src/components/admin/AdminSidebar.tsx"],
+  ];
+
+  it.each(pagesWithRowLinks)("%s's row-level Link sets prefetch={false}", (_name, path) => {
+    const source = readFileSync(path, "utf8");
+    expect(source).toContain("prefetch={false}");
+  });
+
+  it("the dashboard disables prefetch on all four of its high-fanout Link sites (attention cards, config tiles, recent orders, view-all)", () => {
+    const source = readFileSync("src/app/meshek22-control/(protected)/page.tsx", "utf8");
+    const occurrences = source.match(/prefetch=\{false\}/g) ?? [];
+    expect(occurrences.length).toBeGreaterThanOrEqual(4);
   });
 });

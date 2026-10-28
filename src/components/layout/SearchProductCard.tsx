@@ -224,11 +224,11 @@ export function SearchProductCard({ product, onNavigate }: SearchProductCardProp
           )}>
             {formatPrice(selectedVariant.priceAgorot)}
             {isPerKg && (
-              <span className="text-[11px] font-normal text-stone-400 ms-0.5">/ק&quot;ג</span>
+              <span className="text-[11px] font-normal text-stone-500 ms-0.5">/ק&quot;ג</span>
             )}
           </span>
           {hasSale && (
-            <span className="text-[11px] text-stone-400 line-through leading-none">
+            <span className="text-[11px] text-stone-500 line-through leading-none">
               {formatPrice(selectedVariant.comparePriceAgorot!)}
             </span>
           )}

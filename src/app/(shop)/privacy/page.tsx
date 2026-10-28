@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <div className="bg-white border-b border-stone-100 py-10">
         <Container>
           <h1 className="text-3xl font-bold text-gray-900">מדיניות פרטיות</h1>
-          <p className="text-stone-500 mt-2 text-sm">עדכון אחרון: אפריל 2026</p>
+          <p className="text-stone-500 mt-2 text-sm">עדכון אחרון: אוקטובר 2026</p>
         </Container>
       </div>
 
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
             <ul>
               <li><strong>פרטי זיהוי:</strong> שם מלא, כתובת דוא&quot;ל, מספר טלפון.</li>
               <li><strong>כתובת משלוח:</strong> רחוב, ישוב, מיקוד.</li>
-              <li><strong>נתוני התחברות:</strong> כתובת דוא&quot;ל בלבד; הסיסמה אינה נשמרת — ההתחברות מתבצעת באמצעות קוד חד-פעמי (OTP) שנשלח לדוא&quot;ל.</li>
+          <li><strong>רכישה כאורח:</strong> ניתן להזמין ללא יצירת חשבון משתמש. האתר אינו מנהל חשבונות לקוחות ואינו שומר סיסמאות של לקוחות.</li>
               <li><strong>היסטוריית הזמנות:</strong> פרטי ההזמנות שבוצעו, כולל מוצרים, כמויות ומועדים.</li>
               <li><strong>נתוני גלישה:</strong> כתובת IP, סוג דפדפן, ומידע טכני בסיסי לצורך תפעול האתר.</li>
             </ul>
@@ -58,10 +58,22 @@ export default function PrivacyPage() {
             </p>
             <ul>
               <li>
-                <strong>Supabase (supabase.com):</strong> שירות בסיס נתונים ואימות משתמשים.
-                המידע מאוחסן בשרתי Supabase באירופה. עיבוד נתוני OTP ואימות מתבצע דרך
-                שירות זה.
-              </li>
+              <strong>Supabase (supabase.com):</strong> שירות בסיס נתונים שבו נשמרים פרטי
+              ההזמנות. המידע מאוחסן בשרתי Supabase הממוקמים בסינגפור, כלומר מחוץ לישראל.
+            </li>
+            <li>
+              <strong>Vercel (vercel.com):</strong> אירוח האתר והרצת השרת שלו. פונקציות השרת
+              פועלות בסינגפור. כתובת ה-IP וסוג הדפדפן עשויים להירשם ביומני השרת לצורך תפעול ואבטחה.
+            </li>
+            <li>
+              <strong>Resend (resend.com):</strong> שליחת הודעות דוא&quot;ל על ההזמנה
+              (שם, כתובת דוא&quot;ל ופרטי ההזמנה).
+            </li>
+            <li>
+              <strong>Cardcom:</strong> חברת הסליקה. מועברים אליה שם, כתובת דוא&quot;ל, טלפון וסכום
+              העסקה לצורך התשלום והפקת חשבונית מס/קבלה, שנשלחת אליכם בדוא&quot;ל. פרטי כרטיס האשראי
+              מוזנים בדף התשלום של Cardcom בלבד ואינם נשמרים אצלנו.
+            </li>
               <li>
                 <strong>ספקי SMS:</strong> מספר הטלפון משמש לשליחת עדכוני משלוח ב-SMS.
                 מספרי הטלפון אינם נמסרים לצדדים שלישיים אחרים.
@@ -78,12 +90,7 @@ export default function PrivacyPage() {
               ובאחסון. הגישה לנתונים מוגבלת לצוות המאושר בלבד.
             </p>
             <p>
-              סיסמאות אינן נשמרות — שיטת ההתחברות מבוססת על קוד OTP חד-פעמי בלבד,
-              מה שמפחית את הסיכון לדליפת סיסמאות.
-            </p>
-            <p>
-              אנו שומרים מידע כל עוד הוא נדרש לתפעול השירות. ניתן לבקש מחיקת מידע
-              אישי בכל עת.
+              אנו שומרים מידע כל עוד הוא נדרש לתפעול השירות. ניתן לבקש מחיקת מידע אישי בכל עת; מסמכי הזמנות וחשבוניות עשויים להישמר לתקופה שהדין מחייב.
             </p>
           </Section>
 
@@ -104,8 +111,7 @@ export default function PrivacyPage() {
 
           <Section title="7. עוגיות (Cookies)">
             <p>
-              האתר עשוי להשתמש בעוגיות הכרחיות לצורך תפעול תקין (שמירת מצב
-              ההתחברות, סל הקניות וכד׳). אין שימוש בעוגיות פרסום או מעקב.
+              האתר עשוי להשתמש בעוגיות הכרחיות לצורך תפעול תקין (סל הקניות, העדפות נגישות וכד׳). אין שימוש בעוגיות פרסום או מעקב.
             </p>
           </Section>
 
@@ -147,7 +153,7 @@ function Section({
       <h2 className="text-xl font-bold text-gray-900 mb-3 pb-2 border-b border-stone-100">
         {title}
       </h2>
-      <div className="space-y-3 text-[15px] text-stone-600 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ul]:space-y-1.5 [&_a]:text-brand-700 [&_a:hover]:underline">
+      <div className="space-y-3 text-[15px] text-stone-600 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ul]:space-y-1.5 [&_a]:text-brand-700 [&_a]:underline">
         {children}
       </div>
     </section>

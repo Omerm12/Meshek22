@@ -90,7 +90,7 @@ export function Promotions() {
                 {/* Price row */}
                 <div className="flex items-baseline gap-2 mb-5">
                   <span className="text-[26px] font-bold text-gray-900 leading-none">{deal.price}</span>
-                  <span className="text-sm text-stone-400 line-through">{deal.oldPrice}</span>
+                  <span className="text-sm text-stone-500 line-through">{deal.oldPrice}</span>
                 </div>
 
                 {/* Saving badge + CTA */}

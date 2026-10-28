@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SkipLink } from "@/components/layout/SkipLink";
 import { HeroSection } from "@/components/home/HeroSection";
 import { TrustBar } from "@/components/home/TrustBar";
 import { FeaturedCategories } from "@/components/home/FeaturedCategories";
@@ -118,9 +119,11 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
+      <SkipLink target="main-content" />
       <Header categoryTree={categoryTree} />
 
       <main id="main-content">
+        <h1 className="sr-only">משק 22 – ירקות ופירות טריים עד הבית</h1>
         <HeroSection />
         <TrustBar />
         <Suspense fallback={<CategoriesSkeleton />}>

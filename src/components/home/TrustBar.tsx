@@ -53,7 +53,7 @@ export function TrustBar() {
               </div>
               <div>
                 <p className="font-bold text-base sm:text-lg text-gray-900 leading-tight">{title}</p>
-                <p className="text-sm text-stone-400 mt-1 leading-snug">{subtitle}</p>
+                <p className="text-sm text-stone-500 mt-1 leading-snug">{subtitle}</p>
               </div>
             </div>
           ))}

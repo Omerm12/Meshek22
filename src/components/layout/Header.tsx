@@ -375,7 +375,7 @@ export function Header({ categoryTree }: HeaderProps) {
                       setMobileExpanded((prev) => (prev === cat.slug ? null : cat.slug))
                     }
                     className={cn(
-                      "px-3 py-3 rounded-e-xl text-stone-400 hover:text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer",
+                      "px-3 py-3 rounded-e-xl text-stone-500 hover:text-brand-700 hover:bg-brand-50 transition-colors cursor-pointer",
                       mobileExpanded === cat.slug && "bg-brand-50 text-brand-700",
                     )}
                     aria-expanded={mobileExpanded === cat.slug}

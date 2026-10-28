@@ -151,7 +151,7 @@ function Section({
       <h2 className="text-xl font-bold text-gray-900 mb-3 pb-2 border-b border-stone-100">
         {title}
       </h2>
-      <div className="space-y-3 text-[15px] text-stone-600 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ul]:space-y-1.5 [&_a]:text-brand-700 [&_a:hover]:underline">
+      <div className="space-y-3 text-[15px] text-stone-600 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ul]:space-y-1.5 [&_a]:text-brand-700 [&_a]:underline">
         {children}
       </div>
     </section>

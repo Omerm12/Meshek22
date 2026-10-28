@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
+import { BUSINESS_IDENTITY } from "@/lib/config/business";
 
 export const metadata: Metadata = {
   title: "תקנון ותנאי שימוש | משק 22",
@@ -21,6 +22,8 @@ export default function TermsPage() {
           <Section title="1. פרטי העסק">
             <p>
               <strong>שם העסק:</strong> משק 22<br />
+            <strong>שם התאגיד:</strong> {BUSINESS_IDENTITY.name}<br />
+            <strong>ח.פ.:</strong> {BUSINESS_IDENTITY.taxId}<br />
               <strong>כתובת:</strong> משק 22, מושב ינון<br />
               <strong>טלפון:</strong>{" "}
               <a href="tel:0508863030" className="text-brand-700 hover:underline">050-8863030</a><br />
@@ -41,7 +44,7 @@ export default function TermsPage() {
 
           <Section title="3. ביצוע הזמנה">
             <ul>
-              <li>הזמנות מבוצעות דרך האתר בלבד, לאחר יצירת חשבון משתמש.</li>
+              <li>הזמנות מבוצעות דרך האתר בלבד, ללא צורך ביצירת חשבון משתמש.</li>
               <li>על הלקוח למלא פרטים מדויקים: שם מלא, כתובת למשלוח, מספר טלפון ודוא&quot;ל.</li>
               <li>לאחר הגשת ההזמנה יישלח אישור בדוא&quot;ל ו/או SMS.</li>
               <li>הזמנה תיחשב מאושרת רק לאחר שנציג מטעם משק 22 יאשר את ביצועה — בין אם בטלפון, בהודעת SMS, או בדוא&quot;ל.</li>
@@ -157,7 +160,7 @@ function Section({
       <h2 className="text-xl font-bold text-gray-900 mb-3 pb-2 border-b border-stone-100">
         {title}
       </h2>
-      <div className="space-y-3 text-[15px] text-stone-600 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ul]:space-y-1.5 [&_a]:text-brand-700 [&_a:hover]:underline">
+      <div className="space-y-3 text-[15px] text-stone-600 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ul]:space-y-1.5 [&_a]:text-brand-700 [&_a]:underline">
         {children}
       </div>
     </section>

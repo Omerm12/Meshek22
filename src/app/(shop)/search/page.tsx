@@ -34,7 +34,7 @@ export default async function SearchPage() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
             תוצאות חיפוש
           </h1>
-          <p className="mt-1.5 text-xs text-stone-400">
+          <p className="mt-1.5 text-xs text-stone-500">
             * משקל המוצרים עשוי להיות מעט גבוה או נמוך מהטווח המוצג באתר.
           </p>
         </div>

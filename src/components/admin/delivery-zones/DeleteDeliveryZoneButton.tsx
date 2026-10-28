@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
 import { deleteDeliveryZone } from "@/app/meshek22-control/(protected)/delivery-zones/actions";
-import { useRouter } from "next/navigation";
+import { hideDeletedRow } from "@/lib/admin/hide-row";
 
 interface DeleteDeliveryZoneButtonProps {
   id: string;
@@ -14,7 +14,7 @@ export function DeleteDeliveryZoneButton({ id, name }: DeleteDeliveryZoneButtonP
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleDelete = () => {
     setError("");
@@ -26,7 +26,7 @@ export function DeleteDeliveryZoneButton({ id, name }: DeleteDeliveryZoneButtonP
           return;
         }
         setOpen(false);
-        router.refresh();
+        hideDeletedRow(triggerRef.current);
       } catch (err) {
         console.error("[DeleteDeliveryZoneButton] delete failed", err);
         setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
@@ -38,6 +38,7 @@ export function DeleteDeliveryZoneButton({ id, name }: DeleteDeliveryZoneButtonP
     <>
       {/* Trigger */}
       <button
+        ref={triggerRef}
         onClick={() => { setError(""); setOpen(true); }}
         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
         aria-label={`מחק אזור משלוח ${name}`}

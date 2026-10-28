@@ -6,9 +6,13 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import { completeDeleteMutation, completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
 
 export type ActionResult = { success: true } | { success: false; error: string };
+/** Update result: also carries the ids of variants inserted by this save, in submitted order. */
+export type UpdateProductResult =
+  | { success: true; newVariantIds: string[] }
+  | { success: false; error: string };
 
 // ─── Image upload ─────────────────────────────────────────────────────────────
 
@@ -34,7 +38,9 @@ export async function uploadProductImage(formData: FormData): Promise<UploadResu
     return { error: "הקובץ גדול מדי (מקסימום 5MB)" };
   }
 
-  const ext      = (file.name.split(".").pop() ?? "jpg").toLowerCase();
+  // Derived from the validated MIME type, never from the client-supplied file
+  // name (which could carry path separators or an unexpected extension).
+  const ext      = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const filename = `products/${crypto.randomUUID()}.${ext}`;
 
   const supabase = createAdminClient();
@@ -135,7 +141,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
     return { success: false, error: "שגיאה ביצירת הגרסאות. המוצר לא נשמר." };
   }
 
-  completeMutation(
+  return completeMutation(
     "product-create",
     start,
     `${ADMIN_BASE_PATH}/products`,
@@ -152,7 +158,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
 export async function updateProduct(
   id: string,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<UpdateProductResult> {
   const start = performance.now();
   const authStart = start;
   await requireAdmin();
@@ -263,8 +269,8 @@ export async function updateProduct(
           .upsert(existingVariants.map((v) => toDbVariant(v, id)), { onConflict: "id" })
       : Promise.resolve({ error: null as { message?: string } | null }),
     newVariants.length > 0
-      ? supabase.from("product_variants").insert(newVariants.map((v) => toDbVariant(v, id)))
-      : Promise.resolve({ error: null as { message?: string } | null }),
+      ? supabase.from("product_variants").insert(newVariants.map((v) => toDbVariant(v, id))).select("id")
+      : Promise.resolve({ error: null as { message?: string } | null, data: [] as { id: string }[] }),
   ]);
 
   if (upsertResult.error) {
@@ -276,7 +282,12 @@ export async function updateProduct(
     return { success: false, error: "שגיאה ביצירת גרסאות חדשות" };
   }
 
-  return completeUpdateMutation(
+  // Ids of the rows just inserted. The client writes them back into its form
+  // state so a second save (no reload) updates them instead of inserting
+  // duplicates.
+  const newVariantIds = ((insertResult as { data?: { id: string }[] | null }).data ?? []).map((r) => r.id);
+
+  const updated = await completeUpdateMutation(
     "product-update",
     start,
     () => {
@@ -286,6 +297,7 @@ export async function updateProduct(
     },
     { authMs, variantCount: mutableVariants.length }
   );
+  return { ...updated, newVariantIds };
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -304,8 +316,8 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     return { success: false, error: "שגיאה במחיקת המוצר" };
   }
 
-  revalidatePath(`${ADMIN_BASE_PATH}/products`);
-  revalidateStorefront();
-  logMutationTiming("product-delete", start, { outcome: "success", stage: "write_succeeded" });
-  return { success: true };
+  return completeDeleteMutation("product-delete", start, () => {
+    revalidatePath(`${ADMIN_BASE_PATH}/products`);
+    revalidateStorefront();
+  });
 }

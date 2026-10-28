@@ -5,7 +5,12 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { deliveryZoneSchema } from "@/lib/validations/admin-delivery-zone";
 import { ADMIN_BASE_PATH } from "@/lib/admin/routes";
-import { completeMutation, completeUpdateMutation, logMutationTiming } from "@/lib/admin/instrumentation";
+import {
+  completeDeleteMutation,
+  completeMutation,
+  completeUpdateMutation,
+  logMutationTiming,
+} from "@/lib/admin/instrumentation";
 
 // ── Shared result type ────────────────────────────────────────────────────────
 
@@ -91,7 +96,7 @@ export async function createDeliveryZone(formData: FormData): Promise<ActionResu
     return { success: false, error: "שגיאה ביצירת אזור המשלוח. נסו שוב." };
   }
 
-  completeMutation("delivery-zone-create", start, `${ADMIN_BASE_PATH}/delivery-zones`, revalidate);
+  return completeMutation("delivery-zone-create", start, `${ADMIN_BASE_PATH}/delivery-zones`, revalidate);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -198,7 +203,5 @@ export async function deleteDeliveryZone(id: string): Promise<ActionResult> {
     return { success: false, error: "שגיאה במחיקת אזור המשלוח. נסו שוב." };
   }
 
-  revalidate();
-  logMutationTiming("delivery-zone-delete", start, { outcome: "success", stage: "write_succeeded" });
-  return { success: true };
+  return completeDeleteMutation("delivery-zone-delete", start, revalidate);
 }

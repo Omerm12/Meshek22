@@ -84,7 +84,7 @@ export async function DeliveryAreas() {
                       <p className="text-base font-bold text-brand-700 leading-tight">
                         {zone.delivery_fee_agorot === 0 ? "חינם" : formatPrice(zone.delivery_fee_agorot)}
                       </p>
-                      <p className="text-xs text-stone-400">משלוח</p>
+                      <p className="text-xs text-stone-500">משלוח</p>
                     </div>
                   </div>
 
@@ -96,7 +96,7 @@ export async function DeliveryAreas() {
                   </p>
 
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-sm text-stone-400">
+                    <span className="flex items-center gap-1 text-sm text-stone-500">
                       <Clock className="h-3 w-3" aria-hidden="true" />
                       {zone.estimated_delivery_hours
                         ? `עד ${zone.estimated_delivery_hours} שעות`
@@ -107,7 +107,7 @@ export async function DeliveryAreas() {
                         חינם מ-{formatPrice(zone.free_delivery_threshold_agorot ?? 0)}
                       </span>
                     ) : (
-                      <span className="text-sm text-stone-400 bg-stone-50 rounded-full px-2.5 py-0.5">
+                      <span className="text-sm text-stone-500 bg-stone-50 rounded-full px-2.5 py-0.5">
                         ללא משלוח חינם
                       </span>
                     )}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Trash2, Loader2, AlertCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { deleteProduct } from "@/app/meshek22-control/(protected)/products/actions";
+import { hideDeletedRow } from "@/lib/admin/hide-row";
 
 interface DeleteProductButtonProps {
   id: string;
@@ -14,7 +14,7 @@ export function DeleteProductButton({ id, name }: DeleteProductButtonProps) {
   const [open, setOpen]           = useState(false);
   const [error, setError]         = useState("");
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleDelete = () => {
     setError("");
@@ -26,7 +26,7 @@ export function DeleteProductButton({ id, name }: DeleteProductButtonProps) {
           return;
         }
         setOpen(false);
-        router.refresh();
+        hideDeletedRow(triggerRef.current);
       } catch (err) {
         console.error("[DeleteProductButton] delete failed", err);
         setError("אירעה שגיאה בלתי צפויה. נסו שוב.");
@@ -37,6 +37,7 @@ export function DeleteProductButton({ id, name }: DeleteProductButtonProps) {
   return (
     <>
       <button
+        ref={triggerRef}
         onClick={() => { setError(""); setOpen(true); }}
         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
         aria-label={`מחק מוצר ${name}`}

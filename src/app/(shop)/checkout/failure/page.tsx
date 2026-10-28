@@ -32,7 +32,7 @@ export default async function CheckoutFailurePage({
           </p>
 
           {orderNumber && (
-            <p className="text-sm text-stone-400 mb-6">
+            <p className="text-sm text-stone-500 mb-6">
               מספר הזמנה:{" "}
               <span className="font-mono font-bold text-gray-900">{orderNumber}</span>
             </p>

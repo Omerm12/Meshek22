@@ -65,7 +65,7 @@ export function ProductsClientShell({ products }: ProductsClientShellProps) {
       {/* Search bar */}
       <div className="relative mb-6 max-w-lg">
         <Search
-          className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-400 pointer-events-none"
+          className="absolute top-1/2 -translate-y-1/2 start-3.5 h-4 w-4 text-stone-500 pointer-events-none"
           aria-hidden="true"
         />
         <input
@@ -79,13 +79,13 @@ export function ProductsClientShell({ products }: ProductsClientShellProps) {
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-base md:text-sm text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+          className="w-full h-11 bg-white border border-stone-200 rounded-xl ps-10 pe-10 text-base md:text-sm text-gray-900 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
         />
         {search && (
           <button
             onClick={() => handleSearchChange("")}
             aria-label="נקה חיפוש"
-            className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-400 hover:text-stone-700 cursor-pointer transition-colors"
+            className="absolute top-1/2 -translate-y-1/2 end-3 text-stone-500 hover:text-stone-700 cursor-pointer transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -116,7 +116,7 @@ export function ProductsClientShell({ products }: ProductsClientShellProps) {
           )}
         </>
       ) : (
-        <div className="py-24 text-center text-stone-400">
+        <div className="py-24 text-center text-stone-500">
           {search ? (
             <>
               <p className="text-lg font-medium">

@@ -56,7 +56,7 @@ export function Footer() {
                   <Mail className="h-4 w-4 text-brand-500 shrink-0" />
                   ysmeshek22@gmail.com
                 </a>
-                <span className="flex items-center gap-2 text-stone-500">
+                <span className="flex items-center gap-2 text-stone-400">
                   <MapPin className="h-4 w-4 text-brand-500 shrink-0" />
                   מושב ינון
                 </span>
@@ -108,7 +108,7 @@ export function Footer() {
 
       {/* Bottom bar */}
       <Container className="py-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-400">
           <p>© {year} משק 22. כל הזכויות שמורות.</p>
           <p>עוצב ופותח בישראל 🇮🇱</p>
         </div>

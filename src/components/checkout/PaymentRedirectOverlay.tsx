@@ -70,7 +70,7 @@ export function PaymentRedirectOverlay({ paymentUrl }: PaymentRedirectOverlayPro
         </p>
 
         {/* Trust badge */}
-        <div className="flex items-center justify-center gap-1.5 mt-6 text-xs text-stone-400">
+        <div className="flex items-center justify-center gap-1.5 mt-6 text-xs text-stone-500">
           <ShieldCheck className="h-3.5 w-3.5 text-brand-500 shrink-0" />
           מאובטח על ידי CardCom
         </div>

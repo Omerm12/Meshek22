@@ -80,7 +80,7 @@ export function DeliveryChecker({ zones, settlements }: DeliveryCheckerProps) {
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search
-            className="absolute top-1/2 -translate-y-1/2 start-4 h-5 w-5 text-stone-400 pointer-events-none"
+            className="absolute top-1/2 -translate-y-1/2 start-4 h-5 w-5 text-stone-500 pointer-events-none"
             aria-hidden="true"
           />
           <input
@@ -93,7 +93,7 @@ export function DeliveryChecker({ zones, settlements }: DeliveryCheckerProps) {
             }}
             onKeyDown={handleKeyDown}
             placeholder="לדוגמה: פתח תקווה, ראשון לציון..."
-            className="w-full h-14 bg-white border border-stone-200 rounded-xl ps-12 pe-4 text-base text-gray-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+            className="w-full h-14 bg-white border border-stone-200 rounded-xl ps-12 pe-4 text-base text-gray-900 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
             dir="rtl"
             aria-label="הזן שם יישוב"
           />
@@ -154,7 +154,7 @@ function FoundResult({
       {/* Metric boxes */}
       <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-x-reverse divide-emerald-100">
         <div className="px-6 py-5 text-center">
-          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
+          <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">
             דמי משלוח
           </p>
           <p className="text-xl font-bold text-gray-900">
@@ -164,7 +164,7 @@ function FoundResult({
 
         {zone.min_order_agorot !== null && (
           <div className="px-6 py-5 text-center">
-            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">
               הזמנה מינימלית
             </p>
             <p className="text-xl font-bold text-gray-900">
@@ -175,7 +175,7 @@ function FoundResult({
 
         {zone.free_delivery_threshold_agorot && (
           <div className="px-6 py-5 text-center">
-            <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-1">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1">
               משלוח חינם מ-
             </p>
             <p className="text-xl font-bold text-emerald-600">
@@ -203,7 +203,7 @@ function NotFoundResult({ onReset }: { onReset: () => void }) {
     <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
       <div className="flex items-start gap-3">
         <XCircle
-          className="h-5 w-5 text-stone-400 shrink-0 mt-0.5"
+          className="h-5 w-5 text-stone-500 shrink-0 mt-0.5"
           aria-hidden="true"
         />
         <div className="flex-1 min-w-0">

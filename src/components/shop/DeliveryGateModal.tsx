@@ -159,7 +159,7 @@ export function DeliveryGateModal() {
           <button
             onClick={closeGate}
             aria-label="סגור"
-            className="h-9 w-9 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0 ms-3 mt-0.5"
+            className="h-9 w-9 flex items-center justify-center rounded-full text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0 ms-3 mt-0.5"
           >
             <X className="h-4 w-4" />
           </button>
@@ -178,7 +178,7 @@ export function DeliveryGateModal() {
           <div className="flex gap-3">
             <div className="relative flex-1">
               <Search
-                className="absolute top-1/2 -translate-y-1/2 start-4 h-5 w-5 text-stone-400 pointer-events-none"
+                className="absolute top-1/2 -translate-y-1/2 start-4 h-5 w-5 text-stone-500 pointer-events-none"
                 aria-hidden="true"
               />
               <input
@@ -196,7 +196,7 @@ export function DeliveryGateModal() {
                 aria-label="שם היישוב"
                 className={cn(
                   "w-full h-14 bg-white border border-stone-200 rounded-xl ps-12 pe-4",
-                  "text-base text-gray-900 placeholder:text-stone-400",
+                  "text-base text-gray-900 placeholder:text-stone-500",
                   "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
                   "disabled:opacity-50 transition-shadow"
                 )}
@@ -271,7 +271,7 @@ function FoundResult({
       {/* Metric pills */}
       <div className="flex flex-wrap gap-2 mb-5">
         <div className="bg-white rounded-lg px-3 py-2 border border-emerald-100 text-center min-w-[90px]">
-          <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+          <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider mb-0.5">
             דמי משלוח
           </p>
           <p className="text-base font-bold text-gray-900">
@@ -280,7 +280,7 @@ function FoundResult({
         </div>
         {zone.min_order_agorot !== null && (
           <div className="bg-white rounded-lg px-3 py-2 border border-emerald-100 text-center min-w-[90px]">
-            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+            <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider mb-0.5">
               מינימום הזמנה
             </p>
             <p className="text-base font-bold text-gray-900">
@@ -290,7 +290,7 @@ function FoundResult({
         )}
         {zone.free_delivery_threshold_agorot && (
           <div className="bg-white rounded-lg px-3 py-2 border border-emerald-100 text-center min-w-[90px]">
-            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+            <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider mb-0.5">
               משלוח חינם מ-
             </p>
             <p className="text-base font-bold text-emerald-600">
@@ -320,7 +320,7 @@ function NotFoundResult({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
       <div className="flex items-start gap-3">
-        <XCircle className="h-5 w-5 text-stone-400 shrink-0 mt-0.5" aria-hidden="true" />
+        <XCircle className="h-5 w-5 text-stone-500 shrink-0 mt-0.5" aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-800 text-sm mb-0.5">
             כרגע איננו מבצעים משלוחים ליישוב שלכם

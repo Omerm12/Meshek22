@@ -26,7 +26,25 @@ import {
   selectOrdersWithFallback,
   type AdminOrderRow,
 } from "@/lib/admin/orders-data";
-import { withAdminTiming } from "@/lib/admin/instrumentation";
+import { withAdminTiming, runAfterResponse } from "@/lib/admin/instrumentation";
+import { getRequestId } from "@/lib/admin/request-id";
+
+/**
+ * Deferred via after(), not called inline. revalidatePath sets a single,
+ * request-WIDE flag (not scoped to the path) that makes Next.js re-render the
+ * page this Server Action was invoked from, as part of THIS action's response.
+ * OrderActions.tsx applies the new status from the action's return value, so
+ * that re-render was wasted work. Running revalidatePath in after() lets the
+ * response go out first; admin list/dashboard/detail are still invalidated.
+ */
+function scheduleOrderRevalidation(orderId: string): void {
+  runAfterResponse(() => {
+    revalidatePath(ADMIN_BASE_PATH);
+    revalidatePath(`${ADMIN_BASE_PATH}/orders`);
+    revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+  });
+}
+
 import { resolveInvoiceReference } from "@/lib/cardcom-documents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -273,9 +291,7 @@ export async function applyOrderTransition(
       const result = await recoverPaymentByOrderId(orderId);
       externalMs = Math.round(performance.now() - externalStart);
 
-      revalidatePath(ADMIN_BASE_PATH);
-      revalidatePath(`${ADMIN_BASE_PATH}/orders`);
-      revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+      scheduleOrderRevalidation(orderId);
 
       switch (result.outcome) {
         case "paid":
@@ -349,9 +365,7 @@ export async function applyOrderTransition(
       };
     }
 
-    revalidatePath(ADMIN_BASE_PATH);
-    revalidatePath(`${ADMIN_BASE_PATH}/orders`);
-    revalidatePath(`${ADMIN_BASE_PATH}/orders/${orderId}`);
+    scheduleOrderRevalidation(orderId);
 
     outcome = "success";
     return {
@@ -362,6 +376,7 @@ export async function applyOrderTransition(
   } finally {
     console.log("[admin:timing]", {
       scope: "order-status-update",
+      reqId: await getRequestId(),
       action,
       outcome,
       totalMs: Math.round(performance.now() - totalStart),

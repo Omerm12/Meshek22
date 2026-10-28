@@ -167,6 +167,7 @@ export function OrdersListClient({
                       <div className="flex items-center gap-1.5">
                         <Link
                           href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
+                          prefetch={false}
                           className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-brand-600 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors whitespace-nowrap"
                           aria-label={`צפה בהזמנה ${order.order_number}`}
                         >
