@@ -46,6 +46,7 @@ function variantRow() {
       qty_deal_enabled: false,
       qty_deal_quantity: null,
       qty_deal_price_agorot: null,
+      vat_class: "standard",
     },
   };
 }
@@ -116,11 +117,14 @@ function pickupFormData(overrides: Record<string, string> = {}) {
   fd.set("customer_phone", "0501234567");
   fd.set("customer_email", "");
   fd.set("delivery_notes", "");
+  // The total the customer saw: 2 × ₪10.00. (Delivery adds the zone fee below.)
+  fd.set("expected_total_agorot", overrides.expected_total_agorot ?? "2000");
   return fd;
 }
 
 function deliveryFormData(overrides: Record<string, string> = {}) {
   const fd = pickupFormData(overrides);
+  fd.set("expected_total_agorot", overrides.expected_total_agorot ?? "4500"); // + ₪25.00 delivery
   fd.set("fulfillment_method", "delivery");
   fd.set("delivery_zone_id", overrides.delivery_zone_id ?? ZONE_ID);
   fd.set("address_city", "רחובות");

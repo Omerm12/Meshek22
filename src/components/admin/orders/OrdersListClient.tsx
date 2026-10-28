@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertCircle, ExternalLink, Loader2, ClipboardList, Store, Truck } from "lucide-react";
+import { AlertCircle, ExternalLink, FileText, Loader2, ClipboardList, Printer, Store, Truck } from "lucide-react";
 import { fetchOrdersPage, type OrderRow, type OrderPageFilters } from "@/app/meshek22-control/(protected)/orders/actions";
 import {
   describeOrderStatus,
@@ -164,14 +164,43 @@ export function OrdersListClient({
                       {formatDate(order.created_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      <Link
-                        href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
-                        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-brand-600 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors whitespace-nowrap"
-                        aria-label={`צפה בהזמנה ${order.order_number}`}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                        צפייה
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`${ADMIN_BASE_PATH}/orders/${order.id}`}
+                          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-brand-600 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors whitespace-nowrap"
+                          aria-label={`צפה בהזמנה ${order.order_number}`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                          צפייה
+                        </Link>
+                        {order.invoice === "available" && (
+                          <>
+                            <a
+                              href={`${ADMIN_BASE_PATH}/orders/${order.id}/invoice`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-colors whitespace-nowrap"
+                              aria-label={`צפייה בחשבונית של הזמנה ${order.order_number}`}
+                            >
+                              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                              צפייה בחשבונית
+                            </a>
+                            <a
+                              href={`${ADMIN_BASE_PATH}/orders/${order.id}/invoice?print=1`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-colors whitespace-nowrap"
+                              aria-label={`הדפסת חשבונית של הזמנה ${order.order_number}`}
+                            >
+                              <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+                              הדפסת חשבונית
+                            </a>
+                          </>
+                        )}
+                        {order.invoice === "missing" && (
+                          <span className="text-xs text-gray-400 whitespace-nowrap">לא נמצאה חשבונית</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

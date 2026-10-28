@@ -29,7 +29,7 @@ export default async function EditProductPage({
         .from("products")
         .select(`
           id, category_id, name, slug, description, image_url,
-          is_active, is_featured, sort_order,
+          is_active, is_featured, vat_class, sort_order,
           qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot,
           product_variants (
             id, unit, label, price_agorot, compare_price_agorot,
@@ -91,7 +91,8 @@ export default async function EditProductPage({
     image_url:         product.image_url    ?? "",
     is_active:         product.is_active,
     is_featured:       product.is_featured,
-    sort_order:        product.sort_order,
+    vat_class:         product.vat_class,
+    sort_order:       product.sort_order,
     qty_deal_enabled:  product.qty_deal_enabled  ?? false,
     qty_deal_quantity: product.qty_deal_quantity  ?? null,
     qty_deal_price:    product.qty_deal_price_agorot != null

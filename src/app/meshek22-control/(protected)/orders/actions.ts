@@ -27,10 +27,19 @@ import {
   type AdminOrderRow,
 } from "@/lib/admin/orders-data";
 import { withAdminTiming } from "@/lib/admin/instrumentation";
+import { resolveInvoiceReference } from "@/lib/cardcom-documents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type OrderRow = AdminOrderRow;
+/**
+ * What the list shows in the invoice slot:
+ *  - "available": a Cardcom tax invoice is stored for this paid card order
+ *  - "missing":   paid by card but no invoice exists (e.g. only an Order document)
+ *  - "none":      nothing to show (unpaid, other payment method, or unknown)
+ */
+export type OrderInvoiceState = "available" | "missing" | "none";
+
+export type OrderRow = AdminOrderRow & { invoice: OrderInvoiceState };
 
 export interface OrderPageFilters {
   search?: string;
@@ -44,6 +53,38 @@ export interface OrderPageResult {
   nextCursor: string | null;
   /** True when the read failed outright, so the UI can say so instead of showing "no orders". */
   failed: boolean;
+}
+
+/**
+ * Invoice state for the paid card orders on one page.
+ *
+ * One extra read, limited to this page's paid card orders (at most PAGE_SIZE
+ * rows), because the stored Cardcom result is too large to carry on every list
+ * row. A failed read degrades to "none" — the list never breaks over it.
+ */
+async function loadInvoiceStates(
+  supabase: ReturnType<typeof createAdminClient>,
+  rows: AdminOrderRow[]
+): Promise<Map<string, OrderInvoiceState>> {
+  const states = new Map<string, OrderInvoiceState>();
+  const eligible = rows.filter((r) => r.payment_status === "paid" && r.payment_method === "credit_card");
+  if (eligible.length === 0) return states;
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, payment_method, payment_status, payment_metadata")
+    .in("id", eligible.map((r) => r.id));
+
+  if (error || !data) {
+    console.error("[admin:orders] invoice state read failed", { code: error?.code });
+    return states;
+  }
+
+  for (const order of data) {
+    const reference = resolveInvoiceReference(order);
+    states.set(order.id, reference.kind === "available" ? "available" : "missing");
+  }
+  return states;
 }
 
 // 20–30 is the recommended range for the admin order list; 20 keeps the
@@ -116,8 +157,11 @@ export async function fetchOrdersPage(
   const visible = filterRows(rows, { bucket });
 
   const hasMore = visible.length > PAGE_SIZE;
-  const orders = hasMore ? visible.slice(0, PAGE_SIZE) : visible;
-  const last = orders[orders.length - 1];
+  const page = hasMore ? visible.slice(0, PAGE_SIZE) : visible;
+  const last = page[page.length - 1];
+
+  const invoiceStates = await loadInvoiceStates(supabase, page);
+  const orders: OrderRow[] = page.map((o) => ({ ...o, invoice: invoiceStates.get(o.id) ?? "none" }));
 
   return {
     orders,

@@ -118,7 +118,7 @@ function ChoiceCard({
 
 export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) {
   const router = useRouter();
-  const { items, isHydrated, pricing } = useCart();
+  const { items, isHydrated, pricing, refreshPrices, refreshPromotions } = useCart();
 
   // ── Fulfillment + payment ──────────────────────────────────────────────────
   const [fulfillment, setFulfillment] = useState<FulfillmentMethod>("delivery");
@@ -158,6 +158,11 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
   // ── Submission ─────────────────────────────────────────────────────────────
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  // Set when the server reported a different total than the one displayed. The
+  // cart is then re-priced, and the customer must tick to confirm the new amount
+  // (and re-confirm if the displayed total moves again) before paying.
+  const [priceReview, setPriceReview] = useState<number | null>(null);
+  const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
   const [redirectingTo, setRedirectingTo] = useState<string | null>(null);
 
   const navigatingAwayRef = useRef(false);
@@ -240,6 +245,7 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
   const deliveryFeeAgorot = isDelivery ? quote?.feeAgorot ?? 0 : 0;
   const totalAgorot = goodsTotal + deliveryFeeAgorot;
   const belowMinimum = isDelivery && !!quote && !quote.meetsMinimum;
+  const awaitingPriceConfirmation = priceReview !== null && confirmedTotal !== totalAgorot;
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const validate = (): string | null => {
@@ -287,6 +293,8 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
     fd.set("cart_items", JSON.stringify(
       items.map((i) => ({ variantId: i.variantId, quantity: i.quantity }))
     ));
+    // What the customer is looking at. The server refuses to charge anything else.
+    fd.set("expected_total_agorot", String(totalAgorot));
     fd.set("customer_name",  name);
     fd.set("customer_phone", phone);
     fd.set("customer_email", email);
@@ -304,6 +312,12 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
       const result = await createOrder(fd);
 
       if ("error" in result) {
+        if (result.priceChanged) {
+          refreshPrices(result.priceChanged.items);
+          refreshPromotions(result.priceChanged.promotions);
+          setPriceReview(result.priceChanged.serverTotalAgorot);
+          setConfirmedTotal(null);
+        }
         setError(result.error);
         setIsPending(false);
         return;
@@ -754,6 +768,22 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
               )}
             </div>
 
+            {/* Shown after the server corrected a stale cart: explicit confirmation required */}
+            {priceReview !== null && (
+              <label className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-300 flex items-start gap-2 text-sm text-amber-900 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={confirmedTotal === totalAgorot}
+                  onChange={(e) => setConfirmedTotal(e.target.checked ? totalAgorot : null)}
+                />
+                <span>
+                  המחירים בסל עודכנו. אני מאשר/ת שהסכום שיחויב הוא{" "}
+                  <strong>{formatPrice(totalAgorot)}</strong>.
+                </span>
+              </label>
+            )}
+
             {/* Minimum order warning */}
             {belowMinimum && (
               <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
@@ -778,14 +808,14 @@ export function CheckoutForm({ deliveryZones, settlements }: CheckoutFormProps) 
             {/* Submit */}
             <button
               type="submit"
-              disabled={isPending || belowMinimum}
+              disabled={isPending || belowMinimum || awaitingPriceConfirmation}
               className="w-full rounded-full bg-brand-600 text-white font-bold text-base hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-brand-600/20 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
               style={{ height: "52px" }}
             >
               {isPending ? (
                 <><Loader2 className="h-4 w-4 animate-spin" />מעבד...</>
               ) : paymentMethod === "credit_card" ? (
-                <><ShieldCheck className="h-4 w-4" />מעבר לתשלום מאובטח</>
+                <><ShieldCheck className="h-4 w-4" />מעבר לתשלום מאובטח · {formatPrice(totalAgorot)}</>
               ) : (
                 <>שליחת ההזמנה</>
               )}

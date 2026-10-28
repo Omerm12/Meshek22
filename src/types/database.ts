@@ -182,6 +182,8 @@ export interface Database {
           qty_deal_enabled: boolean;
           qty_deal_quantity: number | null;
           qty_deal_price_agorot: number | null;
+          /** VAT treatment for CardCom documents. See src/lib/vat.ts. */
+          vat_class: "standard" | "zero_rated";
           created_at: string;
           updated_at: string;
         };
@@ -198,6 +200,7 @@ export interface Database {
           qty_deal_enabled?: boolean;
           qty_deal_quantity?: number | null;
           qty_deal_price_agorot?: number | null;
+          vat_class?: "standard" | "zero_rated";
         };
         Update: {
           category_id?: string;
@@ -211,6 +214,7 @@ export interface Database {
           qty_deal_enabled?: boolean;
           qty_deal_quantity?: number | null;
           qty_deal_price_agorot?: number | null;
+          vat_class?: "standard" | "zero_rated";
           updated_at?: string;
         };
         Relationships: [];

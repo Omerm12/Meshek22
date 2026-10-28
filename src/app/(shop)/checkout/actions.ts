@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 import { createCardComSession, type CardComLineItem } from "@/lib/cardcom";
+import { isVatClass, resolveSnapshotVat, type VatClass } from "@/lib/vat";
 import { calculateCartPricing } from "@/lib/promotions/engine";
 import type { PricedItem, Promotion } from "@/lib/promotions/types";
 import { toPromotion } from "@/lib/data/promotions";
@@ -51,10 +52,35 @@ type CreateOrderSuccess = {
   successUrl: string;
 };
 
-type CreateOrderResult = { error: string } | CreateOrderSuccess;
+/**
+ * Current catalogue figures for a cart line, returned when the total the customer
+ * confirmed no longer matches the database so the browser can correct its stale copy.
+ */
+export type RefreshedCartPrice = {
+  variantId: string;
+  priceAgorot: number;
+  dealEnabled: boolean;
+  dealQuantity: number | null;
+  dealPriceAgorot: number | null;
+};
+
+type CreateOrderError = {
+  error: string;
+  /** Set only when the confirmed total differs from the authoritative one. */
+  priceChanged?: {
+    serverTotalAgorot: number;
+    items: RefreshedCartPrice[];
+    /** Live group promotions, so the browser re-prices its cart exactly as the server did. */
+    promotions: Promotion[];
+  };
+};
+
+type CreateOrderResult = CreateOrderError | CreateOrderSuccess;
 
 /** Deliberately vague: it must not reveal whether some other order exists. */
 const GENERIC_LOOKUP_ERROR = "ההזמנה לא נמצאה";
+const LEGACY_RETRY_ERROR =
+  "לא ניתן להשלים תשלום להזמנה זו מחדש. נא ליצור הזמנה חדשה או לפנות אלינו ונשמח לעזור.";
 
 function siteOrigin(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -114,7 +140,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       .from("product_variants")
       .select(
         "id, price_agorot, is_available, label, quantity_pricing_mode, " +
-          "products!inner(id, name, is_active, qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot)"
+          "products!inner(id, name, is_active, qty_deal_enabled, qty_deal_quantity, qty_deal_price_agorot, vat_class)"
       )
       .in("id", variantIds),
     db
@@ -144,6 +170,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       qty_deal_enabled: boolean | null;
       qty_deal_quantity: number | null;
       qty_deal_price_agorot: number | null;
+      vat_class: string;
     } | null;
   };
 
@@ -158,7 +185,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     : (promotionsRes.data as unknown as Parameters<typeof toPromotion>[0][]).map(toPromotion);
 
   const pricedItems: PricedItem[] = [];
-  const lineMeta: { variantId: string; label: string; productName: string }[] = [];
+  const lineMeta: { variantId: string; label: string; productName: string; vatClass: VatClass }[] = [];
 
   for (const item of input.items) {
     const variant = variantMap.get(item.variantId);
@@ -171,6 +198,16 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     // Fixed-price variants are sold in whole units only.
     if (variant.quantity_pricing_mode === "fixed" && !Number.isInteger(item.quantity)) {
       return { error: `כמות לא תקינה עבור "${variant.products.name}"` };
+    }
+
+    // The VAT class comes from the database row, never from the client. Fail
+    // closed on an unrecognised value rather than guess a tax treatment.
+    if (!isVatClass(variant.products.vat_class)) {
+      console.error("[createOrder] invalid vat_class", {
+        productId: variant.products.id,
+        vatClass:  variant.products.vat_class,
+      });
+      return { error: "שגיאה באימות המוצרים. נא לפנות לתמיכה." };
     }
 
     pricedItems.push({
@@ -188,6 +225,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
       variantId:   variant.id,
       label:       variant.label,
       productName: variant.products.name,
+      vatClass:    variant.products.vat_class,
     });
   }
 
@@ -263,6 +301,44 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     return { error: "שגיאה בחישוב ההזמנה. נא לפנות לתמיכה." };
   }
 
+  // ── 4b. The customer must be charged exactly what they confirmed ──────────
+  // The browser prices from a localStorage copy that can be stale (a product
+  // repriced or a deal changed since it was added). The server figure is the only
+  // one ever charged, so if the customer saw a different total, stop BEFORE any
+  // order or CardCom session exists and hand back the real figures to re-confirm.
+  //
+  // Fails closed: a missing, malformed or different figure is refused. A browser
+  // running cached frontend code that never sends the field therefore cannot be
+  // charged an amount it did not display.
+  const expectedRaw = formData.get("expected_total_agorot");
+  const expectedTotalAgorot =
+    typeof expectedRaw === "string" && /^\d+$/.test(expectedRaw) ? Number(expectedRaw) : null;
+
+  if (expectedTotalAgorot === null || expectedTotalAgorot !== totalAgorot) {
+    console.warn("[createOrder] confirmed total missing or differs from server total", {
+      expectedTotalAgorot: expectedRaw === null ? null : String(expectedRaw),
+      serverTotalAgorot:   totalAgorot,
+    });
+    const shekels = (totalAgorot / 100).toLocaleString("he-IL", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return {
+      error: `המחירים בסל עודכנו. הסכום המעודכן לתשלום הוא ₪${shekels}. נא לבדוק את הסל ולאשר שוב.`,
+      priceChanged: {
+        serverTotalAgorot: totalAgorot,
+        items: pricedItems.map((i) => ({
+          variantId:       i.variantId,
+          priceAgorot:     i.priceAgorot,
+          dealEnabled:     i.dealEnabled ?? false,
+          dealQuantity:    i.dealQuantity ?? null,
+          dealPriceAgorot: i.dealPriceAgorot ?? null,
+        })),
+        promotions,
+      },
+    };
+  }
+
   // ── 5. Order + item payloads ──────────────────────────────────────────────
   const customerSnapshot: Json = {
     name:  input.customerName,
@@ -296,6 +372,9 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
         product_name:  meta.productName,
         variant_label: meta.label,
         price_agorot:  line.unitPriceAgorot,
+        // Frozen at order creation: later product edits must not change this
+        // order's tax treatment, and payment retries read it back from here.
+        vat_class:     meta.vatClass,
       },
       quantity:           line.quantity,
       unit_price_agorot:  line.unitPriceAgorot,
@@ -414,6 +493,7 @@ export async function createOrder(formData: FormData): Promise<CreateOrderResult
     quantity:         line.quantity,
     unitPriceAgorot:  line.unitPriceAgorot,
     totalPriceAgorot: line.chargedTotalAgorot,
+    vatClass:         lineMeta[index].vatClass,
   }));
 
   let cardComSession: Awaited<ReturnType<typeof createCardComSession>>;
@@ -597,10 +677,29 @@ export async function retryPayment(orderId: string, token: string): Promise<Retr
     | { name?: string; email?: string; phone?: string }
     | null;
 
+  // The retry uses the VAT class frozen on the order — never the product's
+  // current one. An order created before VAT classification has no snapshot, so
+  // its correct tax treatment is unknown, and a retry would issue a legal tax
+  // document for it. Refuse rather than guess: the order is logged for manual
+  // review and the customer is told to contact the shop or reorder. Nothing on
+  // the order is changed.
+  const legacyItems = orderItems.filter((item) => resolveSnapshotVat(item.product_snapshot).legacy);
+  if (legacyItems.length > 0) {
+    console.warn("[retryPayment]", {
+      event:        "legacy_order_vat_unknown_retry_blocked",
+      orderId,
+      orderNumber:  order.order_number,
+      legacyItems:  legacyItems.length,
+      totalItems:   orderItems.length,
+    });
+    return { error: LEGACY_RETRY_ERROR };
+  }
+
   type ItemSnap = { product_name: string; variant_label: string };
   const lineItems: CardComLineItem[] = orderItems.map((item) => {
     const snap = item.product_snapshot as unknown as ItemSnap;
     return {
+      vatClass:         resolveSnapshotVat(item.product_snapshot).vatClass,
       productId:        item.product_variant_id,
       description:      `${snap.product_name} — ${snap.variant_label}`,
       quantity:         item.quantity,

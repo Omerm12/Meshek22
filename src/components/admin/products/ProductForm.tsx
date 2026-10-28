@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { productFormSchema, type ProductFormData } from "@/lib/validations/admin-product";
+import { VAT_CLASSES, VAT_CLASS_LABELS } from "@/lib/vat";
 import { slugify } from "@/lib/utils/slugify";
 import { VariantFields } from "@/components/admin/products/VariantFields";
 import { ProductImageUpload } from "@/components/admin/products/ProductImageUpload";
@@ -120,7 +121,8 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
       image_url:         defaultValues?.image_url          ?? "",
       is_active:         defaultValues?.is_active          ?? true,
       is_featured:       defaultValues?.is_featured        ?? false,
-      sort_order:        defaultValues?.sort_order         ?? 0,
+      vat_class:         defaultValues?.vat_class          ?? "standard",
+      sort_order:       defaultValues?.sort_order         ?? 0,
       qty_deal_enabled:  defaultValues?.qty_deal_enabled   ?? false,
       qty_deal_quantity: defaultValues?.qty_deal_quantity  ?? null,
       qty_deal_price:    defaultValues?.qty_deal_price     ?? null,
@@ -298,6 +300,18 @@ export function ProductForm({ defaultValues, action, submitLabel, categories }: 
                 פעיל
               </label>
             </div>
+          </Field>
+
+          <Field label="מע״מ" id="vat_class">
+            <select
+              id="vat_class"
+              {...register("vat_class")}
+              className={errors.vat_class ? errInputCls : inputCls}
+            >
+              {VAT_CLASSES.map((c) => (
+                <option key={c} value={c}>{VAT_CLASS_LABELS[c]}</option>
+              ))}
+            </select>
           </Field>
 
           <Field label="מומלץ" id="is_featured">

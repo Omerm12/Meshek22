@@ -46,13 +46,24 @@ type CartAction =
   | { type: "CLEAR" }
   | { type: "OPEN" }
   | { type: "CLOSE" }
-  | { type: "HYDRATE"; items: CartLineItem[] };
+  | { type: "HYDRATE"; items: CartLineItem[] }
+  | { type: "REFRESH_PRICES"; prices: PriceRefresh[] };
+
+/** Authoritative catalogue figures from the server, applied over stale stored ones. */
+export type PriceRefresh = Pick<
+  CartLineItem,
+  "variantId" | "priceAgorot" | "dealEnabled" | "dealQuantity" | "dealPriceAgorot"
+>;
 
 interface CartContextValue extends CartState {
   addItem: (item: AddItemPayload) => void;
   removeItem: (variantId: string) => void;
   updateQty: (variantId: string, quantity: number) => void;
   clearCart: () => void;
+  /** Overwrite stored prices/deals with the server's current figures. */
+  refreshPrices: (prices: PriceRefresh[]) => void;
+  /** Replace the live promotions with the server's current set. */
+  refreshPromotions: (promotions: Promotion[]) => void;
   openCart: () => void;
   closeCart: () => void;
   /** Number of distinct line items in the cart (used for the nav badge). */
@@ -169,6 +180,25 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
     }
 
+    case "REFRESH_PRICES": {
+      const byId = new Map(action.prices.map((p) => [p.variantId, p]));
+      return {
+        ...state,
+        items: state.items.map((i) => {
+          const p = byId.get(i.variantId);
+          return p
+            ? {
+                ...i,
+                priceAgorot:     p.priceAgorot,
+                dealEnabled:     p.dealEnabled,
+                dealQuantity:    p.dealQuantity,
+                dealPriceAgorot: p.dealPriceAgorot,
+              }
+            : i;
+        }),
+      };
+    }
+
     case "CLEAR":
       return { ...state, items: [] };
 
@@ -240,6 +270,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     []
   );
   const clearCart  = useCallback(() => dispatch({ type: "CLEAR" }), []);
+  const refreshPrices = useCallback(
+    (prices: PriceRefresh[]) => dispatch({ type: "REFRESH_PRICES", prices }),
+    []
+  );
   const openCart   = useCallback(() => dispatch({ type: "OPEN" }),  []);
   const closeCart  = useCallback(() => dispatch({ type: "CLOSE" }), []);
 
@@ -259,6 +293,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeItem,
         updateQty,
         clearCart,
+        refreshPrices,
+        refreshPromotions: setPromotions,
         openCart,
         closeCart,
         totalItems,

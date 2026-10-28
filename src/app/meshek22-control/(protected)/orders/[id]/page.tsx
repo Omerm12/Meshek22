@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, ArrowRight, User, MapPin, Package, CreditCard, Clock, Store, Truck } from "lucide-react";
+import { ChevronRight, ArrowRight, User, MapPin, Package, CreditCard, Clock, Store, Truck, FileText } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   PICKUP_LOCATION,
@@ -12,6 +12,7 @@ import { isPickupOrder } from "@/lib/admin/order-presentation";
 import { ordersTable, selectOrderDetailWithFallback } from "@/lib/admin/orders-data";
 import { withAdminTiming } from "@/lib/admin/instrumentation";
 import { OrderActions } from "@/components/admin/orders/OrderActions";
+import { OrderInvoiceActions } from "@/components/admin/orders/OrderInvoiceActions";
 import { OrderStatusBadges } from "@/components/admin/orders/OrderStatusBadges";
 import { OrderStatusProvider } from "@/components/admin/orders/OrderStatusContext";
 import { PrintPickingSheetButton } from "@/components/admin/orders/PrintPickingSheetButton";
@@ -110,6 +111,14 @@ export default async function OrderDetailPage({
   );
 
   if (!order) notFound();
+
+  // Only the stored payment facts the invoice link needs; a failed read just
+  // means no invoice is offered, never a broken page.
+  const { data: invoiceFacts } = await supabase
+    .from("orders")
+    .select("id, payment_method, payment_status, payment_metadata")
+    .eq("id", order.id)
+    .maybeSingle();
 
   const customer = order.customer_snapshot as unknown as CustomerSnapshot;
   const address  = order.delivery_address_snapshot as unknown as AddressSnapshot;
@@ -305,6 +314,13 @@ export default async function OrderDetailPage({
               <Row label="אימייל" value={customer?.email}  dir="ltr" />
             </div>
           </SectionCard>
+
+          {/* Cardcom tax invoice/receipt (view / print the original document) */}
+          {invoiceFacts && (
+            <SectionCard title="חשבונית" icon={FileText}>
+              <OrderInvoiceActions order={invoiceFacts} />
+            </SectionCard>
+          )}
 
           {/* Fulfillment: address for delivery, collection point for pickup */}
           <SectionCard

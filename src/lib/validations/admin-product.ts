@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { VAT_CLASSES } from "@/lib/vat";
 
 export const VARIANT_UNITS = ["unit", "250g", "500g", "1kg", "2kg", "bunch", "pack"] as const;
 export type VariantUnit = (typeof VARIANT_UNITS)[number];
@@ -85,6 +86,7 @@ export const productFormSchema = z.object({
     ),
   is_active:   z.boolean(),
   is_featured: z.boolean(),
+  vat_class:   z.enum(VAT_CLASSES, { message: "סיווג מע״מ לא תקין" }),
   sort_order:  z.number().int().min(0).max(9999),
   // ── Bundle deal ────────────────────────────────────────────────────────────
   qty_deal_enabled:  z.boolean(),

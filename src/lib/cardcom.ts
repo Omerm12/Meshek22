@@ -1,3 +1,5 @@
+import { DELIVERY_VAT_CLASS, type VatClass } from "@/lib/vat";
+
 export interface CardComSession {
   lowProfileId: string;
   paymentUrl: string;
@@ -9,6 +11,72 @@ export interface CardComLineItem {
   quantity: number;
   unitPriceAgorot: number;
   totalPriceAgorot: number;
+  /**
+   * How CardCom should account for this line (maps to Document.Products[].IsVatFree).
+   * Taken from the order item's stored snapshot, never recomputed. Defaults to
+   * "standard" when omitted. It never changes the amount charged.
+   */
+  vatClass?: VatClass;
+}
+
+export interface ExactRow {
+  quantity: number;
+  /** Price of ONE unit in whole agorot — never a rounded fraction. */
+  unitAgorot: number;
+  /** True only for the last-resort single row that carries the real quantity in its text. */
+  quantityInDescription?: boolean;
+}
+
+/**
+ * Express a line (a quantity and the exact agorot charged for it) as one or two
+ * document rows whose Quantity × UnitCost equals the charge to the agorot, while
+ * keeping the real purchased quantity.
+ *
+ * A discounted line rarely has a whole-agorot unit price (22 parsley for ₪59.00 is
+ * ₪2.6818 each), and a rounded UnitCost would invoice 22 × 2.68 = ₪58.96. So:
+ *  1. If one whole-agorot unit price fits, a single row.
+ *  2. Otherwise, for whole quantities, k units stay at the catalogue price and the
+ *     other n−k are sold at one whole-agorot price — the shape of an "N for ₪X"
+ *     deal (22 parsley → 20 × ₪2.50 + 2 × ₪4.50). The smallest k that divides
+ *     exactly is used, which recovers the natural "leftover at normal price" split.
+ *  3. If no such k exists (e.g. a saving shared across several lines), the units
+ *     are split into two adjacent whole-agorot prices, which always works.
+ *  4. Fractional quantities (weighed goods) never carry promotions; if one ever
+ *     fails to divide, a single row with the quantity written in the description.
+ */
+export function splitLineIntoExactRows(
+  quantity: number,
+  totalAgorot: number,
+  catalogUnitAgorot: number
+): ExactRow[] {
+  if (quantity <= 0) return [{ quantity: 1, unitAgorot: totalAgorot, quantityInDescription: true }];
+
+  const unit = Math.round(totalAgorot / quantity);
+  if (Math.round(unit * quantity) === totalAgorot) return [{ quantity, unitAgorot: unit }];
+
+  if (!Number.isInteger(quantity)) {
+    return [{ quantity: 1, unitAgorot: totalAgorot, quantityInDescription: true }];
+  }
+
+  for (let k = 0; k <= quantity - 2; k++) {
+    const rest = totalAgorot - k * catalogUnitAgorot;
+    const left = quantity - k;
+    if (rest >= 0 && rest % left === 0) {
+      const discounted = rest / left;
+      if (discounted <= catalogUnitAgorot) {
+        const rows: ExactRow[] = [{ quantity: left, unitAgorot: discounted }];
+        if (k > 0) rows.push({ quantity: k, unitAgorot: catalogUnitAgorot });
+        return rows;
+      }
+    }
+  }
+
+  const base = Math.floor(totalAgorot / quantity);
+  const higher = totalAgorot - base * quantity; // units priced one agora higher
+  const rows: ExactRow[] = [];
+  if (quantity - higher > 0) rows.push({ quantity: quantity - higher, unitAgorot: base });
+  if (higher > 0) rows.push({ quantity: higher, unitAgorot: base + 1 });
+  return rows;
 }
 
 export interface LpResult {
@@ -114,19 +182,23 @@ export async function createCardComSession({
     Quantity: number;
     UnitCost: number;
     TotalLineCost: number;
-  }> = lineItems.map((item) => {
-    const totalLineCost = parseFloat((item.totalPriceAgorot / 100).toFixed(2));
-    const unitCost =
-      item.quantity > 0
-        ? parseFloat((item.totalPriceAgorot / item.quantity / 100).toFixed(2))
-        : totalLineCost;
-    return {
-      ProductID:     item.productId,
-      Description:   item.description,
-      Quantity:      item.quantity,
-      UnitCost:      unitCost,
-      TotalLineCost: totalLineCost,
-    };
+    /** Per line only — never set at document level, so mixed baskets stay correct. */
+    IsVatFree: boolean;
+  }> = lineItems.flatMap((item) => {
+    const isVatFree = item.vatClass === "zero_rated";
+    // Every row satisfies Quantity × UnitCost === TotalLineCost exactly (in whole
+    // agorot), so the document adds up to the amount charged whichever of the
+    // three fields CardCom uses to price a row — nothing here depends on that.
+    return splitLineIntoExactRows(item.quantity, item.totalPriceAgorot, item.unitPriceAgorot).map(
+      (row) => ({
+        ProductID:     item.productId,
+        Description:   row.quantityInDescription ? `${item.description} (כמות: ${item.quantity})` : item.description,
+        Quantity:      row.quantity,
+        UnitCost:      row.unitAgorot / 100,
+        TotalLineCost: Math.round(row.quantity * row.unitAgorot) / 100,
+        IsVatFree:     isVatFree,
+      })
+    );
   });
 
   if (deliveryFeeAgorot > 0) {
@@ -136,6 +208,7 @@ export async function createCardComSession({
       Quantity:      1,
       UnitCost:      deliveryShekels,
       TotalLineCost: deliveryShekels,
+      IsVatFree:     DELIVERY_VAT_CLASS === "zero_rated",
     });
   }
 
@@ -156,6 +229,9 @@ export async function createCardComSession({
   payload["Document"]           = {
     DocumentTypeToCreate: "TaxInvoiceAndReceipt",
     IsSendByEmail: true,
+    // Our order number on the Cardcom document, so it can be matched back to the
+    // order from Cardcom's own reports. Metadata only — it changes no amount.
+    ExternalId: orderNumber,
     Name:     customerName,
     Email:    customerEmail,
     Phone:    customerPhone,
